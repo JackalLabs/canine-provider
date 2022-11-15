@@ -14,7 +14,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
-	storagetypes "github.com/jackalLabs/canine-chain/x/storage/types"
+	storagetypes "github.com/jackal-dao/canine/x/storage/types"
 	"github.com/spf13/cobra"
 )
 

@@ -5,7 +5,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	storagetypes "github.com/jackalLabs/canine-chain/x/storage/types"
+	storagetypes "github.com/jackal-dao/canine/x/storage/types"
 )
 
 const MaxFileSize = 32 << 30
