@@ -1,4 +1,4 @@
-package cmd
+package jprovd
 
 import (
 	"crypto/sha256"

@@ -85,18 +85,8 @@ else
 	go build -mod=readonly $(BUILD_FLAGS) -o build/jprovd ./cmd/jprovd
 endif
 
-build_cli:
-	go build -o build/canined -mod=readonly -tags "$(GO_TAGS) build/jprovd" -ldflags '$(LD_FLAGS)' ./cmd/jprovd
-
-build-contract-tests-hooks:
-ifeq ($(OS),Windows_NT)
-	go build -mod=readonly $(BUILD_FLAGS) -o build/contract_tests.exe ./cmd/contract_tests
-else
-	go build -mod=readonly $(BUILD_FLAGS) -o build/contract_tests ./cmd/contract_tests
-endif
-
 install: go.sum
-	go install -mod=readonly $(BUILD_FLAGS) ./cmd/jprovd
+	go install -mod=readonly $(BUILD_FLAGS) ./...
 
 ########################################
 ### Tools & dependencies
@@ -122,8 +112,6 @@ distclean: clean
 
 ########################################
 ### Testing
-
-
 test: test-unit
 test-all: check test-race test-cover
 

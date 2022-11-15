@@ -1,4 +1,4 @@
-package cmd
+package jprovd
 
 import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
