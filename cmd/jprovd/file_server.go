@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"bytes"
@@ -23,7 +23,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 
-	"github.com/jackal-dao/canine/x/storage/types"
+	storageTypes "github.com/jackal-dao/canine/x/storage/types"
 
 	"github.com/julienschmidt/httprouter"
 	merkletree "github.com/wealdtech/go-merkletree"
@@ -214,7 +214,7 @@ func (q *UploadQueue) makeContract(cmd *cobra.Command, args []string, wg *sync.W
 		return nil, err
 	}
 
-	msg := types.NewMsgPostContract(
+	msg := storageTypes.NewMsgPostContract(
 		clientCtx.GetFromAddress().String(),
 		args[1],
 		args[2],
@@ -284,11 +284,11 @@ func HashData(cmd *cobra.Command, filename string) (string, string, string) {
 func queryBlock(cmd *cobra.Command, cid string) (string, error) {
 	clientCtx := client.GetClientContextFromCmd(cmd)
 
-	queryClient := types.NewQueryClient(clientCtx)
+	queryClient := storageTypes.NewQueryClient(clientCtx)
 
 	argCid := cid
 
-	params := &types.QueryGetActiveDealsRequest{
+	params := &storageTypes.QueryGetActiveDealsRequest{
 		Cid: argCid,
 	}
 
@@ -303,11 +303,11 @@ func queryBlock(cmd *cobra.Command, cid string) (string, error) {
 func checkVerified(cmd *cobra.Command, cid string) (bool, error) {
 	clientCtx := client.GetClientContextFromCmd(cmd)
 
-	queryClient := types.NewQueryClient(clientCtx)
+	queryClient := storageTypes.NewQueryClient(clientCtx)
 
 	argCid := cid
 
-	params := &types.QueryGetActiveDealsRequest{
+	params := &storageTypes.QueryGetActiveDealsRequest{
 		Cid: argCid,
 	}
 
