@@ -1,7 +1,6 @@
-package jprovd
+package server
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -16,7 +15,9 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/JackalLabs/jackal-provider/jprovd/queue"
+	"github.com/JackalLabs/jackal-provider/jprovd/types"
+	"github.com/JackalLabs/jackal-provider/jprovd/utils"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/rs/cors"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -31,106 +32,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func writeFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, closer io.Closer, size int64) ([]byte, error) {
-	h := sha256.New()
-	io.Copy(h, reader)
-	hashName := h.Sum(nil)
-
-	files, err := cmd.Flags().GetString("storagedir")
-	if err != nil {
-		return nil, err
-	}
-
-	// This is path which we want to store the file
-	direrr := os.MkdirAll(fmt.Sprintf("%s/networkfiles/%s/", files, fmt.Sprintf("%x", hashName)), os.ModePerm)
-	if direrr != nil {
-		return hashName, direrr
-	}
-
-	var blocksize int64 = 1024
-	var i int64 = 0
-	for i = 0; i < size; i += blocksize {
-		f, err := os.OpenFile(fmt.Sprintf("%s/networkfiles/%s/%d%s", files, fmt.Sprintf("%x", hashName), i/blocksize, ".jkl"), os.O_WRONLY|os.O_CREATE, 0o666)
-		if err != nil {
-			return hashName, err
-		}
-
-		firstx := make([]byte, blocksize)
-		read, err := file.ReadAt(firstx, i)
-		fmt.Println(read)
-		if err != nil && err != io.EOF {
-			return hashName, err
-		}
-		firstx = firstx[:read]
-		// fmt.Printf(": %s :\n", string(firstx))
-		read, writeerr := f.Write(firstx)
-		fmt.Println(read)
-		if writeerr != nil {
-			return hashName, err
-		}
-		f.Close()
-	}
-	if closer != nil {
-		closer.Close()
-	}
-	return hashName, nil
-}
-
-func downloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string, db *leveldb.DB) ([]byte, error) {
-	resp, err := http.Get(fmt.Sprintf("%s/d/%s", url, fid))
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	buff := bytes.NewBuffer([]byte{})
-	size, err := io.Copy(buff, resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	reader := bytes.NewReader(buff.Bytes())
-
-	hashName, err := writeFileToDisk(cmd, reader, reader, nil, size)
-	if err != nil {
-		return hashName, err
-	}
-
-	err = saveToDatabase(hashName, cid, db)
-	if err != nil {
-		return hashName, err
-	}
-
-	return hashName, nil
-}
-
-func saveToDatabase(hashName []byte, strcid string, db *leveldb.DB) error {
-	err := db.Put(makeDowntimeKey(strcid), []byte(fmt.Sprintf("%d", 0)), nil)
-	if err != nil {
-		fmt.Printf("Downtime Database Error: %v\n", err)
-		return err
-	}
-	derr := db.Put(makeFileKey(strcid), []byte(fmt.Sprintf("%x", hashName)), nil)
-	if derr != nil {
-		fmt.Printf("File Database Error: %v\n", derr)
-		return err
-	}
-
-	fmt.Printf("%s %s\n", fmt.Sprintf("%x", hashName), "Added to database")
-
-	_, cerr := db.Get(makeFileKey(strcid), nil)
-	if cerr != nil {
-		fmt.Printf("Hash Database Error: %s\n", cerr.Error())
-		return err
-	}
-
-	return nil
-}
-
-func (q *UploadQueue) saveFile(file multipart.File, handler *multipart.FileHeader, sender string, cmd *cobra.Command, db *leveldb.DB, w *http.ResponseWriter) error {
+func saveFile(file multipart.File, handler *multipart.FileHeader, sender string, cmd *cobra.Command, db *leveldb.DB, w *http.ResponseWriter, q *queue.UploadQueue) error {
 	size := handler.Size
 
-	hashName, err := writeFileToDisk(cmd, file, file, file, size)
+	hashName, err := utils.WriteFileToDisk(cmd, file, file, file, size)
 	if err != nil {
 		fmt.Printf("Write To Disk Error: %v\n", err)
 		return err
@@ -158,7 +63,10 @@ func (q *UploadQueue) saveFile(file multipart.File, handler *multipart.FileHeade
 
 	fid := fmt.Sprintf("%x", hashName)
 
-	io.WriteString(cidhash, fmt.Sprintf("%s%s%s", sender, ko.Address, fid))
+	_, err = io.WriteString(cidhash, fmt.Sprintf("%s%s%s", sender, ko.Address, fid))
+	if err != nil {
+		return err
+	}
 	cid := cidhash.Sum(nil)
 
 	strcid := fmt.Sprintf("%x", cid)
@@ -166,7 +74,7 @@ func (q *UploadQueue) saveFile(file multipart.File, handler *multipart.FileHeade
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	msg, ctrerr := q.makeContract(cmd, []string{fid, sender, "0"}, &wg)
+	msg, ctrerr := MakeContract(cmd, []string{fid, sender, "0"}, &wg, q)
 	if ctrerr != nil {
 		fmt.Printf("CONTRACT ERROR: %v\n", ctrerr)
 		return ctrerr
@@ -175,14 +83,14 @@ func (q *UploadQueue) saveFile(file multipart.File, handler *multipart.FileHeade
 
 	fmt.Printf("%x\n", hashName)
 
-	v := UploadResponse{
+	v := types.UploadResponse{
 		CID: strcid,
 		FID: fmt.Sprintf("%x", hashName),
 	}
 
 	if msg.Err != nil {
 		fmt.Println(msg.Err)
-		v := ErrorResponse{
+		v := types.ErrorResponse{
 			Error: msg.Err.Error(),
 		}
 		(*w).WriteHeader(http.StatusInternalServerError)
@@ -198,7 +106,7 @@ func (q *UploadQueue) saveFile(file multipart.File, handler *multipart.FileHeade
 	// cidhash := sha256.New()
 	// flags := cmd.Flag("from")
 
-	err = saveToDatabase(hashName, strcid, db)
+	err = utils.SaveToDatabase(hashName, strcid, db)
 	if err != nil {
 		return err
 	}
@@ -206,8 +114,11 @@ func (q *UploadQueue) saveFile(file multipart.File, handler *multipart.FileHeade
 	return nil
 }
 
-func (q *UploadQueue) makeContract(cmd *cobra.Command, args []string, wg *sync.WaitGroup) (*Upload, error) {
-	merkleroot, filesize, fid := HashData(cmd, args[0])
+func MakeContract(cmd *cobra.Command, args []string, wg *sync.WaitGroup, q *queue.UploadQueue) (*types.Upload, error) {
+	merkleroot, filesize, fid, err := HashData(cmd, args[0])
+	if err != nil {
+		return nil, err
+	}
 
 	clientCtx, err := client.GetClientTxContext(cmd)
 	if err != nil {
@@ -226,7 +137,7 @@ func (q *UploadQueue) makeContract(cmd *cobra.Command, args []string, wg *sync.W
 		return nil, err
 	}
 
-	u := Upload{
+	u := types.Upload{
 		Message:  msg,
 		Callback: wg,
 		Err:      nil,
@@ -240,10 +151,10 @@ func (q *UploadQueue) makeContract(cmd *cobra.Command, args []string, wg *sync.W
 	return k, nil
 }
 
-func HashData(cmd *cobra.Command, filename string) (string, string, string) {
+func HashData(cmd *cobra.Command, filename string) (string, string, string, error) {
 	file, err := cmd.Flags().GetString("storagedir")
 	if err != nil {
-		return "", "", ""
+		return "", "", "", err
 	}
 
 	path := fmt.Sprintf("%s/networkfiles/%s/", file, filename)
@@ -266,7 +177,10 @@ func HashData(cmd *cobra.Command, filename string) (string, string, string) {
 		size = size + len(dat)
 
 		h := sha256.New()
-		io.WriteString(h, fmt.Sprintf("%d%x", i, dat))
+		_, err = io.WriteString(h, fmt.Sprintf("%d%x", i, dat))
+		if err != nil {
+			return "", "", "", err
+		}
 		hashName := h.Sum(nil)
 
 		list = append(list, hashName)
@@ -278,7 +192,7 @@ func HashData(cmd *cobra.Command, filename string) (string, string, string) {
 		fmt.Printf("%v\n", err)
 	}
 
-	return hex.EncodeToString(t.Root()), fmt.Sprintf("%d", size), filename
+	return hex.EncodeToString(t.Root()), fmt.Sprintf("%d", size), filename, nil
 }
 
 func queryBlock(cmd *cobra.Command, cid string) (string, error) {
@@ -336,8 +250,6 @@ func StartFileServer(cmd *cobra.Command) {
 		return
 	}
 
-	fmt.Println(cmd.Flags().GetString(flags.FlagHome))
-
 	db, dberr := leveldb.OpenFile(fmt.Sprintf("%s/contracts/contractsdb", files), nil)
 	if dberr != nil {
 		fmt.Println(dberr)
@@ -345,19 +257,19 @@ func StartFileServer(cmd *cobra.Command) {
 	}
 	router := httprouter.New()
 
-	q := UploadQueue{
-		Queue:  make([]*Upload, 0),
+	q := queue.UploadQueue{
+		Queue:  make([]*types.Upload, 0),
 		Locked: false,
 	}
 
-	q.getRoutes(cmd, router, db)
-	q.postRoutes(cmd, router, db)
+	GetRoutes(cmd, router, db, &q)
+	PostRoutes(cmd, router, db, &q)
 
 	handler := cors.Default().Handler(router)
 
 	go postProofs(cmd, db, &q)
-	go q.startListener(clientCtx, cmd)
-	go q.checkStrays(clientCtx, cmd, db)
+	go q.StartListener(clientCtx, cmd)
+	go q.CheckStrays(clientCtx, cmd, db)
 
 	port, err := cmd.Flags().GetString("port")
 	if err != nil {

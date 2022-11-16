@@ -2,12 +2,10 @@ package main
 
 import (
 	"fmt"
-
-	cmd "github.com/JackalLabs/jackal-provider/cmd/jprovd"
 )
 
 func main() {
-	rootCmd := cmd.NewRootCmd()
+	rootCmd := NewRootCmd()
 
 	err := rootCmd.Execute()
 	if err != nil {

@@ -1,4 +1,4 @@
-package jprovd
+package utils
 
 import "fmt"
 
@@ -8,14 +8,14 @@ const (
 	DOWNTIME_KEY    = "DWNT-"
 )
 
-func makeUptimeKey(cid string) []byte {
+func MakeUptimeKey(cid string) []byte {
 	return []byte(fmt.Sprintf("%s%s", UPTIME_LEFT_KEY, cid))
 }
 
-func makeFileKey(cid string) []byte {
+func MakeFileKey(cid string) []byte {
 	return []byte(fmt.Sprintf("%s%s", FILE_KEY, cid))
 }
 
-func makeDowntimeKey(cid string) []byte {
+func MakeDowntimeKey(cid string) []byte {
 	return []byte(fmt.Sprintf("%s%s", DOWNTIME_KEY, cid))
 }

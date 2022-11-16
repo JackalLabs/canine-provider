@@ -1,4 +1,4 @@
-package jprovd
+package queue
 
 import (
 	"encoding/json"
@@ -10,16 +10,23 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/syndtr/goleveldb/leveldb"
 
-	"github.com/jackal-dao/canine/x/storage/types"
+	"github.com/JackalLabs/jackal-provider/jprovd/types"
+	"github.com/JackalLabs/jackal-provider/jprovd/utils"
+	storageTypes "github.com/jackal-dao/canine/x/storage/types"
 
 	ctypes "github.com/cosmos/cosmos-sdk/types"
 )
 
-func (q *UploadQueue) append(upload *Upload) {
+type UploadQueue struct {
+	Queue  []*types.Upload
+	Locked bool
+}
+
+func (q *UploadQueue) Append(upload *types.Upload) {
 	q.Queue = append(q.Queue, upload)
 }
 
-func (q *UploadQueue) checkStrays(clientCtx client.Context, cmd *cobra.Command, db *leveldb.DB) {
+func (q *UploadQueue) CheckStrays(clientCtx client.Context, cmd *cobra.Command, db *leveldb.DB) {
 	files, err := cmd.Flags().GetString("storagedir")
 	if err != nil {
 		return
@@ -28,9 +35,9 @@ func (q *UploadQueue) checkStrays(clientCtx client.Context, cmd *cobra.Command, 
 	for {
 		time.Sleep(time.Second)
 
-		qClient := types.NewQueryClient(clientCtx)
+		qClient := storageTypes.NewQueryClient(clientCtx)
 
-		res, err := qClient.StraysAll(cmd.Context(), &types.QueryAllStraysRequest{})
+		res, err := qClient.StraysAll(cmd.Context(), &storageTypes.QueryAllStraysRequest{})
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -48,7 +55,7 @@ func (q *UploadQueue) checkStrays(clientCtx client.Context, cmd *cobra.Command, 
 				continue
 			}
 
-			filesres, err := qClient.FindFile(cmd.Context(), &types.QueryFindFileRequest{Fid: stray.Fid})
+			filesres, err := qClient.FindFile(cmd.Context(), &storageTypes.QueryFindFileRequest{Fid: stray.Fid})
 			if err != nil {
 				fmt.Println(err)
 				continue
@@ -71,14 +78,14 @@ func (q *UploadQueue) checkStrays(clientCtx client.Context, cmd *cobra.Command, 
 				// return err
 			}
 
-			_, err = downloadFileFromURL(cmd, arr[0], stray.Fid, stray.Cid, db)
+			_, err = utils.DownloadFileFromURL(cmd, arr[0], stray.Fid, stray.Cid, db)
 			if err != nil {
 				fmt.Println(err)
 				continue
 				// return err
 			}
 
-			msg := types.NewMsgClaimStray(
+			msg := storageTypes.NewMsgClaimStray(
 				clientCtx.GetFromAddress().String(),
 				stray.Cid,
 			)
@@ -88,7 +95,7 @@ func (q *UploadQueue) checkStrays(clientCtx client.Context, cmd *cobra.Command, 
 				// return err
 			}
 
-			u := Upload{
+			u := types.Upload{
 				Message:  msg,
 				Callback: nil,
 				Err:      nil,
@@ -103,7 +110,7 @@ func (q *UploadQueue) checkStrays(clientCtx client.Context, cmd *cobra.Command, 
 	}
 }
 
-func (q *UploadQueue) startListener(clientCtx client.Context, cmd *cobra.Command) error {
+func (q *UploadQueue) StartListener(clientCtx client.Context, cmd *cobra.Command) {
 	for {
 		time.Sleep(time.Second * 2)
 
@@ -118,14 +125,14 @@ func (q *UploadQueue) startListener(clientCtx client.Context, cmd *cobra.Command
 		}
 
 		msg := make([]ctypes.Msg, 0)
-		uploads := make([]*Upload, 0)
+		uploads := make([]*types.Upload, 0)
 		for i := 0; i < l; i++ {
 			upload := q.Queue[i]
 			uploads = append(uploads, upload)
 			msg = append(msg, upload.Message)
 		}
 
-		res, err := SendTx(clientCtx, cmd.Flags(), msg...)
+		res, err := utils.SendTx(clientCtx, cmd.Flags(), msg...)
 		for _, v := range uploads {
 			if err != nil {
 				v.Err = err

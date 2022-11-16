@@ -1,4 +1,4 @@
-package jprovd
+package server
 
 import (
 	"crypto/sha256"
@@ -11,12 +11,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/JackalLabs/jackal-provider/jprovd/queue"
+	"github.com/JackalLabs/jackal-provider/jprovd/types"
+	"github.com/JackalLabs/jackal-provider/jprovd/utils"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/syndtr/goleveldb/leveldb"
 
 	"github.com/cosmos/cosmos-sdk/client"
 
-	"github.com/jackal-dao/canine/x/storage/types"
+	storagetypes "github.com/jackal-dao/canine/x/storage/types"
 
 	merkletree "github.com/wealdtech/go-merkletree"
 
@@ -47,7 +51,10 @@ func CreateMerkleForProof(cmd *cobra.Command, filename string, index int) (strin
 		}
 
 		h := sha256.New()
-		io.WriteString(h, fmt.Sprintf("%d%x", i, f))
+		_, err = io.WriteString(h, fmt.Sprintf("%d%x", i, f))
+		if err != nil {
+			return "", "", err
+		}
 		hashName := h.Sum(nil)
 
 		data = append(data, hashName)
@@ -59,7 +66,10 @@ func CreateMerkleForProof(cmd *cobra.Command, filename string, index int) (strin
 	}
 
 	h := sha256.New()
-	io.WriteString(h, fmt.Sprintf("%d%x", index, item))
+	_, err = io.WriteString(h, fmt.Sprintf("%d%x", index, item))
+	if err != nil {
+		return "", "", err
+	}
 	ditem := h.Sum(nil)
 
 	proof, err := tree.GenerateProof(ditem)
@@ -88,7 +98,7 @@ func CreateMerkleForProof(cmd *cobra.Command, filename string, index int) (strin
 	return fmt.Sprintf("%x", item), string(jproof), nil
 }
 
-func postProof(cmd *cobra.Command, cid string, block string, db *leveldb.DB, queue *UploadQueue) (*sdk.TxResponse, error) {
+func postProof(cmd *cobra.Command, cid string, block string, db *leveldb.DB, queue *queue.UploadQueue) (*sdk.TxResponse, error) {
 	clientCtx, err := client.GetClientTxContext(cmd)
 	if err != nil {
 		return nil, err
@@ -99,7 +109,7 @@ func postProof(cmd *cobra.Command, cid string, block string, db *leveldb.DB, que
 		return nil, err
 	}
 
-	data, err := db.Get(makeFileKey(cid), nil)
+	data, err := db.Get(utils.MakeFileKey(cid), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +119,7 @@ func postProof(cmd *cobra.Command, cid string, block string, db *leveldb.DB, que
 		return nil, err
 	}
 
-	msg := types.NewMsgPostproof(
+	msg := storagetypes.NewMsgPostproof(
 		clientCtx.GetFromAddress().String(),
 		item,
 		hashlist,
@@ -122,20 +132,20 @@ func postProof(cmd *cobra.Command, cid string, block string, db *leveldb.DB, que
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	u := Upload{
+	u := types.Upload{
 		Message:  msg,
 		Err:      nil,
 		Callback: &wg,
 		Response: nil,
 	}
 
-	queue.append(&u)
+	queue.Append(&u)
 	wg.Wait()
 
 	return u.Response, u.Err
 }
 
-func postProofs(cmd *cobra.Command, db *leveldb.DB, queue *UploadQueue) {
+func postProofs(cmd *cobra.Command, db *leveldb.DB, queue *queue.UploadQueue) {
 	debug, err := cmd.Flags().GetBool("debug")
 	if err != nil {
 		return
@@ -157,11 +167,11 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, queue *UploadQueue) {
 			cid := string(iter.Key())
 			value := string(iter.Value())
 
-			if cid[:len(FILE_KEY)] != FILE_KEY {
+			if cid[:len(utils.FILE_KEY)] != utils.FILE_KEY {
 				continue
 			}
 
-			cid = cid[len(FILE_KEY):]
+			cid = cid[len(utils.FILE_KEY):]
 
 			if debug {
 				fmt.Printf("filename: %s\n", value)
@@ -177,7 +187,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, queue *UploadQueue) {
 				fmt.Printf("ERROR: %v\n", verr)
 				fmt.Println(verr.Error())
 
-				val, err := db.Get(makeDowntimeKey(cid), nil)
+				val, err := db.Get(utils.MakeDowntimeKey(cid), nil)
 				newval := 0
 				if err == nil {
 					newval, err = strconv.Atoi(string(val))
@@ -190,11 +200,11 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, queue *UploadQueue) {
 
 				if newval > 8 {
 					os.RemoveAll(fmt.Sprintf("%s/networkfiles/%s", files, cid))
-					err = db.Delete(makeFileKey(cid), nil)
+					err = db.Delete(utils.MakeFileKey(cid), nil)
 					if err != nil {
 						continue
 					}
-					err = db.Delete(makeDowntimeKey(cid), nil)
+					err = db.Delete(utils.MakeDowntimeKey(cid), nil)
 					if err != nil {
 						continue
 					}
@@ -205,7 +215,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, queue *UploadQueue) {
 					continue
 				}
 
-				err = db.Put(makeDowntimeKey(cid), []byte(fmt.Sprintf("%d", newval)), nil)
+				err = db.Put(utils.MakeDowntimeKey(cid), []byte(fmt.Sprintf("%d", newval)), nil)
 				if err != nil {
 					continue
 				}

@@ -1,4 +1,4 @@
-package jprovd
+package server
 
 import (
 	"github.com/cosmos/cosmos-sdk/client/flags"

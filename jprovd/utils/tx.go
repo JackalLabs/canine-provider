@@ -1,4 +1,4 @@
-package jprovd
+package utils
 
 import (
 	"bufio"

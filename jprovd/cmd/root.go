@@ -1,6 +1,7 @@
-package jprovd
+package main
 
 import (
+	"github.com/JackalLabs/jackal-provider/jprovd/server"
 	"github.com/spf13/cobra"
 )
 
@@ -11,7 +12,7 @@ func NewRootCmd() *cobra.Command {
 		Long:  "Jackal Lab's implimentation of a Jackal Protocol Storage Provider system.",
 	}
 
-	rootCmd.AddCommand(StartServer())
+	rootCmd.AddCommand(server.StartServer())
 
 	return rootCmd
 }
