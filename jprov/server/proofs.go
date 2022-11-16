@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/JackalLabs/jackal-provider/jprovd/queue"
-	"github.com/JackalLabs/jackal-provider/jprovd/types"
-	"github.com/JackalLabs/jackal-provider/jprovd/utils"
+	"github.com/JackalLabs/jackal-provider/jprov/queue"
+	"github.com/JackalLabs/jackal-provider/jprov/types"
+	"github.com/JackalLabs/jackal-provider/jprov/utils"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/syndtr/goleveldb/leveldb"

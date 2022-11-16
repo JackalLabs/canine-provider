@@ -10,8 +10,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/syndtr/goleveldb/leveldb"
 
-	"github.com/JackalLabs/jackal-provider/jprovd/types"
-	"github.com/JackalLabs/jackal-provider/jprovd/utils"
+	"github.com/JackalLabs/jackal-provider/jprov/types"
+	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	storageTypes "github.com/jackal-dao/canine/x/storage/types"
 
 	ctypes "github.com/cosmos/cosmos-sdk/types"

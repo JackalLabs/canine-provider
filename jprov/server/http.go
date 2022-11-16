@@ -12,9 +12,9 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
-	api "github.com/JackalLabs/jackal-provider/jprovd/api"
-	"github.com/JackalLabs/jackal-provider/jprovd/queue"
-	types "github.com/JackalLabs/jackal-provider/jprovd/types"
+	api "github.com/JackalLabs/jackal-provider/jprov/api"
+	"github.com/JackalLabs/jackal-provider/jprov/queue"
+	types "github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/spf13/cobra"
 )
 

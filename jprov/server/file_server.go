@@ -15,9 +15,9 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/JackalLabs/jackal-provider/jprovd/queue"
-	"github.com/JackalLabs/jackal-provider/jprovd/types"
-	"github.com/JackalLabs/jackal-provider/jprovd/utils"
+	"github.com/JackalLabs/jackal-provider/jprov/queue"
+	"github.com/JackalLabs/jackal-provider/jprov/types"
+	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/rs/cors"
 	"github.com/syndtr/goleveldb/leveldb"

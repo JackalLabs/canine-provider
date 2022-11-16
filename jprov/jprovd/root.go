@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/JackalLabs/jackal-provider/jprovd/server"
+	"github.com/JackalLabs/jackal-provider/jprov/server"
 	"github.com/spf13/cobra"
 )
 

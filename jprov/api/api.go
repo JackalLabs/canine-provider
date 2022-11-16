@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/JackalLabs/jackal-provider/jprovd/queue"
-	"github.com/JackalLabs/jackal-provider/jprovd/types"
+	"github.com/JackalLabs/jackal-provider/jprov/queue"
+	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	storagetypes "github.com/jackal-dao/canine/x/storage/types"

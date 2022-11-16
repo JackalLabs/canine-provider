@@ -82,7 +82,7 @@ build: go.sum
 ifeq ($(OS),Windows_NT)
 	exit 1
 else
-	go build -mod=readonly $(BUILD_FLAGS) -o build/jprovd ./cmd/jprovd
+	go build -mod=readonly $(BUILD_FLAGS) -o build/jprovd ./jprov/jprovd
 endif
 
 install: go.sum
