@@ -48,7 +48,7 @@ func checkVersion(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 }
 
 func downfil(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	file, err := cmd.Flags().GetString("storagedir")
+	file, err := cmd.Flags().GetString(types.DataDir)
 	if err != nil {
 		return
 	}

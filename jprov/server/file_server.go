@@ -152,7 +152,7 @@ func MakeContract(cmd *cobra.Command, args []string, wg *sync.WaitGroup, q *queu
 }
 
 func HashData(cmd *cobra.Command, filename string) (string, string, string, error) {
-	file, err := cmd.Flags().GetString("storagedir")
+	file, err := cmd.Flags().GetString(types.DataDir)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -245,12 +245,17 @@ func StartFileServer(cmd *cobra.Command) {
 		return
 	}
 
-	files, err := cmd.Flags().GetString("storagedir")
+	files, err := cmd.Flags().GetString(types.DataDir)
 	if err != nil {
 		return
 	}
 
-	db, dberr := leveldb.OpenFile(fmt.Sprintf("%s/contracts/contractsdb", files), nil)
+	path, err := filepath.Abs(fmt.Sprintf("%s/contracts/contractsdb", files))
+	if err != nil {
+		return
+	}
+
+	db, dberr := leveldb.OpenFile(path, nil)
 	if dberr != nil {
 		fmt.Println(dberr)
 		return

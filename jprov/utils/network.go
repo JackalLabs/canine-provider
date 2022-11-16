@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/spf13/cobra"
 	"github.com/syndtr/goleveldb/leveldb"
 )
@@ -48,7 +49,7 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 	}
 	hashName := h.Sum(nil)
 
-	files, err := cmd.Flags().GetString("storagedir")
+	files, err := cmd.Flags().GetString(types.DataDir)
 	if err != nil {
 		return nil, err
 	}

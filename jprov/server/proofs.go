@@ -28,7 +28,7 @@ import (
 )
 
 func CreateMerkleForProof(cmd *cobra.Command, filename string, index int) (string, string, error) {
-	file, err := cmd.Flags().GetString("storagedir")
+	file, err := cmd.Flags().GetString(types.DataDir)
 	if err != nil {
 		return "", "", err
 	}
@@ -155,7 +155,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, queue *queue.UploadQueue) {
 		return
 	}
 
-	files, err := cmd.Flags().GetString("storagedir")
+	files, err := cmd.Flags().GetString(types.DataDir)
 	if err != nil {
 		return
 	}

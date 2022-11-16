@@ -27,7 +27,7 @@ func (q *UploadQueue) Append(upload *types.Upload) {
 }
 
 func (q *UploadQueue) CheckStrays(clientCtx client.Context, cmd *cobra.Command, db *leveldb.DB) {
-	files, err := cmd.Flags().GetString("storagedir")
+	files, err := cmd.Flags().GetString(types.DataDir)
 	if err != nil {
 		return
 	}
