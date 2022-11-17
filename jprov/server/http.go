@@ -122,10 +122,9 @@ func fileUpload(w *http.ResponseWriter, r *http.Request, ps httprouter.Params, c
 		}
 		return
 	}
-	file, handler, err := r.FormFile("file") // Retrieve the file from form data
-
 	sender := r.Form.Get("sender")
 
+	file, handler, err := r.FormFile("file") // Retrieve the file from form data
 	if err != nil {
 		fmt.Printf("Error with form file!\n")
 		v := types.ErrorResponse{

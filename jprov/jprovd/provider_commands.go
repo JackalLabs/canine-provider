@@ -1,7 +1,9 @@
-package server
+package main
 
 import (
+	"github.com/JackalLabs/jackal-provider/jprov/server"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 
 	"github.com/spf13/cobra"
 )
@@ -13,12 +15,12 @@ func StartServer() *cobra.Command {
 		Long:  `Start jackal storage provider`,
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			StartFileServer(cmd)
+			server.StartFileServer(cmd)
 			return nil
 		},
 	}
 
-	// flags.AddTxFlagsToCmd(cmd)
+	flags.AddTxFlagsToCmd(cmd)
 	cmd.Flags().String(types.DataDir, types.DefaultAppHome, "Data folder for the Jackal Storage Provider.")
 	cmd.Flags().String("port", "3333", "Port to host the server on.")
 	cmd.Flags().Bool("debug", false, "Allow the printing of info messages from the Storage Provider.")

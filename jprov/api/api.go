@@ -1,158 +1,37 @@
-package jprovd
+package api
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
 	"net/http"
-	"os"
 
+	"github.com/JackalLabs/jackal-provider/jprov/api/client"
+	"github.com/JackalLabs/jackal-provider/jprov/api/data"
+	"github.com/JackalLabs/jackal-provider/jprov/api/network"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
-	"github.com/JackalLabs/jackal-provider/jprov/types"
-	"github.com/cosmos/cosmos-sdk/client"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	storagetypes "github.com/jackal-dao/canine/x/storage/types"
+
 	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/cobra"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
-func listqueue(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps httprouter.Params, q *queue.UploadQueue) {
-	messages := make([]sdk.Msg, 0)
-
-	for _, v := range q.Queue {
-		messages = append(messages, v.Message)
-	}
-
-	v := types.QueueResponse{
-		Messages: messages,
-	}
-
-	err := json.NewEncoder(w).Encode(v)
-	if err != nil {
-		fmt.Println(err)
-	}
-}
-
-func listFiles(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	file, err := cmd.Flags().GetString(types.DataDir)
-	if err != nil {
-		return
-	}
-
-	files, _ := os.ReadDir(fmt.Sprintf("%s/networkfiles/%s/", file, ps.ByName("file")))
-
-	var fileNames []string = make([]string, 0)
-
-	for _, f := range files {
-		fileNames = append(fileNames, f.Name())
-	}
-
-	v := types.ListResponse{
-		Files: fileNames,
-	}
-
-	err = json.NewEncoder(w).Encode(v)
-	if err != nil {
-		fmt.Println(err)
-	}
-}
-
-func dumpdb(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps httprouter.Params, db *leveldb.DB) {
-	data := make([]types.DataBlock, 0)
-	iter := db.NewIterator(nil, nil)
-
-	for iter.Next() {
-		d := types.DataBlock{
-			Key:   string(iter.Key()),
-			Value: string(iter.Value()),
-		}
-		data = append(data, d)
-	}
-
-	v := types.DBResponse{
-		Data: data,
-	}
-
-	err := json.NewEncoder(w).Encode(v)
-	if err != nil {
-		fmt.Println(err)
-	}
-}
-
-func showDeals(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps httprouter.Params, db *leveldb.DB) {
-	clientCtx, err := client.GetClientTxContext(cmd)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	queryClient := storagetypes.NewQueryClient(clientCtx)
-
-	params := &storagetypes.QueryAllActiveDealsRequest{}
-
-	res, err := queryClient.ActiveDealsAll(context.Background(), params)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	v := types.DealsResponse{
-		Deals: res.ActiveDeals,
-	}
-
-	err = json.NewEncoder(w).Encode(v)
-	if err != nil {
-		fmt.Println(err)
-	}
-}
-
-func showStrays(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps httprouter.Params, db *leveldb.DB) {
-	clientCtx, err := client.GetClientTxContext(cmd)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	queryClient := storagetypes.NewQueryClient(clientCtx)
-
-	params := &storagetypes.QueryAllStraysRequest{}
-
-	res, err := queryClient.StraysAll(context.Background(), params)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	v := types.StraysResponse{
-		Strays: res.Strays,
-	}
-
-	err = json.NewEncoder(w).Encode(v)
-	if err != nil {
-		fmt.Println(err)
-	}
-}
-
 func BuildApi(cmd *cobra.Command, q *queue.UploadQueue, router *httprouter.Router, db *leveldb.DB) {
 	lres := func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		listFiles(cmd, w, r, ps)
+		client.ListFiles(cmd, w, r, ps)
 	}
 
 	queue := func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		listqueue(cmd, w, r, ps, q)
+		client.ListQueue(cmd, w, r, ps, q)
 	}
 
 	dumpdb := func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		dumpdb(cmd, w, r, ps, db)
+		data.DumpDB(cmd, w, r, ps, db)
 	}
 
 	dealreq := func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		showDeals(cmd, w, r, ps, db)
+		network.ShowDeals(cmd, w, r, ps, db)
 	}
 
 	straysreq := func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		showStrays(cmd, w, r, ps, db)
+		network.ShowStrays(cmd, w, r, ps, db)
 	}
 
 	// CLIENT

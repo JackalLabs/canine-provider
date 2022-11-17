@@ -20,7 +20,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 
-	storagetypes "github.com/jackal-dao/canine/x/storage/types"
+	storagetypes "github.com/jackalLabs/canine-chain/x/storage/types"
 
 	merkletree "github.com/wealdtech/go-merkletree"
 

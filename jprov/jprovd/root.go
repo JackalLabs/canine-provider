@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 
-	fserver "github.com/JackalLabs/jackal-provider/jprov/server"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/config"
@@ -13,7 +12,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/jackal-dao/canine/app"
+	"github.com/jackalLabs/canine-chain/app"
+	storcli "github.com/jackalLabs/canine-chain/x/storage/client/cli"
+
 	"github.com/spf13/cobra"
 )
 
@@ -64,7 +65,7 @@ func NewRootCmd() *cobra.Command {
 		},
 	}
 
-	rootCmd.AddCommand(fserver.StartServer(), keys.Commands(types.DefaultAppHome), rpc.StatusCommand())
+	rootCmd.AddCommand(StartServer(), keys.Commands(types.DefaultAppHome), rpc.StatusCommand(), storcli.CmdInitProvider())
 
 	return rootCmd
 }

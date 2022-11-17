@@ -12,7 +12,7 @@ import (
 
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
-	storageTypes "github.com/jackal-dao/canine/x/storage/types"
+	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
 
 	ctypes "github.com/cosmos/cosmos-sdk/types"
 )

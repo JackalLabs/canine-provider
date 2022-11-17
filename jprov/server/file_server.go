@@ -24,7 +24,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 
-	storageTypes "github.com/jackal-dao/canine/x/storage/types"
+	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
 
 	"github.com/julienschmidt/httprouter"
 	merkletree "github.com/wealdtech/go-merkletree"
@@ -35,7 +35,7 @@ import (
 func saveFile(file multipart.File, handler *multipart.FileHeader, sender string, cmd *cobra.Command, db *leveldb.DB, w *http.ResponseWriter, q *queue.UploadQueue) error {
 	size := handler.Size
 
-	hashName, err := utils.WriteFileToDisk(cmd, file, file, file, size)
+	fid, err := utils.WriteFileToDisk(cmd, file, file, file, size)
 	if err != nil {
 		fmt.Printf("Write To Disk Error: %v\n", err)
 		return err
@@ -61,31 +61,29 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 
 	cidhash := sha256.New()
 
-	fid := fmt.Sprintf("%x", hashName)
-
 	_, err = io.WriteString(cidhash, fmt.Sprintf("%s%s%s", sender, ko.Address, fid))
 	if err != nil {
 		return err
 	}
 	cid := cidhash.Sum(nil)
-
-	strcid := fmt.Sprintf("%x", cid)
+	strcid, err := utils.MakeCid(cid)
+	if err != nil {
+		return err
+	}
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	msg, ctrerr := MakeContract(cmd, []string{fid, sender, "0"}, &wg, q)
+	msg, ctrerr := MakeContract(cmd, fid, sender, &wg, q)
 	if ctrerr != nil {
 		fmt.Printf("CONTRACT ERROR: %v\n", ctrerr)
 		return ctrerr
 	}
 	wg.Wait()
 
-	fmt.Printf("%x\n", hashName)
-
 	v := types.UploadResponse{
 		CID: strcid,
-		FID: fmt.Sprintf("%x", hashName),
+		FID: fid,
 	}
 
 	if msg.Err != nil {
@@ -103,10 +101,8 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 		fmt.Printf("Json Encode Error: %v\n", err)
 		return err
 	}
-	// cidhash := sha256.New()
-	// flags := cmd.Flag("from")
 
-	err = utils.SaveToDatabase(hashName, strcid, db)
+	err = utils.SaveToDatabase(fid, strcid, db)
 	if err != nil {
 		return err
 	}
@@ -114,8 +110,8 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	return nil
 }
 
-func MakeContract(cmd *cobra.Command, args []string, wg *sync.WaitGroup, q *queue.UploadQueue) (*types.Upload, error) {
-	merkleroot, filesize, fid, err := HashData(cmd, args[0])
+func MakeContract(cmd *cobra.Command, fid string, sender string, wg *sync.WaitGroup, q *queue.UploadQueue) (*types.Upload, error) {
+	merkleroot, filesize, err := HashData(cmd, fid, sender)
 	if err != nil {
 		return nil, err
 	}
@@ -127,8 +123,7 @@ func MakeContract(cmd *cobra.Command, args []string, wg *sync.WaitGroup, q *queu
 
 	msg := storageTypes.NewMsgPostContract(
 		clientCtx.GetFromAddress().String(),
-		args[1],
-		args[2],
+		sender,
 		filesize,
 		fid,
 		merkleroot,
@@ -151,13 +146,13 @@ func MakeContract(cmd *cobra.Command, args []string, wg *sync.WaitGroup, q *queu
 	return k, nil
 }
 
-func HashData(cmd *cobra.Command, filename string) (string, string, string, error) {
+func HashData(cmd *cobra.Command, fid string, sender string) (string, string, error) {
 	file, err := cmd.Flags().GetString(types.DataDir)
 	if err != nil {
-		return "", "", "", err
+		return "", "", err
 	}
 
-	path := fmt.Sprintf("%s/networkfiles/%s/", file, filename)
+	path := fmt.Sprintf("%s/networkfiles/%s/", file, fid)
 	files, err := os.ReadDir(filepath.Clean(path))
 	if err != nil {
 		fmt.Printf("%v\n", err)
@@ -167,7 +162,7 @@ func HashData(cmd *cobra.Command, filename string) (string, string, string, erro
 
 	for i := 0; i < len(files); i++ {
 
-		path := fmt.Sprintf("%s/networkfiles/%s/%d.jkl", file, filename, i)
+		path := fmt.Sprintf("%s/networkfiles/%s/%d.jkl", file, fid, i)
 
 		dat, err := os.ReadFile(filepath.Clean(path))
 		if err != nil {
@@ -179,7 +174,7 @@ func HashData(cmd *cobra.Command, filename string) (string, string, string, erro
 		h := sha256.New()
 		_, err = io.WriteString(h, fmt.Sprintf("%d%x", i, dat))
 		if err != nil {
-			return "", "", "", err
+			return "", "", err
 		}
 		hashName := h.Sum(nil)
 
@@ -192,7 +187,7 @@ func HashData(cmd *cobra.Command, filename string) (string, string, string, erro
 		fmt.Printf("%v\n", err)
 	}
 
-	return hex.EncodeToString(t.Root()), fmt.Sprintf("%d", size), filename, nil
+	return hex.EncodeToString(t.Root()), fmt.Sprintf("%d", size), nil
 }
 
 func queryBlock(cmd *cobra.Command, cid string) (string, error) {
@@ -282,7 +277,7 @@ func StartFileServer(cmd *cobra.Command) {
 		return
 	}
 
-	fmt.Printf("🌍 Storage Provider: http://0.0.0.0:%s\n", port)
+	fmt.Printf("🌍 Started Provider: http://0.0.0.0:%s\n", port)
 	err = http.ListenAndServe(fmt.Sprintf("0.0.0.0:%s", port), handler)
 	if err != nil {
 		fmt.Println(err)
