@@ -65,7 +65,13 @@ func NewRootCmd() *cobra.Command {
 		},
 	}
 
-	rootCmd.AddCommand(StartServer(), keys.Commands(types.DefaultAppHome), rpc.StatusCommand(), storcli.CmdInitProvider())
+	rootCmd.AddCommand(
+		StartServer(),
+		keys.Commands(types.DefaultAppHome),
+		rpc.StatusCommand(),
+		storcli.CmdInitProvider(),
+		config.Cmd(),
+	)
 
 	return rootCmd
 }
