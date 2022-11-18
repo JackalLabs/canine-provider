@@ -8,7 +8,7 @@ import (
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 
-	"github.com/JackalLabs/jackal-provider/jprov/types"
+	"github.com/JackalLabs/jackal-provider/jprov/api/types"
 	storagetypes "github.com/jackalLabs/canine-chain/x/storage/types"
 	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/cobra"

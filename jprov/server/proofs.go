@@ -88,11 +88,11 @@ func CreateMerkleForProof(cmd *cobra.Command, filename string, index int) (strin
 
 	verified, err := merkletree.VerifyProof(ditem, proof, k)
 	if err != nil {
-		fmt.Printf("%v\n", err)
+		fmt.Println(err)
 	}
 
 	if !verified {
-		fmt.Printf("%s\n", "Cannot verify")
+		fmt.Println("Cannot verify")
 	}
 
 	return fmt.Sprintf("%x", item), string(jproof), nil
@@ -160,6 +160,8 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, queue *queue.UploadQueue) {
 		return
 	}
 
+	const maxMisses = 8
+
 	for {
 
 		iter := db.NewIterator(nil, nil)
@@ -195,10 +197,10 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, queue *queue.UploadQueue) {
 						continue
 					}
 				}
-				fmt.Printf("filemissdex: %d\n", newval)
+				fmt.Printf("File will be removed in %d cycles\n", maxMisses-newval)
 				newval += 1
 
-				if newval > 8 {
+				if newval > maxMisses {
 					os.RemoveAll(fmt.Sprintf("%s/networkfiles/%s", files, cid))
 					err = db.Delete(utils.MakeFileKey(cid), nil)
 					if err != nil {
@@ -224,7 +226,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, queue *queue.UploadQueue) {
 
 			if ver {
 				if debug {
-					fmt.Printf("%s\n", "Skipping file as it's already verified.")
+					fmt.Println("Skipping file as it's already verified.")
 				}
 				continue
 			}

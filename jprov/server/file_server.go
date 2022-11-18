@@ -155,7 +155,7 @@ func HashData(cmd *cobra.Command, fid string, sender string) (string, string, er
 	path := fmt.Sprintf("%s/networkfiles/%s/", file, fid)
 	files, err := os.ReadDir(filepath.Clean(path))
 	if err != nil {
-		fmt.Printf("%v\n", err)
+		fmt.Println(err)
 	}
 	size := 0
 	var list [][]byte
@@ -166,7 +166,7 @@ func HashData(cmd *cobra.Command, fid string, sender string) (string, string, er
 
 		dat, err := os.ReadFile(filepath.Clean(path))
 		if err != nil {
-			fmt.Printf("%v\n", err)
+			fmt.Println(err)
 		}
 
 		size = size + len(dat)
@@ -184,7 +184,7 @@ func HashData(cmd *cobra.Command, fid string, sender string) (string, string, er
 
 	t, err := merkletree.New(list)
 	if err != nil {
-		fmt.Printf("%v\n", err)
+		fmt.Println(err)
 	}
 
 	return hex.EncodeToString(t.Root()), fmt.Sprintf("%d", size), nil

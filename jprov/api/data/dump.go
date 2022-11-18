@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/JackalLabs/jackal-provider/jprov/types"
+	"github.com/JackalLabs/jackal-provider/jprov/api/types"
 	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/cobra"
 	"github.com/syndtr/goleveldb/leveldb"

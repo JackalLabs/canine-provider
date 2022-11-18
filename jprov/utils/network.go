@@ -42,8 +42,13 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 }
 
 func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, closer io.Closer, size int64) (string, error) {
+	debug, err := cmd.Flags().GetBool("debug")
+	if err != nil {
+		return "", err
+	}
+
 	h := sha256.New()
-	_, err := io.Copy(h, reader)
+	_, err = io.Copy(h, reader)
 	if err != nil {
 		return "", err
 	}
@@ -75,14 +80,14 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 
 		firstx := make([]byte, blocksize)
 		read, err := file.ReadAt(firstx, i)
-		fmt.Println(read)
+		if debug {
+			fmt.Printf("Bytes read: %d", read)
+		}
 		if err != nil && err != io.EOF {
 			return fid, err
 		}
 		firstx = firstx[:read]
-		// fmt.Printf(": %s :\n", string(firstx))
-		read, writeerr := f.Write(firstx)
-		fmt.Println(read)
+		_, writeerr := f.Write(firstx)
 		if writeerr != nil {
 			return fid, err
 		}

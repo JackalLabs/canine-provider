@@ -14,36 +14,27 @@ import (
 )
 
 func BuildApi(cmd *cobra.Command, q *queue.UploadQueue, router *httprouter.Router, db *leveldb.DB) {
-	lres := func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		client.ListFiles(cmd, w, r, ps)
-	}
-
-	queue := func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		client.ListQueue(cmd, w, r, ps, q)
-	}
-
-	dumpdb := func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		data.DumpDB(cmd, w, r, ps, db)
-	}
-
-	dealreq := func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		network.ShowDeals(cmd, w, r, ps, db)
-	}
-
-	straysreq := func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		network.ShowStrays(cmd, w, r, ps, db)
-	}
-
 	// CLIENT
-	router.GET("/api/client/list", lres)
-	router.GET("/api/client/l", lres)
-	router.GET("/api/client/queue", queue)
-	router.GET("/api/client/q", queue)
+	router.GET("/api/client/list", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		client.ListFiles(cmd, w, r, ps)
+	})
+	router.GET("/api/client/queue", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		client.ListQueue(cmd, w, r, ps, q)
+	})
 
 	// DATA
-	router.GET("/api/data/dump", dumpdb)
+	router.GET("/api/data/dump", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		data.DumpDB(cmd, w, r, ps, db)
+	})
 
 	// NETWORK
-	router.GET("/api/network/deals", dealreq)
-	router.GET("/api/network/strays", straysreq)
+	router.GET("/api/network/deals", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		network.ShowDeals(cmd, w, r, ps, db)
+	})
+	router.GET("/api/network/strays", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		network.ShowStrays(cmd, w, r, ps, db)
+	})
+	router.GET("/api/network/balance", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		network.GetBalance(cmd, w, r, ps)
+	})
 }

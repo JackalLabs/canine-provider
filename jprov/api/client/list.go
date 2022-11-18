@@ -6,10 +6,11 @@ import (
 	"net/http"
 	"os"
 
+	provtypes "github.com/JackalLabs/jackal-provider/jprov/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/JackalLabs/jackal-provider/jprov/api/types"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
-	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/cobra"
 )
@@ -32,7 +33,7 @@ func ListQueue(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps ht
 }
 
 func ListFiles(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	file, err := cmd.Flags().GetString(types.DataDir)
+	file, err := cmd.Flags().GetString(provtypes.DataDir)
 	if err != nil {
 		return
 	}
