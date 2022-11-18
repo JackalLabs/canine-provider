@@ -147,7 +147,7 @@ replace (
 	// use cosmos-flavored protobufs
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
-	github.com/jackalLabs/canine-chain v1.2.0-alpha.1 => /Users/marstonconnell/Documents/GitHub/canine-chain
+	github.com/jackalLabs/canine-chain v1.2.0-alpha.1 => github.com/jackalLabs/canine-chain v1.2.0-alpha.1.0.20221118014755-7e0773534039
 	// use grpc compatible with cosmos-flavored protobufs
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
 
