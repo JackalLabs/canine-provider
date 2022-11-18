@@ -55,8 +55,8 @@ build_tags_comma_sep := $(subst $(empty),$(comma),$(build_tags))
 
 # process linker flags
 
-ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=canine \
-		  -X github.com/cosmos/cosmos-sdk/version.AppName=canined \
+ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=jprov \
+		  -X github.com/cosmos/cosmos-sdk/version.AppName=jprovd \
 		  -X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
 		  -X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
 		  -X github.com/jackalLabs/canine-chain/app.Bech32Prefix=jkl \
@@ -102,7 +102,7 @@ go.sum: go.mod
 draw-deps:
 	@# requires brew install graphviz or apt-get install graphviz
 	go get github.com/RobotsAndPencils/goviz
-	@goviz -i ./cmd/canined -d 2 | dot -Tpng -o dependency-graph.png
+	@goviz -i ./cmd/jprovd -d 2 | dot -Tpng -o dependency-graph.png
 
 clean:
 	rm -rf snapcraft-local.yaml build/
