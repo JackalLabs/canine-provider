@@ -37,8 +37,8 @@ Files can be uploaded through a POST request to `localhost:3333/upload` with for
 The response will be a JSON response formatted as:
 ```JSON
 {
-    "CID": "cid...",
-    "FID": "fid..."
+    "CID": "jklc1...",
+    "FID": "jklf1..."
 }
 ```
 
