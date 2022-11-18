@@ -15,7 +15,7 @@ var _ = strconv.Itoa(0)
 func CmdSetProviderKeybase() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set-key [keybase-identity]",
-		Short: "Broadcast message set-provider-ip",
+		Short: "Set providers keybase identity",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			argKey := args[0]

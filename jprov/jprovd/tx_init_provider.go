@@ -16,7 +16,7 @@ var _ = strconv.Itoa(0)
 func CmdInitProvider() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init [ip] [totalspace] [keybase-identity]",
-		Short: "init provider",
+		Short: "Init provider",
 		Long:  "Initialize a provider with given parameters.",
 		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {

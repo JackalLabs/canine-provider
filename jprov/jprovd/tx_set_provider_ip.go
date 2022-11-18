@@ -15,7 +15,7 @@ var _ = strconv.Itoa(0)
 func CmdSetProviderIP() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set-ip [ip]",
-		Short: "Set provider ip",
+		Short: "Set provider's ip address",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			argIP := args[0]

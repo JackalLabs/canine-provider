@@ -21,7 +21,7 @@ import (
 func StartServerCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "start",
-		Short: "start jackal storage provider",
+		Short: "Start jackal storage provider",
 		Long:  `Start the Jackal Storage Provider server with the specified port.`,
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -42,7 +42,7 @@ func StartServerCommand() *cobra.Command {
 func GenKeyCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "gen-key",
-		Short: "generate a private key",
+		Short: "Generate a new private key",
 		Long:  `Generate a new Jackal address and private key combination to interact with the blockchain.`,
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
