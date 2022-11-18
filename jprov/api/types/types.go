@@ -6,30 +6,36 @@ import (
 )
 
 type DataBlock struct {
-	Key   string
-	Value string
+	Key   string `json:"block_name"`
+	Value string `json:"block_data"`
 }
 
 type ListResponse struct {
-	Files []string
+	Files []string `json:"files"`
 }
 
 type QueueResponse struct {
-	Messages []sdk.Msg
+	Messages []sdk.Msg `json:"messages"`
 }
 
 type DBResponse struct {
-	Data []DataBlock
+	Data []DataBlock `json:"data"`
 }
 
 type DealsResponse struct {
-	Deals []storagetypes.ActiveDeals
+	Deals []storagetypes.ActiveDeals `json:"deals"`
 }
 
 type StraysResponse struct {
-	Strays []storagetypes.Strays
+	Strays []storagetypes.Strays `json:"strays"`
 }
 
 type BalanceResponse struct {
-	Balance *sdk.Coin
+	Balance *sdk.Coin `json:"balance"`
+}
+
+type SpaceResponse struct {
+	Total int64 `json:"total_space"`
+	Used  int64 `json:"used_space"`
+	Free  int64 `json:"free_space"`
 }

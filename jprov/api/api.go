@@ -21,6 +21,9 @@ func BuildApi(cmd *cobra.Command, q *queue.UploadQueue, router *httprouter.Route
 	router.GET("/api/client/queue", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		client.ListQueue(cmd, w, r, ps, q)
 	})
+	router.GET("/api/client/space", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		client.GetSpace(cmd, w, r, ps)
+	})
 
 	// DATA
 	router.GET("/api/data/dump", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
