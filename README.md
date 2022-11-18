@@ -1,3 +1,4 @@
+![Jackal Provider Cover](./assets/jklstorage.png)
 # Jackal Storage Provider
 
 ## Overview
