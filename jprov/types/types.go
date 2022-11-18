@@ -9,28 +9,28 @@ import (
 const MaxFileSize = 32 << 30
 
 type IndexResponse struct {
-	Status  string
-	Address string
+	Status  string `json:"status"`
+	Address string `json:"address"`
 }
 
 type UploadResponse struct {
-	CID string
-	FID string
+	CID string `json:"cid"`
+	FID string `json:"fid"`
 }
 
 type ErrorResponse struct {
-	Error string
+	Error string `json:"error"`
 }
 
 type VersionResponse struct {
-	Version string
+	Version string `json:"version"`
 }
 
 type Message interface{}
 
 type Upload struct {
-	Message  sdk.Msg
-	Callback *sync.WaitGroup
-	Err      error
-	Response *sdk.TxResponse
+	Message  sdk.Msg         `json:"message"`
+	Callback *sync.WaitGroup `json:"callback"`
+	Err      error           `json:"error"`
+	Response *sdk.TxResponse `json:"response"`
 }

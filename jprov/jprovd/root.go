@@ -7,13 +7,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/config"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/jackalLabs/canine-chain/app"
-	storcli "github.com/jackalLabs/canine-chain/x/storage/client/cli"
 
 	"github.com/spf13/cobra"
 )
@@ -66,12 +64,23 @@ func NewRootCmd() *cobra.Command {
 	}
 
 	rootCmd.AddCommand(
-		StartServer(),
-		keys.Commands(types.DefaultAppHome),
+		StartServerCommand(),
+		GenKeyCommand(),
 		rpc.StatusCommand(),
-		storcli.CmdInitProvider(),
 		config.Cmd(),
 	)
+
+	cmds := []*cobra.Command{
+		CmdSetProviderTotalspace(),
+		CmdSetProviderIP(),
+		CmdSetProviderKeybase(),
+		CmdInitProvider(),
+	}
+
+	for _, c := range cmds {
+		AddTxFlagsToCmd(c)
+		rootCmd.AddCommand(c)
+	}
 
 	return rootCmd
 }
