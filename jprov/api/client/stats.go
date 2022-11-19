@@ -12,6 +12,7 @@ import (
 	storagetypes "github.com/jackalLabs/canine-chain/x/storage/types"
 
 	"github.com/JackalLabs/jackal-provider/jprov/api/types"
+	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/cobra"
 )
@@ -24,9 +25,13 @@ func GetSpace(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps htt
 	}
 
 	queryClient := storagetypes.NewQueryClient(clientCtx)
-	address := clientCtx.GetFromAddress()
+	address, err := crypto.GetAddress(clientCtx)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	params := &storagetypes.QueryGetProvidersRequest{
-		Address: address.String(),
+		Address: address,
 	}
 	res, err := queryClient.Providers(context.Background(), params)
 	if err != nil {
@@ -37,7 +42,7 @@ func GetSpace(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps htt
 	totalSpace := res.Providers.Totalspace
 
 	fsparams := &storagetypes.QueryFreespaceRequest{
-		Address: address.String(),
+		Address: address,
 	}
 	fsres, err := queryClient.Freespace(context.Background(), fsparams)
 	if err != nil {

@@ -26,7 +26,7 @@ jobs:
         uses: github/codeql-action/init@v2
         with:
           languages: 'go'
-          queries: crypto-com/cosmos-sdk-codeql@main,security-and-quality
+          queries: security-and-quality
 
       - name: Autobuild
         uses: github/codeql-action/autobuild@v2

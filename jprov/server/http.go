@@ -13,6 +13,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 
 	api "github.com/JackalLabs/jackal-provider/jprov/api"
+	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
 	types "github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/spf13/cobra"
@@ -25,11 +26,15 @@ func indexres(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps htt
 		return
 	}
 
-	address := clientCtx.GetFromAddress()
+	address, err := crypto.GetAddress(clientCtx)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	v := types.IndexResponse{
 		Status:  "online",
-		Address: address.String(),
+		Address: address,
 	}
 	err = json.NewEncoder(w).Encode(v)
 	if err != nil {

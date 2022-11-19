@@ -1,20 +1,166 @@
 package main
 
 import (
+	"bytes"
+	"errors"
+	"fmt"
 	"os"
+	"strings"
+	"text/template"
 
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/config"
+	clientConfig "github.com/cosmos/cosmos-sdk/client/config"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
-	"github.com/cosmos/cosmos-sdk/server"
+
+	tmos "github.com/tendermint/tendermint/libs/os"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/jackalLabs/canine-chain/app"
+	tmcfg "github.com/tendermint/tendermint/config"
+	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 )
+
+type Context struct {
+	Viper  *viper.Viper
+	Config *Config
+	Logger tmlog.Logger
+}
+
+const ProviderContextKey = sdk.ContextKey("provider.context")
+
+var configTemplate *template.Template
+
+func bindFlags(basename string, cmd *cobra.Command, v *viper.Viper) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("bindFlags failed: %v", r)
+		}
+	}()
+
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		// Environment variables can't have dashes in them, so bind them to their equivalent
+		// keys with underscores, e.g. --favorite-color to STING_FAVORITE_COLOR
+		err = v.BindEnv(f.Name, fmt.Sprintf("%s_%s", basename, strings.ToUpper(strings.ReplaceAll(f.Name, "-", "_"))))
+		if err != nil {
+			panic(err)
+		}
+
+		err = v.BindPFlag(f.Name, f)
+		if err != nil {
+			panic(err)
+		}
+
+		// Apply the viper config value to the flag when the flag is not set and viper has a value
+		if !f.Changed && v.IsSet(f.Name) {
+			val := v.Get(f.Name)
+			err = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
+			if err != nil {
+				panic(err)
+			}
+		}
+	})
+
+	return err
+}
+
+func NewContext(v *viper.Viper, config *Config, logger tmlog.Logger) *Context {
+	return &Context{v, config, logger}
+}
+
+func NewDefaultContext() *Context {
+	return NewContext(
+		viper.New(),
+		DefaultConfig(),
+		tmlog.NewTMLogger(tmlog.NewSyncWriter(os.Stdout)),
+	)
+}
+
+func SetCmdServerContext(cmd *cobra.Command, serverCtx *Context) error {
+	v := cmd.Context().Value(ProviderContextKey)
+	if v == nil {
+		return errors.New("server context not set")
+	}
+
+	serverCtxPtr := v.(*Context)
+	*serverCtxPtr = *serverCtx
+
+	return nil
+}
+
+func DefaultBaseConfig() BaseConfig {
+	return BaseConfig{
+		LogLevel:  tmcfg.DefaultLogLevel,
+		LogFormat: tmcfg.LogFormatPlain,
+	}
+}
+
+// DefaultConfig returns a default configuration for a Tendermint node
+func DefaultConfig() *Config {
+	return &Config{
+		BaseConfig: DefaultBaseConfig(),
+	}
+}
+
+type BaseConfig struct {
+	// chainID is unexposed and immutable but here for convenience
+	//nolint:all
+	chainID string
+
+	// The root directory for all data.
+	// This should be set in viper so it can unmarshal into this struct
+	RootDir string `mapstructure:"home"`
+
+	LogLevel string `mapstructure:"log_level"`
+
+	// Output format: 'plain' (colored text) or 'json'
+	LogFormat string `mapstructure:"log_format"`
+}
+
+type Config struct {
+	BaseConfig `mapstructure:",squash"`
+}
+
+func (cfg BaseConfig) ValidateBasic() error {
+	switch cfg.LogFormat {
+	case tmcfg.LogFormatPlain, tmcfg.LogFormatJSON:
+	default:
+		return errors.New("unknown log_format (must be 'plain' or 'json')")
+	}
+	return nil
+}
+
+func (cfg *Config) ValidateBasic() error {
+	if err := cfg.BaseConfig.ValidateBasic(); err != nil {
+		return err
+	}
+
+	// if err := cfg.Instrumentation.ValidateBasic(); err != nil {
+	// 	return fmt.Errorf("error in [instrumentation] section: %w", err)
+	// }
+	return nil
+}
+
+func WriteConfigFile(configFilePath string, config *Config) {
+	var buffer bytes.Buffer
+
+	if err := configTemplate.Execute(&buffer, config); err != nil {
+		panic(err)
+	}
+
+	tmos.MustWriteFile(configFilePath, buffer.Bytes(), 0o644)
+}
+
+func (cfg *Config) SetRoot(root string) *Config {
+	cfg.BaseConfig.RootDir = root
+	return cfg
+}
 
 func NewRootCmd() *cobra.Command {
 	encodingConfig := app.MakeEncodingConfig()
@@ -50,7 +196,7 @@ func NewRootCmd() *cobra.Command {
 				return err
 			}
 
-			initClientCtx, err = config.ReadFromClientConfig(initClientCtx)
+			initClientCtx, err = clientConfig.ReadFromClientConfig(initClientCtx)
 			if err != nil {
 				return err
 			}
@@ -59,7 +205,9 @@ func NewRootCmd() *cobra.Command {
 				return err
 			}
 
-			return server.InterceptConfigsPreRunHandler(cmd, "", nil)
+			return nil
+
+			// return interceptConfigsPreRunHandler(cmd, "", nil)
 		},
 	}
 
@@ -67,7 +215,7 @@ func NewRootCmd() *cobra.Command {
 		StartServerCommand(),
 		GenKeyCommand(),
 		rpc.StatusCommand(),
-		config.Cmd(),
+		clientConfig.Cmd(),
 	)
 
 	cmds := []*cobra.Command{

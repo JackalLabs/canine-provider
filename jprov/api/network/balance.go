@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/JackalLabs/jackal-provider/jprov/api/types"
+	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/julienschmidt/httprouter"
@@ -21,11 +22,15 @@ func GetBalance(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps h
 	}
 
 	queryClient := banktypes.NewQueryClient(clientCtx)
-	address := clientCtx.GetFromAddress()
+	address, err := crypto.GetAddress(clientCtx)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	params := &banktypes.QueryBalanceRequest{
 		Denom:   "ujkl",
-		Address: address.String(),
+		Address: address,
 	}
 
 	res, err := queryClient.Balance(context.Background(), params)

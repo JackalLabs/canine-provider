@@ -4,11 +4,12 @@ go 1.19
 
 require (
 	github.com/cosmos/cosmos-sdk v0.45.11
-	github.com/jackalLabs/canine-chain v1.2.0-alpha.1
+	github.com/jackalLabs/canine-chain v1.2.0-alpha.3
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/rs/cors v1.8.2
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
+	github.com/spf13/viper v1.13.0
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/tendermint/tendermint v0.34.23
 	github.com/wealdtech/go-merkletree v1.0.0
@@ -108,7 +109,6 @@ require (
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	github.com/spf13/viper v1.13.0 // indirect
 	github.com/stretchr/testify v1.8.1 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
 	github.com/tendermint/btcd v0.1.1 // indirect
@@ -147,7 +147,7 @@ replace (
 	// use cosmos-flavored protobufs
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
-	github.com/jackalLabs/canine-chain v1.2.0-alpha.1 => github.com/jackalLabs/canine-chain v1.2.0-alpha.1.0.20221118200331-8b5fcc0a4443
+	// github.com/jackalLabs/canine-chain v1.2.0-alpha.1 => github.com/jackalLabs/canine-chain v1.2.0-alpha.1.0.20221118200331-8b5fcc0a4443
 	// use grpc compatible with cosmos-flavored protobufs
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
 

@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/syndtr/goleveldb/leveldb"
 
+	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
@@ -85,8 +86,14 @@ func (q *UploadQueue) CheckStrays(clientCtx client.Context, cmd *cobra.Command, 
 				// return err
 			}
 
+			address, err := crypto.GetAddress(clientCtx)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+
 			msg := storageTypes.NewMsgClaimStray(
-				clientCtx.GetFromAddress().String(),
+				address,
 				stray.Cid,
 			)
 			if err := msg.ValidateBasic(); err != nil {

@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
@@ -119,8 +120,14 @@ func postProof(cmd *cobra.Command, cid string, block string, db *leveldb.DB, que
 		return nil, err
 	}
 
+	address, err := crypto.GetAddress(clientCtx)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+
 	msg := storagetypes.NewMsgPostproof(
-		clientCtx.GetFromAddress().String(),
+		address,
 		item,
 		hashlist,
 		cid,

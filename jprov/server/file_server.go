@@ -15,10 +15,10 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/rs/cors"
 	"github.com/syndtr/goleveldb/leveldb"
 
@@ -46,22 +46,15 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 		return qerr
 	}
 
-	info, ierr := clientCtx.Keyring.Key(clientCtx.From)
-
-	if ierr != nil {
-		fmt.Printf("Inforing Error: %v\n", ierr)
-		return ierr
-	}
-
-	ko, err := keyring.MkAccKeyOutput(info)
+	address, err := crypto.GetAddress(clientCtx)
 	if err != nil {
-		fmt.Printf("Inforing Error: %v\n", ierr)
+		fmt.Println(err)
 		return err
 	}
 
 	cidhash := sha256.New()
 
-	_, err = io.WriteString(cidhash, fmt.Sprintf("%s%s%s", sender, ko.Address, fid))
+	_, err = io.WriteString(cidhash, fmt.Sprintf("%s%s%s", sender, address, fid))
 	if err != nil {
 		return err
 	}
@@ -121,8 +114,14 @@ func MakeContract(cmd *cobra.Command, fid string, sender string, wg *sync.WaitGr
 		return nil, err
 	}
 
+	address, err := crypto.GetAddress(clientCtx)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+
 	msg := storageTypes.NewMsgPostContract(
-		clientCtx.GetFromAddress().String(),
+		address,
 		sender,
 		filesize,
 		fid,
@@ -237,6 +236,25 @@ func StartFileServer(cmd *cobra.Command) {
 	clientCtx, qerr := client.GetClientTxContext(cmd)
 	if qerr != nil {
 		fmt.Println(qerr)
+		return
+	}
+
+	queryClient := storageTypes.NewQueryClient(clientCtx)
+
+	address, err := crypto.GetAddress(clientCtx)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	params := &storageTypes.QueryGetProvidersRequest{
+		Address: address,
+	}
+
+	_, err = queryClient.Providers(context.Background(), params)
+	if err != nil {
+		fmt.Println("Provider not initialized on the blockchain, or conneciton to the RPC node has been lost. Please make sure your RPC node is available then run `jprovd init` to fix this.")
+		// fmt.Println(err)
 		return
 	}
 
