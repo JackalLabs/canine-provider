@@ -3,9 +3,7 @@ package main
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"os"
-	"strings"
 	"text/template"
 
 	"github.com/JackalLabs/jackal-provider/jprov/types"
@@ -23,7 +21,6 @@ import (
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
@@ -36,39 +33,6 @@ type Context struct {
 const ProviderContextKey = sdk.ContextKey("provider.context")
 
 var configTemplate *template.Template
-
-func bindFlags(basename string, cmd *cobra.Command, v *viper.Viper) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("bindFlags failed: %v", r)
-		}
-	}()
-
-	cmd.Flags().VisitAll(func(f *pflag.Flag) {
-		// Environment variables can't have dashes in them, so bind them to their equivalent
-		// keys with underscores, e.g. --favorite-color to STING_FAVORITE_COLOR
-		err = v.BindEnv(f.Name, fmt.Sprintf("%s_%s", basename, strings.ToUpper(strings.ReplaceAll(f.Name, "-", "_"))))
-		if err != nil {
-			panic(err)
-		}
-
-		err = v.BindPFlag(f.Name, f)
-		if err != nil {
-			panic(err)
-		}
-
-		// Apply the viper config value to the flag when the flag is not set and viper has a value
-		if !f.Changed && v.IsSet(f.Name) {
-			val := v.Get(f.Name)
-			err = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
-			if err != nil {
-				panic(err)
-			}
-		}
-	})
-
-	return err
-}
 
 func NewContext(v *viper.Viper, config *Config, logger tmlog.Logger) *Context {
 	return &Context{v, config, logger}
