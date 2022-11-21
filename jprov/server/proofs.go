@@ -29,8 +29,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func CreateMerkleForProof(cmd *cobra.Command, filename string, index int) (string, string, error) {
-	clientCtx := client.GetClientContextFromCmd(cmd)
+func CreateMerkleForProof(clientCtx client.Context, filename string, index int) (string, string, error) {
 	files := utils.GetStoragePath(clientCtx, filename)
 
 	var data [][]byte
@@ -96,12 +95,7 @@ func CreateMerkleForProof(cmd *cobra.Command, filename string, index int) (strin
 	return fmt.Sprintf("%x", item), string(jproof), nil
 }
 
-func postProof(cmd *cobra.Command, cid string, block string, db *leveldb.DB, queue *queue.UploadQueue) (*sdk.TxResponse, error) {
-	clientCtx, err := client.GetClientTxContext(cmd)
-	if err != nil {
-		return nil, err
-	}
-
+func postProof(clientCtx client.Context, cid string, block string, db *leveldb.DB, queue *queue.UploadQueue) (*sdk.TxResponse, error) {
 	dex, err := strconv.Atoi(block)
 	if err != nil {
 		return nil, err
@@ -112,7 +106,7 @@ func postProof(cmd *cobra.Command, cid string, block string, db *leveldb.DB, que
 		return nil, err
 	}
 
-	item, hashlist, err := CreateMerkleForProof(cmd, string(data), dex)
+	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), dex)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +234,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, queue *queue.UploadQueue) {
 				continue
 			}
 
-			res, err := postProof(cmd, cid, block, db, queue)
+			res, err := postProof(clientCtx, cid, block, db, queue)
 			if err != nil {
 				fmt.Printf("Posting Error: %s\n", err.Error())
 				continue

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/cosmos/cosmos-sdk/version"
+
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/server"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
@@ -89,6 +91,19 @@ func ClientCmd() *cobra.Command {
 		clientConfig.Cmd(),
 		GetBalanceCmd(),
 	)
+
+	return cmd
+}
+
+func VersionCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "version",
+		Short: "Prints version info",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Printf("%s %s\n", version.AppName, version.Version)
+			return nil
+		},
+	}
 
 	return cmd
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/version"
 
 	"github.com/julienschmidt/httprouter"
 
@@ -46,7 +47,7 @@ func indexres(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps htt
 
 func checkVersion(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	v := types.VersionResponse{
-		Version: "1.0.0",
+		Version: version.Version,
 	}
 	err := json.NewEncoder(w).Encode(v)
 	if err != nil {

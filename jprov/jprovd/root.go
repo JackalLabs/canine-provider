@@ -186,6 +186,7 @@ func NewRootCmd() *cobra.Command {
 		init,
 		DataCmd(),
 		ClientCmd(),
+		VersionCmd(),
 	)
 
 	return rootCmd
