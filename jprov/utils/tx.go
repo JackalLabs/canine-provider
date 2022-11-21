@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
@@ -101,10 +100,6 @@ func SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, msgs ...sdk.Msg) (
 }
 
 func Sign(txf txns.Factory, clientCtx client.Context, name string, txBuilder client.TxBuilder, overwriteSig bool) error {
-	if txf.Keybase() == nil {
-		return errors.New("keybase must be set prior to signing a transaction")
-	}
-
 	signMode := txf.SignMode()
 	if signMode == signing.SignMode_SIGN_MODE_UNSPECIFIED {
 		// use the SignModeHandler's default mode if unspecified

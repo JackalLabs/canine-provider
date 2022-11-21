@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
@@ -12,10 +13,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/input"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	"github.com/cosmos/cosmos-sdk/types/bech32"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stortypes "github.com/jackalLabs/canine-chain/x/storage/types"
-	tmcli "github.com/tendermint/tendermint/libs/cli"
-
 	"github.com/spf13/cobra"
+	tmcli "github.com/tendermint/tendermint/libs/cli"
 )
 
 func StartServerCommand() *cobra.Command {
@@ -35,6 +36,44 @@ func StartServerCommand() *cobra.Command {
 	cmd.Flags().String("port", "3333", "Port to host the server on.")
 	cmd.Flags().Bool("debug", false, "Allow the printing of info messages from the Storage Provider.")
 	cmd.Flags().Uint16("interval", 30, "The interval in seconds for which to check proofs.")
+
+	return cmd
+}
+
+func GetBalanceCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "balance",
+		Short: "Get account balance",
+		Long:  `Get the account balance of the current storage provider key.`,
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+			queryClient := banktypes.NewQueryClient(clientCtx)
+			address, err := crypto.GetAddress(clientCtx)
+			if err != nil {
+				fmt.Println(err)
+				return nil
+			}
+
+			params := &banktypes.QueryBalanceRequest{
+				Denom:   "ujkl",
+				Address: address,
+			}
+
+			res, err := queryClient.Balance(context.Background(), params)
+			if err != nil {
+				fmt.Println(err)
+				return nil
+			}
+
+			fmt.Printf("Balance: %s\n", res.Balance)
+
+			return nil
+		},
+	}
 
 	return cmd
 }

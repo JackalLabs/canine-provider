@@ -180,6 +180,7 @@ func NewRootCmd() *cobra.Command {
 		GenKeyCommand(),
 		rpc.StatusCommand(),
 		clientConfig.Cmd(),
+		GetBalanceCmd(),
 	)
 
 	cmds := []*cobra.Command{
