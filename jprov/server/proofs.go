@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -29,19 +30,15 @@ import (
 )
 
 func CreateMerkleForProof(cmd *cobra.Command, filename string, index int) (string, string, error) {
-	file, err := cmd.Flags().GetString(types.DataDir)
-	if err != nil {
-		return "", "", err
-	}
-
-	files, _ := os.ReadDir(fmt.Sprintf("%s/networkfiles/%s/", file, filename))
+	clientCtx := client.GetClientContextFromCmd(cmd)
+	files := utils.GetStoragePath(clientCtx, filename)
 
 	var data [][]byte
 
 	var item []byte
 
 	for i := 0; i < len(files); i += 1 {
-		f, err := os.ReadFile(fmt.Sprintf("%s/networkfiles/%s/%d%s", file, filename, i, ".jkl"))
+		f, err := os.ReadFile(filepath.Join(files, fmt.Sprintf("%d.jkl", i)))
 		if err != nil {
 			fmt.Printf("Error can't open file!\n")
 			return "", "", err
@@ -161,8 +158,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, queue *queue.UploadQueue) {
 	if err != nil {
 		return
 	}
-
-	files, err := cmd.Flags().GetString(types.DataDir)
+	clientCtx, err := client.GetClientTxContext(cmd)
 	if err != nil {
 		return
 	}
@@ -192,9 +188,9 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, queue *queue.UploadQueue) {
 
 			ver, verr := checkVerified(cmd, cid)
 			if verr != nil {
-				fmt.Println("Verification error")
-				fmt.Printf("ERROR: %v\n", verr)
-				fmt.Println(verr.Error())
+				// fmt.Println("Verification error")
+				// fmt.Printf("ERROR: %v\n", verr)
+				// fmt.Println(verr.Error())
 
 				val, err := db.Get(utils.MakeDowntimeKey(cid), nil)
 				newval := 0
@@ -204,11 +200,11 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, queue *queue.UploadQueue) {
 						continue
 					}
 				}
-				fmt.Printf("File will be removed in %d cycles\n", maxMisses-newval)
+				fmt.Printf("%s will be removed in %d cycles\n", value, maxMisses-newval)
 				newval += 1
 
 				if newval > maxMisses {
-					os.RemoveAll(fmt.Sprintf("%s/networkfiles/%s", files, cid))
+					os.RemoveAll(utils.GetStoragePath(clientCtx, value))
 					err = db.Delete(utils.MakeFileKey(cid), nil)
 					if err != nil {
 						continue

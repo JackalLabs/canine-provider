@@ -3,14 +3,13 @@ package main
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"text/template"
 
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/cosmos/cosmos-sdk/client"
-	clientConfig "github.com/cosmos/cosmos-sdk/client/config"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/client/rpc"
 
 	tmos "github.com/tendermint/tendermint/libs/os"
 
@@ -157,15 +156,18 @@ func NewRootCmd() *cobra.Command {
 
 			initClientCtx, err := client.ReadPersistentCommandFlags(initClientCtx, cmd.Flags())
 			if err != nil {
+				fmt.Println(err)
 				return err
 			}
 
-			initClientCtx, err = clientConfig.ReadFromClientConfig(initClientCtx)
+			initClientCtx, err = ReadFromClientConfig(initClientCtx)
 			if err != nil {
+				fmt.Println(err)
 				return err
 			}
 
 			if err := client.SetCmdClientContextHandler(initClientCtx, cmd); err != nil {
+				fmt.Println(err)
 				return err
 			}
 
@@ -175,25 +177,16 @@ func NewRootCmd() *cobra.Command {
 		},
 	}
 
+	init := CmdInitProvider()
+	AddTxFlagsToCmd(init)
+
 	rootCmd.AddCommand(
 		StartServerCommand(),
-		GenKeyCommand(),
-		rpc.StatusCommand(),
-		clientConfig.Cmd(),
-		GetBalanceCmd(),
+		ResetCommand(),
+		init,
+		DataCmd(),
+		ClientCmd(),
 	)
-
-	cmds := []*cobra.Command{
-		CmdSetProviderTotalspace(),
-		CmdSetProviderIP(),
-		CmdSetProviderKeybase(),
-		CmdInitProvider(),
-	}
-
-	for _, c := range cmds {
-		AddTxFlagsToCmd(c)
-		rootCmd.AddCommand(c)
-	}
 
 	return rootCmd
 }

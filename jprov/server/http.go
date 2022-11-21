@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/syndtr/goleveldb/leveldb"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
 	types "github.com/JackalLabs/jackal-provider/jprov/types"
+	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -53,17 +55,14 @@ func checkVersion(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 }
 
 func downfil(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	file, err := cmd.Flags().GetString(types.DataDir)
-	if err != nil {
-		return
-	}
+	clientCtx := client.GetClientContextFromCmd(cmd)
 
-	files, _ := os.ReadDir(fmt.Sprintf("%s/networkfiles/%s/", file, ps.ByName("file")))
+	files, _ := os.ReadDir(utils.GetStoragePath(clientCtx, ps.ByName("file")))
 
 	var data []byte
 
 	for i := 0; i < len(files); i += 1 {
-		f, err := os.ReadFile(fmt.Sprintf("%s/networkfiles/%s/%d%s", file, ps.ByName("file"), i, ".jkl"))
+		f, err := os.ReadFile(filepath.Join(utils.GetStoragePath(clientCtx, ps.ByName("file")), fmt.Sprintf("%d.jkl", i)))
 		if err != nil {
 			fmt.Printf("Error can't open file!\n")
 			_, err = w.Write([]byte("cannot find file"))
@@ -76,7 +75,7 @@ func downfil(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps http
 		data = append(data, f...)
 	}
 
-	_, err = w.Write(data)
+	_, err := w.Write(data)
 	if err != nil {
 		return
 	}

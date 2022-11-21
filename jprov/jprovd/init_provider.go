@@ -26,10 +26,13 @@ func CmdInitProvider() *cobra.Command {
 
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
+				fmt.Println(err)
 				return err
 			}
+
 			address, err := crypto.GetAddress(clientCtx)
 			if err != nil {
+				fmt.Println(err)
 				return err
 			}
 			fmt.Printf("Initializing account: %s\n", address)
@@ -40,9 +43,15 @@ func CmdInitProvider() *cobra.Command {
 				argKeybase,
 			)
 			if err := msg.ValidateBasic(); err != nil {
+				fmt.Println(err)
 				return err
 			}
-			_, err = utils.SendTx(clientCtx, cmd.Flags(), msg)
+			res, err := utils.SendTx(clientCtx, cmd.Flags(), msg)
+			if err != nil {
+				fmt.Println(err)
+				return err
+			}
+			fmt.Println(res.RawLog)
 			return err
 		},
 	}

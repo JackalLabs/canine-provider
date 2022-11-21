@@ -28,11 +28,6 @@ func (q *UploadQueue) Append(upload *types.Upload) {
 }
 
 func (q *UploadQueue) CheckStrays(clientCtx client.Context, cmd *cobra.Command, db *leveldb.DB) {
-	files, err := cmd.Flags().GetString(types.DataDir)
-	if err != nil {
-		return
-	}
-
 	for {
 		time.Sleep(time.Second)
 
@@ -52,7 +47,8 @@ func (q *UploadQueue) CheckStrays(clientCtx client.Context, cmd *cobra.Command, 
 		}
 
 		for _, stray := range s {
-			if _, err := os.Stat(fmt.Sprintf("%s/networkfiles/%s", files, stray.Fid)); !os.IsNotExist(err) {
+
+			if _, err := os.Stat(utils.GetStoragePath(clientCtx, stray.Fid)); !os.IsNotExist(err) {
 				continue
 			}
 

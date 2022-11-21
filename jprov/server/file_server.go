@@ -146,12 +146,8 @@ func MakeContract(cmd *cobra.Command, fid string, sender string, wg *sync.WaitGr
 }
 
 func HashData(cmd *cobra.Command, fid string, sender string) (string, string, error) {
-	file, err := cmd.Flags().GetString(types.DataDir)
-	if err != nil {
-		return "", "", err
-	}
-
-	path := fmt.Sprintf("%s/networkfiles/%s/", file, fid)
+	clientCtx := client.GetClientContextFromCmd(cmd)
+	path := utils.GetStoragePath(clientCtx, fid)
 	files, err := os.ReadDir(filepath.Clean(path))
 	if err != nil {
 		fmt.Println(err)
@@ -161,7 +157,7 @@ func HashData(cmd *cobra.Command, fid string, sender string) (string, string, er
 
 	for i := 0; i < len(files); i++ {
 
-		path := fmt.Sprintf("%s/networkfiles/%s/%d.jkl", file, fid, i)
+		path := filepath.Join(utils.GetStoragePath(clientCtx, fid), fmt.Sprintf("%d.jkl", i))
 
 		dat, err := os.ReadFile(filepath.Clean(path))
 		if err != nil {
@@ -254,19 +250,10 @@ func StartFileServer(cmd *cobra.Command) {
 	_, err = queryClient.Providers(context.Background(), params)
 	if err != nil {
 		fmt.Println("Provider not initialized on the blockchain, or conneciton to the RPC node has been lost. Please make sure your RPC node is available then run `jprovd init` to fix this.")
-		// fmt.Println(err)
 		return
 	}
 
-	files, err := cmd.Flags().GetString(types.DataDir)
-	if err != nil {
-		return
-	}
-
-	path, err := filepath.Abs(fmt.Sprintf("%s/contracts/contractsdb", files))
-	if err != nil {
-		return
-	}
+	path := utils.GetDataPath(clientCtx)
 
 	db, dberr := leveldb.OpenFile(path, nil)
 	if dberr != nil {

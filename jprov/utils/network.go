@@ -7,8 +7,9 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 
-	"github.com/JackalLabs/jackal-provider/jprov/types"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/spf13/cobra"
 	"github.com/syndtr/goleveldb/leveldb"
 )
@@ -47,25 +48,23 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 		return "", err
 	}
 
+	clientCtx := client.GetClientContextFromCmd(cmd)
+
 	h := sha256.New()
 	_, err = io.Copy(h, reader)
 	if err != nil {
 		return "", err
 	}
 	hashName := h.Sum(nil)
-
-	files, err := cmd.Flags().GetString(types.DataDir)
-	if err != nil {
-		return "", err
-	}
-
 	fid, err := MakeFid(hashName)
 	if err != nil {
 		return "", err
 	}
 
+	path := GetStoragePath(clientCtx, fid)
+
 	// This is path which we want to store the file
-	direrr := os.MkdirAll(fmt.Sprintf("%s/networkfiles/%s/", files, fid), os.ModePerm)
+	direrr := os.MkdirAll(path, os.ModePerm)
 	if direrr != nil {
 		return fid, direrr
 	}
@@ -73,7 +72,7 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 	var blocksize int64 = 1024
 	var i int64
 	for i = 0; i < size; i += blocksize {
-		f, err := os.OpenFile(fmt.Sprintf("%s/networkfiles/%s/%d%s", files, fid, i/blocksize, ".jkl"), os.O_WRONLY|os.O_CREATE, 0o666)
+		f, err := os.OpenFile(filepath.Join(path, fmt.Sprintf("%d.jkl", i/blocksize)), os.O_WRONLY|os.O_CREATE, 0o666)
 		if err != nil {
 			return fid, err
 		}

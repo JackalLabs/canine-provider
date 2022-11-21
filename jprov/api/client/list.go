@@ -6,7 +6,8 @@ import (
 	"net/http"
 	"os"
 
-	provtypes "github.com/JackalLabs/jackal-provider/jprov/types"
+	"github.com/JackalLabs/jackal-provider/jprov/utils"
+	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/JackalLabs/jackal-provider/jprov/api/types"
@@ -33,12 +34,12 @@ func ListQueue(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps ht
 }
 
 func ListFiles(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	file, err := cmd.Flags().GetString(provtypes.DataDir)
-	if err != nil {
-		return
-	}
+	clientCtx := client.GetClientContextFromCmd(cmd)
 
-	files, _ := os.ReadDir(fmt.Sprintf("%s/networkfiles/%s/", file, ps.ByName("file")))
+	files, err := os.ReadDir(utils.GetStoragePath(clientCtx, ps.ByName("file")))
+	if err != nil {
+		fmt.Println(err)
+	}
 
 	var fileNames []string = make([]string, 0)
 

@@ -4,13 +4,16 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/server"
-	"github.com/JackalLabs/jackal-provider/jprov/types"
+	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/cosmos/cosmos-sdk/client"
+	clientConfig "github.com/cosmos/cosmos-sdk/client/config"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/input"
+	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	"github.com/cosmos/cosmos-sdk/types/bech32"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -32,10 +35,60 @@ func StartServerCommand() *cobra.Command {
 	}
 
 	AddTxFlagsToCmd(cmd)
-	cmd.Flags().String(types.DataDir, types.DefaultAppHome, "Data folder for the Jackal Storage Provider.")
 	cmd.Flags().String("port", "3333", "Port to host the server on.")
 	cmd.Flags().Bool("debug", false, "Allow the printing of info messages from the Storage Provider.")
 	cmd.Flags().Uint16("interval", 30, "The interval in seconds for which to check proofs.")
+
+	return cmd
+}
+
+func DataCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "data",
+		Short: "Provider data commands",
+		Long:  `The sub-menu for Jackal Storage Provider data commands.`,
+	}
+
+	cmds := []*cobra.Command{
+		CmdSetProviderTotalspace(),
+		CmdSetProviderIP(),
+		CmdSetProviderKeybase(),
+	}
+
+	for _, c := range cmds {
+		AddTxFlagsToCmd(c)
+		cmd.AddCommand(c)
+	}
+
+	return cmd
+}
+
+func NetworkCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "network",
+		Short: "Provider network commands",
+		Long:  `The sub-menu for Jackal Storage Provider network commands.`,
+	}
+
+	cmd.AddCommand(
+		rpc.StatusCommand(),
+	)
+
+	return cmd
+}
+
+func ClientCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "client",
+		Short: "Provider client commands",
+		Long:  `The sub-menu for Jackal Storage Provider client commands.`,
+	}
+
+	cmd.AddCommand(
+		GenKeyCommand(),
+		clientConfig.Cmd(),
+		GetBalanceCmd(),
+	)
 
 	return cmd
 }
@@ -51,6 +104,7 @@ func GetBalanceCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
 			queryClient := banktypes.NewQueryClient(clientCtx)
 			address, err := crypto.GetAddress(clientCtx)
 			if err != nil {
@@ -74,6 +128,48 @@ func GetBalanceCmd() *cobra.Command {
 			return nil
 		},
 	}
+
+	return cmd
+}
+
+func ResetCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "reset",
+		Short: "Reset storage provider",
+		Long:  `Resets the storage provider, this includes removing the storage directory & the internal database but keeping the private key.`,
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			buf := bufio.NewReader(cmd.InOrStdin())
+
+			yes, err := input.GetConfirmation("Are you sure you want to reset the system?", buf, cmd.ErrOrStderr())
+			if err != nil {
+				return err
+			}
+
+			if !yes {
+				return nil
+			}
+
+			err = os.RemoveAll(utils.GetStorageAllPath(clientCtx))
+			if err != nil {
+				return err
+			}
+
+			err = os.RemoveAll(utils.GetDataPath(clientCtx))
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+
+	AddTxFlagsToCmd(cmd)
 
 	return cmd
 }
@@ -126,10 +222,6 @@ func GenKeyCommand() *cobra.Command {
 	}
 
 	AddTxFlagsToCmd(cmd)
-	cmd.Flags().String(types.DataDir, types.DefaultAppHome, "Data folder for the Jackal Storage Provider.")
-	cmd.Flags().String("port", "3333", "Port to host the server on.")
-	cmd.Flags().Bool("debug", false, "Allow the printing of info messages from the Storage Provider.")
-	cmd.Flags().Uint16("interval", 30, "The interval in seconds for which to check proofs.")
 
 	return cmd
 }
@@ -137,8 +229,6 @@ func GenKeyCommand() *cobra.Command {
 // AddTxFlagsToCmd adds common flags to a module tx command.
 func AddTxFlagsToCmd(cmd *cobra.Command) {
 	cmd.Flags().StringP(tmcli.OutputFlag, "o", "json", "Output format (text|json)")
-	cmd.Flags().String(flags.FlagKeyringDir, "", "The client Keyring directory; if omitted, the default 'home' directory will be used")
-	cmd.Flags().String(flags.FlagFrom, "", "Name or address of private key with which to sign")
 	cmd.Flags().Uint64P(flags.FlagAccountNumber, "a", 0, "The account number of the signing account (offline mode only)")
 	cmd.Flags().Uint64P(flags.FlagSequence, "s", 0, "The sequence number of the signing account (offline mode only)")
 	cmd.Flags().String(flags.FlagNote, "", "Note to add a description to the transaction (previously --memo)")
@@ -147,15 +237,15 @@ func AddTxFlagsToCmd(cmd *cobra.Command) {
 	cmd.Flags().String(flags.FlagNode, "tcp://localhost:26657", "<host>:<port> to tendermint rpc interface for this chain")
 	cmd.Flags().Bool(flags.FlagUseLedger, false, "Use a connected Ledger device")
 	cmd.Flags().Float64(flags.FlagGasAdjustment, flags.DefaultGasAdjustment, "adjustment factor to be multiplied against the estimate returned by the tx simulation; if the gas limit is set manually this flag is ignored ")
-	cmd.Flags().StringP(flags.FlagBroadcastMode, "b", flags.BroadcastSync, "Transaction broadcasting mode (sync|async|block)")
+	cmd.Flags().StringP(flags.FlagBroadcastMode, "b", flags.BroadcastBlock, "Transaction broadcasting mode (sync|async|block)")
 	cmd.Flags().Bool(flags.FlagDryRun, false, "ignore the --gas flag and perform a simulation of a transaction, but don't broadcast it (when enabled, the local Keybase is not accessible)")
 	cmd.Flags().Bool(flags.FlagGenerateOnly, false, "Build an unsigned transaction and write it to STDOUT (when enabled, the local Keybase is not accessible)")
 	cmd.Flags().Bool(flags.FlagOffline, false, "Offline mode (does not allow any online functionality")
 	cmd.Flags().BoolP(flags.FlagSkipConfirmation, "y", false, "Skip tx broadcasting prompt confirmation")
-	cmd.Flags().String(flags.FlagKeyringBackend, flags.DefaultKeyringBackend, "Select keyring's backend (os|file|kwallet|pass|test|memory)")
 	cmd.Flags().String(flags.FlagSignMode, "", "Choose sign mode (direct|amino-json), this is an advanced feature")
 	cmd.Flags().Uint64(flags.FlagTimeoutHeight, 0, "Set a block timeout height to prevent the tx from being committed past a certain height")
 	cmd.Flags().String(flags.FlagFeeAccount, "", "Fee account pays fees for the transaction instead of deducting from the signer")
+	cmd.Flags().String(flags.FlagChainID, "", "The network chain ID")
 
 	// --gas can accept integers and "auto"
 	cmd.Flags().String(flags.FlagGas, "", fmt.Sprintf("gas limit to set per-transaction; set to %q to calculate sufficient gas automatically (default %d)", flags.GasFlagAuto, flags.DefaultGasLimit))

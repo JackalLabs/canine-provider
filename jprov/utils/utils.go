@@ -1,6 +1,11 @@
 package utils
 
-import "fmt"
+import (
+	"fmt"
+	"path/filepath"
+
+	"github.com/cosmos/cosmos-sdk/client"
+)
 
 const (
 	UPTIME_LEFT_KEY = "UPTL-"
@@ -18,4 +23,23 @@ func MakeFileKey(cid string) []byte {
 
 func MakeDowntimeKey(cid string) []byte {
 	return []byte(fmt.Sprintf("%s%s", DOWNTIME_KEY, cid))
+}
+
+func GetStoragePath(ctx client.Context, fid string) string {
+	configPath := filepath.Join(ctx.HomeDir, "storage")
+	configFilePath := filepath.Join(configPath, fid)
+
+	return configFilePath
+}
+
+func GetStorageAllPath(ctx client.Context) string {
+	configPath := filepath.Join(ctx.HomeDir, "storage")
+
+	return configPath
+}
+
+func GetDataPath(ctx client.Context) string {
+	dataPath := filepath.Join(ctx.HomeDir, "data")
+
+	return dataPath
 }
