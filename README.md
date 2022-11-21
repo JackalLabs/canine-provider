@@ -3,6 +3,7 @@
 
 [![Build](https://github.com/JackalLabs/canine-provider/actions/workflows/build.yml/badge.svg)](https://github.com/JackalLabs/canine-provider/actions/workflows/build.yml)
 [![Test](https://github.com/JackalLabs/canine-provider/actions/workflows/test.yml/badge.svg)](https://github.com/JackalLabs/canine-provider/actions/workflows/test.yml)
+[![golangci-lint](https://github.com/JackalLabs/canine-provider/actions/workflows/golangci.yml/badge.svg)](https://github.com/JackalLabs/canine-provider/actions/workflows/golangci.yml)
 
 ## Overview
 The storage provider is a web-server that accepts incoming files from users and creates contracts for the users to approve. These contracts last until the user either cancels them or the provider itself goes offline.
