@@ -24,9 +24,11 @@ You must also be using the keyring-backend: `test`. (`jprovd config keyring-back
 ```sh
 $ jprovd config chain-id {current-chain-id}
 
-$ jprovd tx storage init-miner {IP_ADDRESS} {STORAGE_IN_BYTES} --from {KEY_NAME} --gas-prices=0.002ujkl --gas-adjustment=1.5
+$ jprovd gen-key
 
-$ jprovd start-miner --from {KEY_NAME} --gas-prices=0.002ujkl --gas-adjustment=1.5 -y
+$ jprovd init {IP_ADDRESS} {STORAGE_IN_BYTES} {KEYBASE_IDENTITY}
+
+$ jprovd start
 ```
 
 ## Posting files
