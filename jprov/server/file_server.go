@@ -262,10 +262,7 @@ func StartFileServer(cmd *cobra.Command) {
 	}
 	router := httprouter.New()
 
-	q := queue.UploadQueue{
-		Queue:  make([]*types.Upload, 0),
-		Locked: false,
-	}
+	q := queue.New()
 
 	GetRoutes(cmd, router, db, &q)
 	PostRoutes(cmd, router, db, &q)

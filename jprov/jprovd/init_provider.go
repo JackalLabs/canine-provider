@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
@@ -10,8 +9,6 @@ import (
 	"github.com/jackalLabs/canine-chain/x/storage/types"
 	"github.com/spf13/cobra"
 )
-
-var _ = strconv.Itoa(0)
 
 func CmdInitProvider() *cobra.Command {
 	cmd := &cobra.Command{

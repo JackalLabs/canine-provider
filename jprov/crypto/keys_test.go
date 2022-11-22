@@ -8,6 +8,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestExport(t *testing.T) {
+	require := require.New(t)
+
+	keyString := "b7ad3d27faef9bad601c18430ca11a523d163c5071797c8bef100baba8c37737"
+
+	key, err := crypto.ParsePrivKey(keyString)
+	require.NoError(err)
+
+	exportedKey := crypto.ExportPrivKey(key)
+
+	require.Equal(keyString, exportedKey)
+}
+
 func TestSign(t *testing.T) {
 	require := require.New(t)
 

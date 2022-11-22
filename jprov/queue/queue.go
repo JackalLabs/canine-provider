@@ -23,6 +23,14 @@ type UploadQueue struct {
 	Locked bool
 }
 
+func New() UploadQueue {
+	queue := UploadQueue{
+		Queue:  make([]*types.Upload, 0),
+		Locked: false,
+	}
+	return queue
+}
+
 func (q *UploadQueue) Append(upload *types.Upload) {
 	q.Queue = append(q.Queue, upload)
 }

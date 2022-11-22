@@ -1,18 +1,10 @@
 #!/usr/bin/make -f
 
-PACKAGES_SIMTEST=$(shell go list ./... | grep '/simulation')
 VERSION := $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
 LEDGER_ENABLED ?= true
-SDK_PACK := $(shell go list -m github.com/cosmos/cosmos-sdk | sed  's/ /\@/g')
-BINDIR ?= $(GOPATH)/bin
-SIMAPP = ./app
 
-# for dockerized protobuf tools
-DOCKER := $(shell which docker)
-BUF_IMAGE=bufbuild/buf #@sha256:3cb1f8a4b48bd5ad8f09168f10f607ddc318af202f5c057d52a45216793d85e5 #v1.4.0
-DOCKER_BUF := $(DOCKER) run --platform="linux/amd64" --rm -v $(CURDIR):/workspace --workdir /workspace $(BUF_IMAGE)
-HTTPS_GIT := https://github.com/jackalLabs/canine-chain.git
+HTTPS_GIT := https://github.com/jackalLabs/canine-provider.git
 
 export GO111MODULE = on
 
@@ -59,7 +51,6 @@ ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=jprov \
 		  -X github.com/cosmos/cosmos-sdk/version.AppName=jprovd \
 		  -X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
 		  -X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
-		  -X github.com/jackalLabs/canine-chain/app.Bech32Prefix=jkl \
 		  -X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags_comma_sep)"
 
 ifeq ($(WITH_CLEVELDB),yes)
