@@ -270,8 +270,8 @@ func StartFileServer(cmd *cobra.Command) {
 	handler := cors.Default().Handler(router)
 
 	go postProofs(cmd, db, &q)
-	go q.StartListener(clientCtx, cmd)
-	go q.CheckStrays(clientCtx, cmd, db)
+	go q.StartListener(cmd)
+	go q.CheckStrays(cmd, db)
 
 	port, err := cmd.Flags().GetString("port")
 	if err != nil {
