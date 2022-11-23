@@ -185,9 +185,7 @@ func HashData(cmd *cobra.Command, fid string, sender string) (string, string, er
 	return hex.EncodeToString(t.Root()), fmt.Sprintf("%d", size), nil
 }
 
-func queryBlock(cmd *cobra.Command, cid string) (string, error) {
-	clientCtx := client.GetClientContextFromCmd(cmd)
-
+func queryBlock(clientCtx *client.Context, cid string) (string, error) {
 	queryClient := storageTypes.NewQueryClient(clientCtx)
 
 	argCid := cid
@@ -204,9 +202,7 @@ func queryBlock(cmd *cobra.Command, cid string) (string, error) {
 	return res.ActiveDeals.Blocktoprove, nil
 }
 
-func checkVerified(cmd *cobra.Command, cid string) (bool, error) {
-	clientCtx := client.GetClientContextFromCmd(cmd)
-
+func checkVerified(clientCtx *client.Context, cid string) (bool, error) {
 	queryClient := storageTypes.NewQueryClient(clientCtx)
 
 	argCid := cid

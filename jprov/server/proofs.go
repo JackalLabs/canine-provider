@@ -81,11 +81,17 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int) 
 
 	e := hex.EncodeToString(tree.Root())
 
-	k, _ := hex.DecodeString(e)
+	k, err := hex.DecodeString(e)
+	if err != nil {
+		fmt.Println(err)
+		return "", "", err
+
+	}
 
 	verified, err := merkletree.VerifyProof(ditem, proof, k)
 	if err != nil {
 		fmt.Println(err)
+		return "", "", err
 	}
 
 	if !verified {
@@ -180,7 +186,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, queue *queue.UploadQueue) {
 				fmt.Printf("CID: %s\n", cid)
 			}
 
-			ver, verr := checkVerified(cmd, cid)
+			ver, verr := checkVerified(&clientCtx, cid)
 			if verr != nil {
 				// fmt.Println("Verification error")
 				// fmt.Printf("ERROR: %v\n", verr)
@@ -228,7 +234,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, queue *queue.UploadQueue) {
 				continue
 			}
 
-			block, berr := queryBlock(cmd, string(cid))
+			block, berr := queryBlock(&clientCtx, string(cid))
 			if berr != nil {
 				fmt.Printf("Query Error: %v\n", berr)
 				continue

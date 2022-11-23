@@ -58,7 +58,11 @@ func checkVersion(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 func downfil(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	clientCtx := client.GetClientContextFromCmd(cmd)
 
-	files, _ := os.ReadDir(utils.GetStoragePath(clientCtx, ps.ByName("file")))
+	files, err := os.ReadDir(utils.GetStoragePath(clientCtx, ps.ByName("file")))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	var data []byte
 
@@ -76,7 +80,7 @@ func downfil(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps http
 		data = append(data, f...)
 	}
 
-	_, err := w.Write(data)
+	_, err = w.Write(data)
 	if err != nil {
 		return
 	}
