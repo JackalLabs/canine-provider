@@ -34,10 +34,10 @@ import (
 
 func saveFile(file multipart.File, handler *multipart.FileHeader, sender string, cmd *cobra.Command, db *leveldb.DB, w *http.ResponseWriter, q *queue.UploadQueue) error {
 	size := handler.Size
-
-	fid, err := utils.WriteFileToDisk(cmd, file, file, file, size)
+	ctx := utils.GetServerContextFromCmd(cmd)
+	fid, err := utils.WriteFileToDisk(cmd, file, file, file, size, ctx.Logger)
 	if err != nil {
-		fmt.Printf("Write To Disk Error: %v\n", err)
+		ctx.Logger.Error("Write To Disk Error: %v", err)
 		return err
 	}
 
@@ -48,7 +48,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 
 	address, err := crypto.GetAddress(clientCtx)
 	if err != nil {
-		fmt.Println(err)
+		ctx.Logger.Error(err.Error())
 		return err
 	}
 
@@ -69,7 +69,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 
 	msg, ctrerr := MakeContract(cmd, fid, sender, &wg, q)
 	if ctrerr != nil {
-		fmt.Printf("CONTRACT ERROR: %v\n", ctrerr)
+		ctx.Logger.Error("CONTRACT ERROR: %v", ctrerr)
 		return ctrerr
 	}
 	wg.Wait()
@@ -80,7 +80,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	}
 
 	if msg.Err != nil {
-		fmt.Println(msg.Err)
+		ctx.Logger.Error(msg.Err.Error())
 		v := types.ErrorResponse{
 			Error: msg.Err.Error(),
 		}
@@ -91,11 +91,11 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	}
 
 	if err != nil {
-		fmt.Printf("Json Encode Error: %v\n", err)
+		ctx.Logger.Error("Json Encode Error: %v", err)
 		return err
 	}
 
-	err = utils.SaveToDatabase(fid, strcid, db)
+	err = utils.SaveToDatabase(fid, strcid, db, ctx.Logger)
 	if err != nil {
 		return err
 	}
@@ -104,11 +104,11 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 }
 
 func MakeContract(cmd *cobra.Command, fid string, sender string, wg *sync.WaitGroup, q *queue.UploadQueue) (*types.Upload, error) {
-	merkleroot, filesize, err := HashData(cmd, fid, sender)
+	merkleroot, filesize, err := HashData(cmd, fid, sender, q)
 	if err != nil {
 		return nil, err
 	}
-
+	ctx := utils.GetServerContextFromCmd(cmd)
 	clientCtx, err := client.GetClientTxContext(cmd)
 	if err != nil {
 		return nil, err
@@ -116,7 +116,7 @@ func MakeContract(cmd *cobra.Command, fid string, sender string, wg *sync.WaitGr
 
 	address, err := crypto.GetAddress(clientCtx)
 	if err != nil {
-		fmt.Println(err)
+		ctx.Logger.Error(err.Error())
 		return nil, err
 	}
 
@@ -145,12 +145,13 @@ func MakeContract(cmd *cobra.Command, fid string, sender string, wg *sync.WaitGr
 	return k, nil
 }
 
-func HashData(cmd *cobra.Command, fid string, sender string) (string, string, error) {
+func HashData(cmd *cobra.Command, fid string, sender string, q *queue.UploadQueue) (string, string, error) {
 	clientCtx := client.GetClientContextFromCmd(cmd)
+	ctx := utils.GetServerContextFromCmd(cmd)
 	path := utils.GetStoragePath(clientCtx, fid)
 	files, err := os.ReadDir(filepath.Clean(path))
 	if err != nil {
-		fmt.Println(err)
+		ctx.Logger.Error(err.Error())
 	}
 	size := 0
 	var list [][]byte
@@ -161,7 +162,7 @@ func HashData(cmd *cobra.Command, fid string, sender string) (string, string, er
 
 		dat, err := os.ReadFile(filepath.Clean(path))
 		if err != nil {
-			fmt.Println(err)
+			ctx.Logger.Error(err.Error())
 		}
 
 		size = size + len(dat)
@@ -179,7 +180,7 @@ func HashData(cmd *cobra.Command, fid string, sender string) (string, string, er
 
 	t, err := merkletree.New(list)
 	if err != nil {
-		fmt.Println(err)
+		ctx.Logger.Error(err.Error())
 	}
 
 	return hex.EncodeToString(t.Root()), fmt.Sprintf("%d", size), nil
@@ -265,7 +266,9 @@ func StartFileServer(cmd *cobra.Command) {
 
 	handler := cors.Default().Handler(router)
 
-	go postProofs(cmd, db, &q)
+	ctx := utils.GetServerContextFromCmd(cmd)
+
+	go postProofs(cmd, db, &q, ctx)
 	go q.StartListener(cmd)
 	go q.CheckStrays(cmd, db)
 

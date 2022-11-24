@@ -6,14 +6,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/spf13/cobra"
-	"github.com/syndtr/goleveldb/leveldb"
-
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
+	"github.com/cosmos/cosmos-sdk/client"
 	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
+	"github.com/spf13/cobra"
+	"github.com/syndtr/goleveldb/leveldb"
 
 	ctypes "github.com/cosmos/cosmos-sdk/types"
 )
@@ -38,11 +37,13 @@ func (q *UploadQueue) Append(upload *types.Upload) {
 func (q *UploadQueue) checkStraysOnce(cmd *cobra.Command, db *leveldb.DB) {
 	clientCtx := client.GetClientContextFromCmd(cmd)
 
+	ctx := utils.GetServerContextFromCmd(cmd)
+
 	qClient := storageTypes.NewQueryClient(clientCtx)
 
 	res, err := qClient.StraysAll(cmd.Context(), &storageTypes.QueryAllStraysRequest{})
 	if err != nil {
-		fmt.Println(err)
+		ctx.Logger.Error(err.Error())
 		return
 	}
 
@@ -60,34 +61,34 @@ func (q *UploadQueue) checkStraysOnce(cmd *cobra.Command, db *leveldb.DB) {
 
 		filesres, err := qClient.FindFile(cmd.Context(), &storageTypes.QueryFindFileRequest{Fid: stray.Fid})
 		if err != nil {
-			fmt.Println(err)
+			ctx.Logger.Error(err.Error())
 			continue
 			// return err
 		}
-		fmt.Println(filesres.ProviderIps)
+		ctx.Logger.Info(filesres.ProviderIps)
 
 		var arr []string
 		err = json.Unmarshal([]byte(filesres.ProviderIps), &arr)
 		if err != nil {
-			fmt.Println(err)
+			ctx.Logger.Error(err.Error())
 			continue
 		}
 
 		if len(arr) == 0 {
 			err = fmt.Errorf("no providers have the file we want something is wrong")
-			fmt.Println(err)
+			ctx.Logger.Error(err.Error())
 			continue
 		}
 
-		_, err = utils.DownloadFileFromURL(cmd, arr[0], stray.Fid, stray.Cid, db)
+		_, err = utils.DownloadFileFromURL(cmd, arr[0], stray.Fid, stray.Cid, db, ctx.Logger)
 		if err != nil {
-			fmt.Println(err)
+			ctx.Logger.Error(err.Error())
 			continue
 		}
 
 		address, err := crypto.GetAddress(clientCtx)
 		if err != nil {
-			fmt.Println(err)
+			ctx.Logger.Error(err.Error())
 			continue
 		}
 
@@ -96,7 +97,7 @@ func (q *UploadQueue) checkStraysOnce(cmd *cobra.Command, db *leveldb.DB) {
 			stray.Cid,
 		)
 		if err := msg.ValidateBasic(); err != nil {
-			fmt.Println(err)
+			ctx.Logger.Error(err.Error())
 			continue
 		}
 
@@ -109,7 +110,7 @@ func (q *UploadQueue) checkStraysOnce(cmd *cobra.Command, db *leveldb.DB) {
 
 		q.Queue = append(q.Queue, &u)
 
-		fmt.Println(res)
+		ctx.Logger.Info(res.String())
 	}
 }
 

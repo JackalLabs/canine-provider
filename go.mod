@@ -7,6 +7,7 @@ require (
 	github.com/jackalLabs/canine-chain v1.2.0-alpha.3
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/rs/cors v1.8.2
+	github.com/rs/zerolog v1.27.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.14.0
@@ -104,7 +105,6 @@ require (
 	github.com/rakyll/statik v0.1.7 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/regen-network/cosmos-proto v0.3.1 // indirect
-	github.com/rs/zerolog v1.27.0 // indirect
 	github.com/sasha-s/go-deadlock v0.3.1 // indirect
 	github.com/spf13/afero v1.9.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect

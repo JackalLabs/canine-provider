@@ -22,16 +22,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func indexres(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func indexres(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps httprouter.Params, q *queue.UploadQueue) {
 	clientCtx, err := client.GetClientTxContext(cmd)
+	ctx := utils.GetServerContextFromCmd(cmd)
 	if err != nil {
-		fmt.Println(err)
+		ctx.Logger.Error(err.Error())
 		return
 	}
 
 	address, err := crypto.GetAddress(clientCtx)
 	if err != nil {
-		fmt.Println(err)
+		ctx.Logger.Error(err.Error())
 		return
 	}
 
@@ -41,26 +42,26 @@ func indexres(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps htt
 	}
 	err = json.NewEncoder(w).Encode(v)
 	if err != nil {
-		fmt.Println(err)
+		ctx.Logger.Error(err.Error())
 	}
 }
 
-func checkVersion(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func checkVersion(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx *utils.Context) {
 	v := types.VersionResponse{
 		Version: version.Version,
 	}
 	err := json.NewEncoder(w).Encode(v)
 	if err != nil {
-		fmt.Println(err)
+		ctx.Logger.Error(err.Error())
 	}
 }
 
-func downfil(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func downfil(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx *utils.Context) {
 	clientCtx := client.GetClientContextFromCmd(cmd)
 
 	files, err := os.ReadDir(utils.GetStoragePath(clientCtx, ps.ByName("file")))
 	if err != nil {
-		fmt.Println(err)
+		ctx.Logger.Error(err.Error())
 		return
 	}
 
@@ -69,10 +70,10 @@ func downfil(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps http
 	for i := 0; i < len(files); i += 1 {
 		f, err := os.ReadFile(filepath.Join(utils.GetStoragePath(clientCtx, ps.ByName("file")), fmt.Sprintf("%d.jkl", i)))
 		if err != nil {
-			fmt.Printf("Error can't open file!\n")
+			ctx.Logger.Info("Error can't open file!")
 			_, err = w.Write([]byte("cannot find file"))
 			if err != nil {
-				fmt.Println(err)
+				ctx.Logger.Error(err.Error())
 			}
 			return
 		}
@@ -87,18 +88,20 @@ func downfil(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps http
 }
 
 func GetRoutes(cmd *cobra.Command, router *httprouter.Router, db *leveldb.DB, q *queue.UploadQueue) {
+	ctx := utils.GetServerContextFromCmd(cmd)
+
 	dfil := func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		downfil(cmd, w, r, ps)
+		downfil(cmd, w, r, ps, ctx)
 	}
 
 	ires := func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		indexres(cmd, w, r, ps)
+		indexres(cmd, w, r, ps, q)
 	}
 
-	router.GET("/version", checkVersion)
-	router.GET("/v", checkVersion)
+	router.GET("/version", func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+		checkVersion(w, r, p, ctx)
+	})
 	router.GET("/download/:file", dfil)
-	router.GET("/d/:file", dfil)
 
 	api.BuildApi(cmd, q, router, db)
 
@@ -117,17 +120,19 @@ func PostRoutes(cmd *cobra.Command, router *httprouter.Router, db *leveldb.DB, q
 // This function returns the filename(to save in database) of the saved file
 // or an error if it occurs
 func fileUpload(w *http.ResponseWriter, r *http.Request, ps httprouter.Params, cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue) {
+	ctx := utils.GetServerContextFromCmd(cmd)
+
 	// ParseMultipartForm parses a request body as multipart/form-data
 	err := r.ParseMultipartForm(types.MaxFileSize) // MAX file size lives here
 	if err != nil {
-		fmt.Printf("Error with form file!\n")
+		ctx.Logger.Error("Error with form file!")
 		v := types.ErrorResponse{
 			Error: err.Error(),
 		}
 		(*w).WriteHeader(http.StatusInternalServerError)
 		err = json.NewEncoder(*w).Encode(v)
 		if err != nil {
-			fmt.Println(err)
+			ctx.Logger.Error(err.Error())
 		}
 		return
 	}
@@ -135,14 +140,14 @@ func fileUpload(w *http.ResponseWriter, r *http.Request, ps httprouter.Params, c
 
 	file, handler, err := r.FormFile("file") // Retrieve the file from form data
 	if err != nil {
-		fmt.Printf("Error with form file!\n")
+		ctx.Logger.Error("Error with form file!")
 		v := types.ErrorResponse{
 			Error: err.Error(),
 		}
 		(*w).WriteHeader(http.StatusInternalServerError)
 		err = json.NewEncoder(*w).Encode(v)
 		if err != nil {
-			fmt.Println(err)
+			ctx.Logger.Error(err.Error())
 		}
 		return
 	}
@@ -155,7 +160,7 @@ func fileUpload(w *http.ResponseWriter, r *http.Request, ps httprouter.Params, c
 		(*w).WriteHeader(http.StatusInternalServerError)
 		err = json.NewEncoder(*w).Encode(v)
 		if err != nil {
-			fmt.Println(err)
+			ctx.Logger.Error(err.Error())
 		}
 	}
 }

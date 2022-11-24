@@ -9,12 +9,14 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/tendermint/tendermint/libs/log"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/spf13/cobra"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
-func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string, db *leveldb.DB) (string, error) {
+func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string, db *leveldb.DB, logger log.Logger) (string, error) {
 	resp, err := http.Get(fmt.Sprintf("%s/d/%s", url, fid))
 	if err != nil {
 		return "", err
@@ -29,12 +31,12 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 
 	reader := bytes.NewReader(buff.Bytes())
 
-	hashName, err := WriteFileToDisk(cmd, reader, reader, nil, size)
+	hashName, err := WriteFileToDisk(cmd, reader, reader, nil, size, logger)
 	if err != nil {
 		return hashName, err
 	}
 
-	err = SaveToDatabase(hashName, cid, db)
+	err = SaveToDatabase(hashName, cid, db, logger)
 	if err != nil {
 		return hashName, err
 	}
@@ -42,16 +44,11 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 	return hashName, nil
 }
 
-func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, closer io.Closer, size int64) (string, error) {
-	debug, err := cmd.Flags().GetBool("debug")
-	if err != nil {
-		return "", err
-	}
-
+func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, closer io.Closer, size int64, logger log.Logger) (string, error) {
 	clientCtx := client.GetClientContextFromCmd(cmd)
 
 	h := sha256.New()
-	_, err = io.Copy(h, reader)
+	_, err := io.Copy(h, reader)
 	if err != nil {
 		return "", err
 	}
@@ -79,9 +76,8 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 
 		firstx := make([]byte, blocksize)
 		read, err := file.ReadAt(firstx, i)
-		if debug {
-			fmt.Printf("Bytes read: %d", read)
-		}
+		logger.Debug(fmt.Sprintf("Bytes read: %d", read))
+
 		if err != nil && err != io.EOF {
 			return fid, err
 		}
@@ -98,23 +94,23 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 	return fid, nil
 }
 
-func SaveToDatabase(fid string, strcid string, db *leveldb.DB) error {
+func SaveToDatabase(fid string, strcid string, db *leveldb.DB, logger log.Logger) error {
 	err := db.Put(MakeDowntimeKey(strcid), []byte(fmt.Sprintf("%d", 0)), nil)
 	if err != nil {
-		fmt.Printf("Downtime Database Error: %v\n", err)
+		logger.Error("Downtime Database Error: %v", err)
 		return err
 	}
 	derr := db.Put(MakeFileKey(strcid), []byte(fid), nil)
 	if derr != nil {
-		fmt.Printf("File Database Error: %v\n", derr)
+		logger.Error("File Database Error: %v", derr)
 		return err
 	}
 
-	fmt.Printf("%s %s\n", fid, "Added to database")
+	logger.Info(fmt.Sprintf("%s %s", fid, "Added to database"))
 
 	_, cerr := db.Get(MakeFileKey(strcid), nil)
 	if cerr != nil {
-		fmt.Printf("Hash Database Error: %s\n", cerr.Error())
+		logger.Error("Hash Database Error: %s", cerr.Error())
 		return err
 	}
 

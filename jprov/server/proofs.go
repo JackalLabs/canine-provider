@@ -29,7 +29,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func CreateMerkleForProof(clientCtx client.Context, filename string, index int) (string, string, error) {
+func CreateMerkleForProof(clientCtx client.Context, filename string, index int, ctx *utils.Context) (string, string, error) {
 	files := utils.GetStoragePath(clientCtx, filename)
 
 	var data [][]byte
@@ -39,7 +39,7 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int) 
 	for i := 0; i < len(files); i += 1 {
 		f, err := os.ReadFile(filepath.Join(files, fmt.Sprintf("%d.jkl", i)))
 		if err != nil {
-			fmt.Printf("Error can't open file!\n")
+			ctx.Logger.Error("Error can't open file!")
 			return "", "", err
 		}
 
@@ -83,25 +83,25 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int) 
 
 	k, err := hex.DecodeString(e)
 	if err != nil {
-		fmt.Println(err)
+		ctx.Logger.Error(err.Error())
 		return "", "", err
 
 	}
 
 	verified, err := merkletree.VerifyProof(ditem, proof, k)
 	if err != nil {
-		fmt.Println(err)
+		ctx.Logger.Error(err.Error())
 		return "", "", err
 	}
 
 	if !verified {
-		fmt.Println("Cannot verify")
+		ctx.Logger.Info("Cannot verify")
 	}
 
 	return fmt.Sprintf("%x", item), string(jproof), nil
 }
 
-func postProof(clientCtx client.Context, cid string, block string, db *leveldb.DB, queue *queue.UploadQueue) (*sdk.TxResponse, error) {
+func postProof(clientCtx client.Context, cid string, block string, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) (*sdk.TxResponse, error) {
 	dex, err := strconv.Atoi(block)
 	if err != nil {
 		return nil, err
@@ -112,14 +112,14 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 		return nil, err
 	}
 
-	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), dex)
+	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), dex, ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	address, err := crypto.GetAddress(clientCtx)
 	if err != nil {
-		fmt.Println(err)
+		ctx.Logger.Error(err.Error())
 		return nil, err
 	}
 
@@ -143,17 +143,13 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 		Response: nil,
 	}
 
-	queue.Append(&u)
+	q.Append(&u)
 	wg.Wait()
 
 	return u.Response, u.Err
 }
 
-func postProofs(cmd *cobra.Command, db *leveldb.DB, queue *queue.UploadQueue) {
-	debug, err := cmd.Flags().GetBool("debug")
-	if err != nil {
-		return
-	}
+func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) {
 	interval, err := cmd.Flags().GetUint16("interval")
 	if err != nil {
 		return
@@ -178,19 +174,12 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, queue *queue.UploadQueue) {
 
 			cid = cid[len(utils.FILE_KEY):]
 
-			if debug {
-				fmt.Printf("filename: %s\n", value)
-			}
+			ctx.Logger.Debug(fmt.Sprintf("filename: %s", value))
 
-			if debug {
-				fmt.Printf("CID: %s\n", cid)
-			}
+			ctx.Logger.Debug(fmt.Sprintf("CID: %s", cid))
 
 			ver, verr := checkVerified(&clientCtx, cid)
 			if verr != nil {
-				// fmt.Println("Verification error")
-				// fmt.Printf("ERROR: %v\n", verr)
-				// fmt.Println(verr.Error())
 
 				val, err := db.Get(utils.MakeDowntimeKey(cid), nil)
 				newval := 0
@@ -200,10 +189,11 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, queue *queue.UploadQueue) {
 						continue
 					}
 				}
-				fmt.Printf("%s will be removed in %d cycles\n", value, maxMisses-newval)
+
 				newval += 1
 
 				if newval > maxMisses {
+					ctx.Logger.Info(fmt.Sprintf("%s is being removed", value))
 					os.RemoveAll(utils.GetStoragePath(clientCtx, value))
 					err = db.Delete(utils.MakeFileKey(cid), nil)
 					if err != nil {
@@ -213,12 +203,10 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, queue *queue.UploadQueue) {
 					if err != nil {
 						continue
 					}
-					// err = db.Delete(makeUptimeKey(cid), nil)
-					// if err != nil {
-					// 	continue
-					// }
 					continue
 				}
+
+				ctx.Logger.Info(fmt.Sprintf("%s will be removed in %d cycles", value, (maxMisses+1)-newval))
 
 				err = db.Put(utils.MakeDowntimeKey(cid), []byte(fmt.Sprintf("%d", newval)), nil)
 				if err != nil {
@@ -228,33 +216,31 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, queue *queue.UploadQueue) {
 			}
 
 			if ver {
-				if debug {
-					fmt.Println("Skipping file as it's already verified.")
-				}
+				ctx.Logger.Debug("Skipping file as it's already verified.")
 				continue
 			}
 
 			block, berr := queryBlock(&clientCtx, string(cid))
 			if berr != nil {
-				fmt.Printf("Query Error: %v\n", berr)
+				ctx.Logger.Error("Query Error: %v", berr)
 				continue
 			}
 
-			res, err := postProof(clientCtx, cid, block, db, queue)
+			res, err := postProof(clientCtx, cid, block, db, q, ctx)
 			if err != nil {
-				fmt.Printf("Posting Error: %s\n", err.Error())
+				ctx.Logger.Error("Posting Error: %s", err.Error())
 				continue
 			}
 
 			if res.Code != 0 {
-				fmt.Printf("Contract Response Error: %s\n", fmt.Errorf(res.RawLog))
+				ctx.Logger.Error("Contract Response Error: %s", fmt.Errorf(res.RawLog))
 				continue
 			}
 		}
 		iter.Release()
 		err = iter.Error()
 		if err != nil {
-			fmt.Printf("Iterator Error: %s\n", err.Error())
+			ctx.Logger.Error("Iterator Error: %s", err.Error())
 		}
 
 		time.Sleep(time.Duration(interval) * time.Second)

@@ -67,7 +67,7 @@ BUILD_FLAGS := -tags "$(build_tags_comma_sep)" -ldflags '$(ldflags)' -trimpath
 # The below include contains the tools and runsim targets.
 # include contrib/devtools/Makefile
 
-all: install lint test
+all: lint test install
 
 build: go.sum
 ifeq ($(OS),Windows_NT)
