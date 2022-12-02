@@ -191,7 +191,7 @@ func queryBlock(clientCtx *client.Context, cid string) (string, error) {
 
 	argCid := cid
 
-	params := &storageTypes.QueryGetActiveDealsRequest{
+	params := &storageTypes.QueryActiveDealRequest{
 		Cid: argCid,
 	}
 
@@ -208,7 +208,7 @@ func checkVerified(clientCtx *client.Context, cid string) (bool, error) {
 
 	argCid := cid
 
-	params := &storageTypes.QueryGetActiveDealsRequest{
+	params := &storageTypes.QueryActiveDealRequest{
 		Cid: argCid,
 	}
 
@@ -240,7 +240,7 @@ func StartFileServer(cmd *cobra.Command) {
 		return
 	}
 
-	params := &storageTypes.QueryGetProvidersRequest{
+	params := &storageTypes.QueryProviderRequest{
 		Address: address,
 	}
 

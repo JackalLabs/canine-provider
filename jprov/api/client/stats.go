@@ -30,7 +30,7 @@ func GetSpace(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps htt
 		fmt.Println(err)
 		return
 	}
-	params := &storagetypes.QueryGetProvidersRequest{
+	params := &storagetypes.QueryProviderRequest{
 		Address: address,
 	}
 	res, err := queryClient.Providers(context.Background(), params)
