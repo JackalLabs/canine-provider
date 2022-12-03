@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -33,9 +32,17 @@ import (
 func CreateMerkleForProof(clientCtx client.Context, filename string, index int64, ctx *utils.Context) (string, string, error) {
 	files := utils.GetStoragePath(clientCtx, filename)
 
-	fs, err := ioutil.ReadDir(files)
+	f, err := os.Open(files)
 	if err != nil {
-		ctx.Logger.Error("Error can't open directory!")
+		ctx.Logger.Error(err.Error())
+		return "", "", err
+	}
+
+	fileInfo, err := f.Readdir(-1)
+	f.Close()
+	if err != nil {
+		ctx.Logger.Error(err.Error())
+
 		return "", "", err
 	}
 
@@ -44,7 +51,7 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int64
 	var item []byte
 
 	var i int64
-	for i = 0; i < int64(len(fs)); i++ {
+	for i = 0; i < int64(len(fileInfo)); i++ {
 
 		f, err := os.ReadFile(filepath.Join(files, fmt.Sprintf("%d.jkl", i)))
 		if err != nil {
