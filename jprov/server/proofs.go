@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -29,14 +30,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func CreateMerkleForProof(clientCtx client.Context, filename string, index int, ctx *utils.Context) (string, string, error) {
+func CreateMerkleForProof(clientCtx client.Context, filename string, index int64, ctx *utils.Context) (string, string, error) {
 	files := utils.GetStoragePath(clientCtx, filename)
+
+	fs, err := ioutil.ReadDir(files)
+	if err != nil {
+		ctx.Logger.Error("Error can't open directory!")
+		return "", "", err
+	}
 
 	var data [][]byte
 
 	var item []byte
 
-	for i := 0; i < len(files); i += 1 {
+	var i int64
+	for i = 0; i < int64(len(fs)); i++ {
+
 		f, err := os.ReadFile(filepath.Join(files, fmt.Sprintf("%d.jkl", i)))
 		if err != nil {
 			ctx.Logger.Error("Error can't open file!")
@@ -102,9 +111,10 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 }
 
 func postProof(clientCtx client.Context, cid string, block string, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) (*sdk.TxResponse, error) {
-	dex, err := strconv.Atoi(block)
-	if err != nil {
-		return nil, err
+	dex, ok := sdk.NewIntFromString(block)
+	ctx.Logger.Debug(fmt.Sprintf("BlockToProve: %s", block))
+	if !ok {
+		return nil, fmt.Errorf("cannot parse block number")
 	}
 
 	data, err := db.Get(utils.MakeFileKey(cid), nil)
@@ -112,7 +122,7 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 		return nil, err
 	}
 
-	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), dex, ctx)
+	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), dex.Int64(), ctx)
 	if err != nil {
 		return nil, err
 	}
