@@ -76,6 +76,7 @@ func NewRootCmd() *cobra.Command {
 		DataCmd(),
 		ClientCmd(),
 		VersionCmd(),
+		NetworkCmd(),
 	)
 
 	return rootCmd
