@@ -232,6 +232,25 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 				continue
 			}
 
+			val, err := db.Get(utils.MakeDowntimeKey(cid), nil)
+			newval := 0
+			if err == nil {
+				newval, err = strconv.Atoi(string(val))
+				if err != nil {
+					continue
+				}
+			}
+
+			newval -= 1 // lower the downtime counter to only account for consecutive misses.
+			if newval < 0 {
+				newval = 0
+			}
+
+			err = db.Put(utils.MakeDowntimeKey(cid), []byte(fmt.Sprintf("%d", newval)), nil)
+			if err != nil {
+				continue
+			}
+
 			if ver {
 				ctx.Logger.Debug("Skipping file as it's already verified.")
 				continue
