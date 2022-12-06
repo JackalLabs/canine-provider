@@ -116,7 +116,7 @@ func (q *UploadQueue) checkStraysOnce(cmd *cobra.Command, db *leveldb.DB) {
 
 func (q *UploadQueue) CheckStrays(cmd *cobra.Command, db *leveldb.DB) {
 	for {
-		time.Sleep(time.Second)
+		time.Sleep(time.Second * 5)
 
 		q.checkStraysOnce(cmd, db)
 
