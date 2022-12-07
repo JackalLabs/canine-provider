@@ -46,15 +46,30 @@ func (q *UploadQueue) checkStraysOnce(cmd *cobra.Command, db *leveldb.DB) {
 		ctx.Logger.Error(err.Error())
 		return
 	}
-
 	s := res.Strays
 
 	if len(s) == 0 {
 		return
 	}
 
-	for _, stray := range s {
+	addr, err := crypto.GetAddress(clientCtx)
+	if err != nil {
+		ctx.Logger.Error(err.Error())
+		return
+	}
+	req := storageTypes.QueryProviderRequest{
+		Address: addr,
+	}
 
+	provs, err := qClient.Providers(cmd.Context(), &req)
+	if err != nil {
+		ctx.Logger.Error(err.Error())
+		return
+	}
+	ip := provs.Providers.Address
+
+	for _, stray := range s {
+		ctx.Logger.Info(fmt.Sprintf("Getting info for %s", stray.Cid))
 		if _, err := os.Stat(utils.GetStoragePath(clientCtx, stray.Fid)); !os.IsNotExist(err) {
 			continue
 		}
@@ -65,7 +80,6 @@ func (q *UploadQueue) checkStraysOnce(cmd *cobra.Command, db *leveldb.DB) {
 			continue
 			// return err
 		}
-		ctx.Logger.Info(filesres.ProviderIps)
 
 		var arr []string
 		err = json.Unmarshal([]byte(filesres.ProviderIps), &arr)
@@ -80,9 +94,20 @@ func (q *UploadQueue) checkStraysOnce(cmd *cobra.Command, db *leveldb.DB) {
 			continue
 		}
 
-		_, err = utils.DownloadFileFromURL(cmd, arr[0], stray.Fid, stray.Cid, db, ctx.Logger)
-		if err != nil {
-			ctx.Logger.Error(err.Error())
+		found := false
+		for _, prov := range arr {
+			if prov == ip {
+				continue
+			}
+			_, err = utils.DownloadFileFromURL(cmd, prov, stray.Fid, stray.Cid, db, ctx.Logger)
+			if err != nil {
+				ctx.Logger.Error(err.Error())
+				continue
+			}
+			found = true
+		}
+
+		if !found {
 			continue
 		}
 
@@ -109,8 +134,6 @@ func (q *UploadQueue) checkStraysOnce(cmd *cobra.Command, db *leveldb.DB) {
 		}
 
 		q.Queue = append(q.Queue, &u)
-
-		ctx.Logger.Info(res.String())
 	}
 }
 

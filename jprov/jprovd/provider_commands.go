@@ -90,6 +90,7 @@ func ClientCmd() *cobra.Command {
 		GenKeyCommand(),
 		clientConfig.Cmd(),
 		GetBalanceCmd(),
+		GetAddressCmd(),
 	)
 
 	return cmd
@@ -139,6 +140,33 @@ func GetBalanceCmd() *cobra.Command {
 			}
 
 			fmt.Printf("Balance: %s\n", res.Balance)
+
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func GetAddressCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "address",
+		Short: "Get account address",
+		Long:  `Get the account address of the current storage provider key.`,
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			address, err := crypto.GetAddress(clientCtx)
+			if err != nil {
+				fmt.Println(err)
+				return nil
+			}
+
+			fmt.Printf("Address: %s\n", address)
 
 			return nil
 		},

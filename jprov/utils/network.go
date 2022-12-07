@@ -17,9 +17,12 @@ import (
 )
 
 func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string, db *leveldb.DB, logger log.Logger) (string, error) {
-	resp, err := http.Get(fmt.Sprintf("%s/d/%s", url, fid))
+	resp, err := http.Get(fmt.Sprintf("%s/download/%s", url, fid))
 	if err != nil {
 		return "", err
+	}
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("failed to find file on network")
 	}
 	defer resp.Body.Close()
 
