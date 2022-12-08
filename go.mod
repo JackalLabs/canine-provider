@@ -4,7 +4,8 @@ go 1.19
 
 require (
 	github.com/cosmos/cosmos-sdk v0.45.11
-	github.com/jackalLabs/canine-chain v1.2.0-alpha.4
+	github.com/huin/goupnp v1.0.3
+	github.com/jackalLabs/canine-chain v1.2.0-alpha.7
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/rs/cors v1.8.2
 	github.com/rs/zerolog v1.27.0
@@ -15,6 +16,7 @@ require (
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/tendermint/tendermint v0.34.23
 	github.com/wealdtech/go-merkletree v1.0.0
+	golang.org/x/sync v0.1.0
 )
 
 require (

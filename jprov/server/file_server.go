@@ -269,6 +269,7 @@ func StartFileServer(cmd *cobra.Command) {
 	ctx := utils.GetServerContextFromCmd(cmd)
 
 	go postProofs(cmd, db, &q, ctx)
+	go NatCycle(cmd.Context())
 	go q.StartListener(cmd)
 	go q.CheckStrays(cmd, db)
 

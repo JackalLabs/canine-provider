@@ -8,6 +8,8 @@ import (
 
 const MaxFileSize = 32 << 30
 
+const AppName = "jprovd"
+
 type IndexResponse struct {
 	Status  string `json:"status"`
 	Address string `json:"address"`

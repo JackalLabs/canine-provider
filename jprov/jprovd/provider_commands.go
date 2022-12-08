@@ -74,6 +74,7 @@ func NetworkCmd() *cobra.Command {
 
 	cmd.AddCommand(
 		rpc.StatusCommand(),
+		GetIpCmd(),
 	)
 
 	return cmd
@@ -140,6 +141,31 @@ func GetBalanceCmd() *cobra.Command {
 			}
 
 			fmt.Printf("Balance: %s\n", res.Balance)
+
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func GetIpCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "ip",
+		Short: "Get provider ip address",
+		Long:  `Get the external ip address this provider can be connected to.`,
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			client, err := server.PickRouterClient(cmd.Context())
+			if err != nil {
+				return err
+			}
+
+			externalIP, err := client.GetExternalIPAddress()
+			if err != nil {
+				return err
+			}
+			fmt.Printf("%s:3333\n", externalIP)
 
 			return nil
 		},
