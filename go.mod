@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/cosmos/cosmos-sdk v0.45.11
 	github.com/huin/goupnp v1.0.3
-	github.com/jackalLabs/canine-chain v1.2.0-alpha.7
+	github.com/jackalLabs/canine-chain v1.2.0-alpha.8
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/rs/cors v1.8.2
 	github.com/rs/zerolog v1.27.0
@@ -120,7 +120,7 @@ require (
 	github.com/tendermint/crypto v0.0.0-20191022145703-50d29ede1e15 // indirect
 	github.com/tendermint/go-amino v0.16.0 // indirect
 	github.com/tendermint/tm-db v0.6.7 // indirect
-	github.com/zondax/hid v0.9.0 // indirect
+	github.com/zondax/hid v0.9.1 // indirect
 	github.com/zondax/ledger-go v0.13.0 // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
 	golang.org/x/crypto v0.1.0 // indirect

@@ -2,24 +2,17 @@ package main
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"os"
 
 	"github.com/cosmos/cosmos-sdk/version"
 
-	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/server"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/cosmos/cosmos-sdk/client"
-	clientConfig "github.com/cosmos/cosmos-sdk/client/config"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/input"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
-	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
-	"github.com/cosmos/cosmos-sdk/types/bech32"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	stortypes "github.com/jackalLabs/canine-chain/x/storage/types"
 	"github.com/spf13/cobra"
 	tmcli "github.com/tendermint/tendermint/libs/cli"
 )
@@ -80,68 +73,12 @@ func NetworkCmd() *cobra.Command {
 	return cmd
 }
 
-func ClientCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "client",
-		Short: "Provider client commands",
-		Long:  `The sub-menu for Jackal Storage Provider client commands.`,
-	}
-
-	cmd.AddCommand(
-		GenKeyCommand(),
-		clientConfig.Cmd(),
-		GetBalanceCmd(),
-		GetAddressCmd(),
-	)
-
-	return cmd
-}
-
 func VersionCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "version",
 		Short: "Prints version info",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Printf("%s %s\n", version.AppName, version.Version)
-			return nil
-		},
-	}
-
-	return cmd
-}
-
-func GetBalanceCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "balance",
-		Short: "Get account balance",
-		Long:  `Get the account balance of the current storage provider key.`,
-		Args:  cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
-			if err != nil {
-				return err
-			}
-
-			queryClient := banktypes.NewQueryClient(clientCtx)
-			address, err := crypto.GetAddress(clientCtx)
-			if err != nil {
-				fmt.Println(err)
-				return nil
-			}
-
-			params := &banktypes.QueryBalanceRequest{
-				Denom:   "ujkl",
-				Address: address,
-			}
-
-			res, err := queryClient.Balance(context.Background(), params)
-			if err != nil {
-				fmt.Println(err)
-				return nil
-			}
-
-			fmt.Printf("Balance: %s\n", res.Balance)
-
 			return nil
 		},
 	}
@@ -156,43 +93,16 @@ func GetIpCmd() *cobra.Command {
 		Long:  `Get the external ip address this provider can be connected to.`,
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			client, err := server.PickRouterClient(cmd.Context())
+			cli, err := server.PickRouterClient(cmd.Context())
 			if err != nil {
 				return err
 			}
 
-			externalIP, err := client.GetExternalIPAddress()
+			externalIP, err := cli.GetExternalIPAddress()
 			if err != nil {
 				return err
 			}
 			fmt.Printf("%s:3333\n", externalIP)
-
-			return nil
-		},
-	}
-
-	return cmd
-}
-
-func GetAddressCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "address",
-		Short: "Get account address",
-		Long:  `Get the account address of the current storage provider key.`,
-		Args:  cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
-			if err != nil {
-				return err
-			}
-
-			address, err := crypto.GetAddress(clientCtx)
-			if err != nil {
-				fmt.Println(err)
-				return nil
-			}
-
-			fmt.Printf("Address: %s\n", address)
 
 			return nil
 		},
@@ -237,60 +147,6 @@ func ResetCommand() *cobra.Command {
 			return nil
 		},
 	}
-
-	AddTxFlagsToCmd(cmd)
-
-	return cmd
-}
-
-func GenKeyCommand() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "gen-key",
-		Short: "Generate a new private key",
-		Long:  `Generate a new Jackal address and private key combination to interact with the blockchain.`,
-		Args:  cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
-			if err != nil {
-				return err
-			}
-			pKey := secp256k1.GenPrivKey()
-			address, err := bech32.ConvertAndEncode(stortypes.AddressPrefix, pKey.PubKey().Address().Bytes())
-			if err != nil {
-				return err
-			}
-
-			keyExport := crypto.StorPrivKey{
-				Address: address,
-				Key:     crypto.ExportPrivKey(pKey),
-			}
-
-			alreadyKey := crypto.KeyExists(clientCtx)
-			buf := bufio.NewReader(cmd.InOrStdin())
-
-			if alreadyKey {
-				yes, err := input.GetConfirmation("Key already exists, would you like to overwrite it? If so please make sure you have created a backup.", buf, cmd.ErrOrStderr())
-				if err != nil {
-					return err
-				}
-
-				if !yes {
-					return nil
-				}
-			}
-
-			err = crypto.WriteKey(clientCtx, &keyExport)
-			if err != nil {
-				return err
-			}
-
-			fmt.Printf("Your new address is %s\n", address)
-
-			return nil
-		},
-	}
-
-	AddTxFlagsToCmd(cmd)
 
 	return cmd
 }
