@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -197,7 +198,11 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 
 			ver, verr := checkVerified(&clientCtx, cid)
 			if verr != nil {
-
+				ctx.Logger.Error(verr.Error())
+				rr := strings.Contains(verr.Error(), "key not found")
+				if !rr {
+					continue
+				}
 				val, err := db.Get(utils.MakeDowntimeKey(cid), nil)
 				newval := 0
 				if err == nil {
@@ -264,7 +269,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 
 			res, err := postProof(clientCtx, cid, block, db, q, ctx)
 			if err != nil {
-				ctx.Logger.Error("Posting Error: %s", err.Error())
+				ctx.Logger.Error(fmt.Sprintf("Posting Error: %s", err.Error()))
 				continue
 			}
 

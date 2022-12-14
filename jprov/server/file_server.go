@@ -213,6 +213,7 @@ func checkVerified(clientCtx *client.Context, cid string) (bool, error) {
 	}
 
 	res, err := queryClient.ActiveDeals(context.Background(), params)
+
 	if err != nil {
 		return false, err
 	}
