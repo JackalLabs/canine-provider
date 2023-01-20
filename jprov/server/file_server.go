@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,8 +10,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
-	"path/filepath"
-	"strconv"
 	"sync"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
@@ -27,8 +24,6 @@ import (
 	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
 
 	"github.com/julienschmidt/httprouter"
-	merkletree "github.com/wealdtech/go-merkletree"
-
 	"github.com/spf13/cobra"
 )
 
@@ -104,7 +99,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 }
 
 func MakeContract(cmd *cobra.Command, fid string, sender string, wg *sync.WaitGroup, q *queue.UploadQueue) (*types.Upload, error) {
-	merkleroot, filesize, err := HashData(cmd, fid, sender, q)
+	merkleroot, filesize, err := HashData(cmd, fid)
 	if err != nil {
 		return nil, err
 	}
@@ -145,87 +140,6 @@ func MakeContract(cmd *cobra.Command, fid string, sender string, wg *sync.WaitGr
 	return k, nil
 }
 
-func HashData(cmd *cobra.Command, fid string, sender string, q *queue.UploadQueue) (string, string, error) {
-	clientCtx := client.GetClientContextFromCmd(cmd)
-	ctx := utils.GetServerContextFromCmd(cmd)
-	path := utils.GetStoragePath(clientCtx, fid)
-	files, err := os.ReadDir(filepath.Clean(path))
-	if err != nil {
-		ctx.Logger.Error(err.Error())
-	}
-	size := 0
-	var list [][]byte
-
-	for i := 0; i < len(files); i++ {
-
-		path := filepath.Join(utils.GetStoragePath(clientCtx, fid), fmt.Sprintf("%d.jkl", i))
-
-		dat, err := os.ReadFile(filepath.Clean(path))
-		if err != nil {
-			ctx.Logger.Error(err.Error())
-		}
-
-		size = size + len(dat)
-
-		h := sha256.New()
-		_, err = io.WriteString(h, fmt.Sprintf("%d%x", i, dat))
-		if err != nil {
-			return "", "", err
-		}
-		hashName := h.Sum(nil)
-
-		list = append(list, hashName)
-
-	}
-
-	t, err := merkletree.New(list)
-	if err != nil {
-		ctx.Logger.Error(err.Error())
-	}
-
-	return hex.EncodeToString(t.Root()), fmt.Sprintf("%d", size), nil
-}
-
-func queryBlock(clientCtx *client.Context, cid string) (string, error) {
-	queryClient := storageTypes.NewQueryClient(clientCtx)
-
-	argCid := cid
-
-	params := &storageTypes.QueryActiveDealRequest{
-		Cid: argCid,
-	}
-
-	res, err := queryClient.ActiveDeals(context.Background(), params)
-	if err != nil {
-		return "", err
-	}
-
-	return res.ActiveDeals.Blocktoprove, nil
-}
-
-func checkVerified(clientCtx *client.Context, cid string) (bool, error) {
-	queryClient := storageTypes.NewQueryClient(clientCtx)
-
-	argCid := cid
-
-	params := &storageTypes.QueryActiveDealRequest{
-		Cid: argCid,
-	}
-
-	res, err := queryClient.ActiveDeals(context.Background(), params)
-
-	if err != nil {
-		return false, err
-	}
-
-	ver, err := strconv.ParseBool(res.ActiveDeals.Proofverified)
-	if err != nil {
-		return false, err
-	}
-
-	return ver, nil
-}
-
 func StartFileServer(cmd *cobra.Command) {
 	clientCtx, qerr := client.GetClientTxContext(cmd)
 	if qerr != nil {
@@ -247,7 +161,7 @@ func StartFileServer(cmd *cobra.Command) {
 
 	_, err = queryClient.Providers(context.Background(), params)
 	if err != nil {
-		fmt.Println("Provider not initialized on the blockchain, or conneciton to the RPC node has been lost. Please make sure your RPC node is available then run `jprovd init` to fix this.")
+		fmt.Println("Provider not initialized on the blockchain, or connection to the RPC node has been lost. Please make sure your RPC node is available then run `jprovd init` to fix this.")
 		return
 	}
 
