@@ -17,6 +17,7 @@ import (
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
+	"github.com/wealdtech/go-merkletree/sha3"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -86,7 +87,7 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int64
 	}
 	ditem := h.Sum(nil)
 
-	proof, err := tree.GenerateProof(ditem)
+	proof, err := tree.GenerateProof(ditem, 0)
 	if err != nil {
 		return "", "", err
 	}
@@ -105,7 +106,7 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int64
 
 	}
 
-	verified, err := merkletree.VerifyProof(ditem, proof, k)
+	verified, err := merkletree.VerifyProofUsing(ditem, false, proof, [][]byte{k}, sha3.New512())
 	if err != nil {
 		ctx.Logger.Error(err.Error())
 		return "", "", err
