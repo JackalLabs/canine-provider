@@ -1,9 +1,6 @@
 package utils
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/cosmos/cosmos-sdk/client"
 	txns "github.com/cosmos/cosmos-sdk/client/tx"
@@ -50,6 +47,7 @@ func prepareFactory(clientCtx client.Context, txf txns.Factory) (txns.Factory, e
 
 func SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, msgs ...sdk.Msg) (*sdk.TxResponse, error) {
 	txf := txns.NewFactoryCLI(clientCtx, flagSet)
+
 	txf, err := prepareFactory(clientCtx, txf)
 	if err != nil {
 		return nil, err
@@ -60,15 +58,7 @@ func SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, msgs ...sdk.Msg) (
 		return nil, err
 	}
 
-	if txf.SimulateAndExecute() || clientCtx.Simulate {
-		_, adjusted, err := txns.CalculateGas(clientCtx, txf, msgs...)
-		if err != nil {
-			return nil, err
-		}
-
-		txf = txf.WithGas(adjusted)
-		_, _ = fmt.Fprintf(os.Stderr, "%s\n", txns.GasEstimateResponse{GasEstimate: txf.Gas()})
-	}
+	txf = txf.WithGas(uint64(2000000 * (len(msgs) + 1)))
 
 	if clientCtx.Simulate {
 		return nil, nil
