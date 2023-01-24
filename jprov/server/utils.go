@@ -17,6 +17,8 @@ import (
 	"github.com/wealdtech/go-merkletree"
 )
 
+const ErrNotYours = "not your deal"
+
 func HashData(cmd *cobra.Command, fid string) (string, string, error) {
 	clientCtx := client.GetClientContextFromCmd(cmd)
 	ctx := utils.GetServerContextFromCmd(cmd)
@@ -96,7 +98,7 @@ func checkVerified(clientCtx *client.Context, cid string, self string) (bool, er
 	}
 
 	if res.ActiveDeals.Provider != self {
-		return false, fmt.Errorf("not your deal, get rid of it")
+		return false, fmt.Errorf(ErrNotYours)
 	}
 
 	return ver, nil

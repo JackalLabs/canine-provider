@@ -206,7 +206,8 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 			if verr != nil {
 				ctx.Logger.Error(verr.Error())
 				rr := strings.Contains(verr.Error(), "key not found")
-				if !rr {
+				ny := strings.Contains(verr.Error(), ErrNotYours)
+				if !rr && !ny {
 					continue
 				}
 				val, err := db.Get(utils.MakeDowntimeKey(cid), nil)
