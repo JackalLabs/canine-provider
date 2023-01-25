@@ -87,7 +87,6 @@ func checkVerified(clientCtx *client.Context, cid string, self string) (bool, er
 	}
 
 	res, err := queryClient.ActiveDeals(context.Background(), params)
-
 	if err != nil {
 		return false, err
 	}
