@@ -19,17 +19,18 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3.1.0
+        uses: actions/checkout@v3.3.0
 
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v2
         with:
           languages: 'go'
-          queries: crypto-com/cosmos-sdk-codeql@main,security-and-quality
+          queries: security-and-quality
 
       - name: Autobuild
         uses: github/codeql-action/autobuild@v2
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v2
+
