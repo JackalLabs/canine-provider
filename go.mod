@@ -152,8 +152,12 @@ replace (
 	// use cosmos-flavored protobufs
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
+	github.com/jackalLabs/canine-chain => github.com/jackallabs/canine-chain v1.2.0-alpha.12.0.20230124032231-f9a91fb5a692
+
 	github.com/tendermint/tendermint => github.com/informalsystems/tendermint v0.34.23
 	github.com/tendermint/tm-db => github.com/informalsystems/tm-db v0.6.7
+
+	github.com/wealdtech/go-merkletree => github.com/TheMarstonConnell/go-merkletree v0.0.0-20230124030923-93fb10e701d7
 
 	// github.com/jackalLabs/canine-chain v1.2.0-alpha.1 => github.com/jackalLabs/canine-chain v1.2.0-alpha.1.0.20221118200331-8b5fcc0a4443
 	// use grpc compatible with cosmos-flavored protobufs

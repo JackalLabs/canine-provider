@@ -14,15 +14,15 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
-	api "github.com/JackalLabs/jackal-provider/jprov/api"
+	"github.com/JackalLabs/jackal-provider/jprov/api"
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
-	types "github.com/JackalLabs/jackal-provider/jprov/types"
+	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/spf13/cobra"
 )
 
-func indexres(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps httprouter.Params, q *queue.UploadQueue) {
+func indexres(cmd *cobra.Command, w http.ResponseWriter) {
 	clientCtx, err := client.GetClientTxContext(cmd)
 	ctx := utils.GetServerContextFromCmd(cmd)
 	if err != nil {
@@ -46,7 +46,7 @@ func indexres(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps htt
 	}
 }
 
-func checkVersion(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx *utils.Context) {
+func checkVersion(w http.ResponseWriter, ctx *utils.Context) {
 	v := types.VersionResponse{
 		Version: version.Version,
 	}
@@ -56,7 +56,7 @@ func checkVersion(w http.ResponseWriter, r *http.Request, ps httprouter.Params, 
 	}
 }
 
-func downfil(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx *utils.Context) {
+func downfil(cmd *cobra.Command, w http.ResponseWriter, ps httprouter.Params, ctx *utils.Context) {
 	clientCtx := client.GetClientContextFromCmd(cmd)
 
 	files, err := os.ReadDir(utils.GetStoragePath(clientCtx, ps.ByName("file")))
@@ -91,15 +91,15 @@ func GetRoutes(cmd *cobra.Command, router *httprouter.Router, db *leveldb.DB, q 
 	ctx := utils.GetServerContextFromCmd(cmd)
 
 	dfil := func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		downfil(cmd, w, r, ps, ctx)
+		downfil(cmd, w, ps, ctx)
 	}
 
 	ires := func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		indexres(cmd, w, r, ps, q)
+		indexres(cmd, w)
 	}
 
 	router.GET("/version", func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-		checkVersion(w, r, p, ctx)
+		checkVersion(w, ctx)
 	})
 	router.GET("/download/:file", dfil)
 
@@ -110,7 +110,7 @@ func GetRoutes(cmd *cobra.Command, router *httprouter.Router, db *leveldb.DB, q 
 
 func PostRoutes(cmd *cobra.Command, router *httprouter.Router, db *leveldb.DB, q *queue.UploadQueue) {
 	upfil := func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		fileUpload(&w, r, ps, cmd, db, q)
+		fileUpload(&w, r, cmd, db, q)
 	}
 
 	router.POST("/upload", upfil)
@@ -119,7 +119,7 @@ func PostRoutes(cmd *cobra.Command, router *httprouter.Router, db *leveldb.DB, q
 
 // This function returns the filename(to save in database) of the saved file
 // or an error if it occurs
-func fileUpload(w *http.ResponseWriter, r *http.Request, ps httprouter.Params, cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue) {
+func fileUpload(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue) {
 	ctx := utils.GetServerContextFromCmd(cmd)
 
 	// ParseMultipartForm parses a request body as multipart/form-data
