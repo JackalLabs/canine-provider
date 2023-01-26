@@ -180,6 +180,12 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 
 	const maxMisses = 8
 
+	address, err := crypto.GetAddress(clientCtx)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
 	for {
 
 		iter := db.NewIterator(nil, nil)
@@ -197,11 +203,12 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 
 			ctx.Logger.Debug(fmt.Sprintf("CID: %s", cid))
 
-			ver, verr := checkVerified(&clientCtx, cid)
+			ver, verr := checkVerified(&clientCtx, cid, address)
 			if verr != nil {
 				ctx.Logger.Error(verr.Error())
 				rr := strings.Contains(verr.Error(), "key not found")
-				if !rr {
+				ny := strings.Contains(verr.Error(), ErrNotYours)
+				if !rr && !ny {
 					continue
 				}
 				val, err := db.Get(utils.MakeDowntimeKey(cid), nil)

@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
@@ -17,8 +18,6 @@ import (
 	"github.com/cosmos/go-bip39"
 	stortypes "github.com/jackalLabs/canine-chain/x/storage/types"
 	"github.com/spf13/cobra"
-
-	"errors"
 )
 
 func ClientCmd() *cobra.Command {
@@ -46,7 +45,6 @@ func WithdrawCommand() *cobra.Command {
 		Short: "Withdraw tokens to a specified account.",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
@@ -174,7 +172,7 @@ func GenKeyCommand() *cobra.Command {
 
 			pKey := secp256k1.GenPrivKeyFromSecret([]byte(mnemonic))
 
-			//pKey := secp256k1.GenPrivKey()
+			// pKey := secp256k1.GenPrivKey()
 			address, err := bech32.ConvertAndEncode(stortypes.AddressPrefix, pKey.PubKey().Address().Bytes())
 			if err != nil {
 				return err
@@ -252,7 +250,7 @@ func ImportKeyCommand() *cobra.Command {
 
 			pKey := secp256k1.GenPrivKeyFromSecret([]byte(mnemonic))
 
-			//pKey := secp256k1.GenPrivKey()
+			// pKey := secp256k1.GenPrivKey()
 			address, err := bech32.ConvertAndEncode(stortypes.AddressPrefix, pKey.PubKey().Address().Bytes())
 			if err != nil {
 				return err

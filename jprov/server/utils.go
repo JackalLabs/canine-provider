@@ -17,6 +17,8 @@ import (
 	"github.com/wealdtech/go-merkletree"
 )
 
+const ErrNotYours = "not your deal"
+
 func HashData(cmd *cobra.Command, fid string) (string, string, error) {
 	clientCtx := client.GetClientContextFromCmd(cmd)
 	ctx := utils.GetServerContextFromCmd(cmd)
@@ -75,7 +77,7 @@ func queryBlock(clientCtx *client.Context, cid string) (string, error) {
 	return res.ActiveDeals.Blocktoprove, nil
 }
 
-func checkVerified(clientCtx *client.Context, cid string) (bool, error) {
+func checkVerified(clientCtx *client.Context, cid string, self string) (bool, error) {
 	queryClient := storageTypes.NewQueryClient(clientCtx)
 
 	argCid := cid
@@ -85,7 +87,6 @@ func checkVerified(clientCtx *client.Context, cid string) (bool, error) {
 	}
 
 	res, err := queryClient.ActiveDeals(context.Background(), params)
-
 	if err != nil {
 		return false, err
 	}
@@ -93,6 +94,10 @@ func checkVerified(clientCtx *client.Context, cid string) (bool, error) {
 	ver, err := strconv.ParseBool(res.ActiveDeals.Proofverified)
 	if err != nil {
 		return false, err
+	}
+
+	if res.ActiveDeals.Provider != self {
+		return false, fmt.Errorf(ErrNotYours)
 	}
 
 	return ver, nil
