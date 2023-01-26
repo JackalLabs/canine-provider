@@ -6,7 +6,7 @@ require (
 	github.com/cosmos/cosmos-sdk v0.45.11
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/huin/goupnp v1.0.3
-	github.com/jackalLabs/canine-chain v1.2.0-alpha.11
+	github.com/jackalLabs/canine-chain v1.2.0-alpha.13
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/rs/cors v1.8.2
 	github.com/rs/zerolog v1.27.0
@@ -123,12 +123,12 @@ require (
 	github.com/zondax/hid v0.9.1 // indirect
 	github.com/zondax/ledger-go v0.13.0 // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
-	golang.org/x/crypto v0.1.0 // indirect
+	golang.org/x/crypto v0.5.0 // indirect
 	golang.org/x/exp v0.0.0-20221019170559-20944726eadf // indirect
-	golang.org/x/net v0.1.0 // indirect
-	golang.org/x/sys v0.1.0 // indirect
-	golang.org/x/term v0.1.0 // indirect
-	golang.org/x/text v0.4.0 // indirect
+	golang.org/x/net v0.5.0 // indirect
+	golang.org/x/sys v0.4.0 // indirect
+	golang.org/x/term v0.4.0 // indirect
+	golang.org/x/text v0.6.0 // indirect
 	google.golang.org/genproto v0.0.0-20221024183307-1bc688fe9f3e // indirect
 	google.golang.org/grpc v1.50.1 // indirect
 	google.golang.org/protobuf v1.28.2-0.20220831092852-f930b1dc76e8 // indirect
@@ -152,7 +152,7 @@ replace (
 	// use cosmos-flavored protobufs
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
-	github.com/jackalLabs/canine-chain => github.com/jackallabs/canine-chain v1.2.0-alpha.12.0.20230124032231-f9a91fb5a692
+	//github.com/jackalLabs/canine-chain => github.com/jackallabs/canine-chain v1.2.0-alpha.12.0.20230124032231-f9a91fb5a692
 
 	github.com/tendermint/tendermint => github.com/informalsystems/tendermint v0.34.23
 	github.com/tendermint/tm-db => github.com/informalsystems/tm-db v0.6.7
