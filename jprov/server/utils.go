@@ -15,6 +15,7 @@ import (
 	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
 	"github.com/spf13/cobra"
 	"github.com/wealdtech/go-merkletree"
+	"github.com/wealdtech/go-merkletree/sha3"
 )
 
 const ErrNotYours = "not your deal"
@@ -52,7 +53,7 @@ func HashData(cmd *cobra.Command, fid string) (string, string, error) {
 
 	}
 
-	t, err := merkletree.New(list)
+	t, err := merkletree.NewUsing(list, sha3.New512(), false)
 	if err != nil {
 		ctx.Logger.Error(err.Error())
 	}

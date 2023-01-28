@@ -2,7 +2,6 @@ package server
 
 import (
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -75,10 +74,12 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int64
 		data = append(data, hashName)
 	}
 
-	tree, err := merkletree.New(data)
+	tree, err := merkletree.NewUsing(data, sha3.New512(), false)
 	if err != nil {
 		return "", "", err
 	}
+
+	ctx.Logger.Info(fmt.Sprintf("Merkle Root: %x", tree.Root()))
 
 	h := sha256.New()
 	_, err = io.WriteString(h, fmt.Sprintf("%d%x", index, item))
@@ -97,16 +98,7 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int64
 		return "", "", err
 	}
 
-	e := hex.EncodeToString(tree.Root())
-
-	k, err := hex.DecodeString(e)
-	if err != nil {
-		ctx.Logger.Error(err.Error())
-		return "", "", err
-
-	}
-
-	verified, err := merkletree.VerifyProofUsing(ditem, false, proof, [][]byte{k}, sha3.New512())
+	verified, err := merkletree.VerifyProofUsing(ditem, false, proof, [][]byte{tree.Root()}, sha3.New512())
 	if err != nil {
 		ctx.Logger.Error(err.Error())
 		return "", "", err
@@ -173,6 +165,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 	if err != nil {
 		return
 	}
+
 	clientCtx, err := client.GetClientTxContext(cmd)
 	if err != nil {
 		return
