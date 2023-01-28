@@ -79,8 +79,6 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int64
 		return "", "", err
 	}
 
-	ctx.Logger.Info(fmt.Sprintf("Merkle Root: %x", tree.Root()))
-
 	h := sha256.New()
 	_, err = io.WriteString(h, fmt.Sprintf("%d%x", index, item))
 	if err != nil {
