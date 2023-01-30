@@ -30,7 +30,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func CreateMerkleForProof(clientCtx client.Context, filename string, index int64, ctx *utils.Context) (string, string, error) {
+func CreateMerkleForProof(clientCtx client.Context, filename string, index int, ctx *utils.Context) (string, string, error) {
 	files := utils.GetStoragePath(clientCtx, filename)
 
 	f, err := os.Open(files)
@@ -38,9 +38,9 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int64
 		ctx.Logger.Error(err.Error())
 		return "", "", err
 	}
+	defer f.Close()
 
 	fileInfo, err := f.Readdir(-1)
-	f.Close()
 	if err != nil {
 		ctx.Logger.Error(err.Error())
 
@@ -51,8 +51,13 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int64
 
 	var item []byte
 
-	var i int64
-	for i = 0; i < int64(len(fileInfo)); i++ {
+	lengthFile := len(fileInfo)
+
+	if lengthFile == 0 {
+		return "", "", fmt.Errorf("File not found on this machine")
+	}
+
+	for i := 0; i < lengthFile; i++ {
 
 		f, err := os.ReadFile(filepath.Join(files, fmt.Sprintf("%d.jkl", i)))
 		if err != nil {
@@ -121,7 +126,7 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 		return nil, err
 	}
 
-	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), dex.Int64(), ctx)
+	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), int(dex.Int64()), ctx)
 	if err != nil {
 		return nil, err
 	}
