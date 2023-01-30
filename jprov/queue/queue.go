@@ -70,7 +70,9 @@ func (q *UploadQueue) checkStraysOnce(cmd *cobra.Command, db *leveldb.DB) {
 
 	for _, stray := range s {
 		ctx.Logger.Info(fmt.Sprintf("Getting info for %s", stray.Cid))
-		if _, err := os.Stat(utils.GetStoragePath(clientCtx, stray.Fid)); !os.IsNotExist(err) {
+		address, err := crypto.GetAddress(clientCtx)
+		if err != nil {
+			ctx.Logger.Error(err.Error())
 			continue
 		}
 
@@ -88,33 +90,43 @@ func (q *UploadQueue) checkStraysOnce(cmd *cobra.Command, db *leveldb.DB) {
 			continue
 		}
 
+		localCopy := false
 		if len(arr) == 0 {
-			ctx.Logger.Error("No providers have the file we want something is wrong")
-			continue
+			if _, err := os.Stat(utils.GetStoragePath(clientCtx, stray.Fid)); !os.IsNotExist(err) {
+				localCopy = true
+			}
 		}
 
-		found := false
-		for _, prov := range arr {
-			if prov == ip {
+		if !localCopy {
+
+			if _, err := os.Stat(utils.GetStoragePath(clientCtx, stray.Fid)); !os.IsNotExist(err) {
+				ctx.Logger.Info("Already have this file")
 				continue
 			}
-			_, err = utils.DownloadFileFromURL(cmd, prov, stray.Fid, stray.Cid, db, ctx.Logger)
-			if err != nil {
-				ctx.Logger.Error(err.Error())
+
+			if len(arr) == 0 {
+				ctx.Logger.Error("No providers have the file we want something is wrong")
 				continue
 			}
-			found = true
-		}
 
-		if !found {
-			ctx.Logger.Info("Cannot find the file we want, either something is wrong or you have the file already")
-			continue
-		}
+			found := false
+			for _, prov := range arr {
+				if prov == ip {
+					continue
+				}
+				_, err = utils.DownloadFileFromURL(cmd, prov, stray.Fid, stray.Cid, db, ctx.Logger)
+				if err != nil {
+					ctx.Logger.Error(err.Error())
+					continue
+				}
+				found = true
+			}
 
-		address, err := crypto.GetAddress(clientCtx)
-		if err != nil {
-			ctx.Logger.Error(err.Error())
-			continue
+			if !found {
+				ctx.Logger.Info("Cannot find the file we want, either something is wrong or you have the file already")
+				continue
+			}
+
 		}
 
 		msg := storageTypes.NewMsgClaimStray(
