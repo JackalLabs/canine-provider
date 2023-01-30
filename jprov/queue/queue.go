@@ -89,7 +89,7 @@ func (q *UploadQueue) checkStraysOnce(cmd *cobra.Command, db *leveldb.DB) {
 		}
 
 		if len(arr) == 0 {
-			ctx.Logger.Info("no providers have the file we want something is wrong")
+			ctx.Logger.Error("No providers have the file we want something is wrong")
 			continue
 		}
 
@@ -107,6 +107,7 @@ func (q *UploadQueue) checkStraysOnce(cmd *cobra.Command, db *leveldb.DB) {
 		}
 
 		if !found {
+			ctx.Logger.Info("Cannot find the file we want, either something is wrong or you have the file already")
 			continue
 		}
 
