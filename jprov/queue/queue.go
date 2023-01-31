@@ -96,6 +96,11 @@ func (q *UploadQueue) checkStraysOnce(cmd *cobra.Command, db *leveldb.DB) {
 		} else { // If there are providers with this file, we will download it from them instead to keep things consistent
 			if _, err := os.Stat(utils.GetStoragePath(clientCtx, stray.Fid)); !os.IsNotExist(err) {
 				ctx.Logger.Info("Already have this file")
+				err = utils.SaveToDatabase(stray.Fid, stray.Cid, db, ctx.Logger) // Add the file back to the database since it's never being downloaded
+				if err != nil {
+					ctx.Logger.Error(err.Error())
+					continue
+				}
 				continue
 			}
 
