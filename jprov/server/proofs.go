@@ -30,7 +30,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func CreateMerkleForProof(clientCtx client.Context, filename string, index int64, ctx *utils.Context) (string, string, error) {
+func CreateMerkleForProof(clientCtx client.Context, filename string, index int, ctx *utils.Context) (string, string, error) {
 	files := utils.GetStoragePath(clientCtx, filename)
 
 	f, err := os.Open(files)
@@ -38,9 +38,9 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int64
 		ctx.Logger.Error(err.Error())
 		return "", "", err
 	}
+	defer f.Close()
 
 	fileInfo, err := f.Readdir(-1)
-	f.Close()
 	if err != nil {
 		ctx.Logger.Error(err.Error())
 
@@ -51,8 +51,13 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int64
 
 	var item []byte
 
-	var i int64
-	for i = 0; i < int64(len(fileInfo)); i++ {
+	lengthFile := len(fileInfo)
+
+	if lengthFile == 0 {
+		return "", "", fmt.Errorf("File not found on this machine")
+	}
+
+	for i := 0; i < lengthFile; i++ {
 
 		f, err := os.ReadFile(filepath.Join(files, fmt.Sprintf("%d.jkl", i)))
 		if err != nil {
@@ -121,7 +126,7 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 		return nil, err
 	}
 
-	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), dex.Int64(), ctx)
+	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), int(dex.Int64()), ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +183,6 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 	}
 
 	for {
-
 		iter := db.NewIterator(nil, nil)
 		for iter.Next() {
 			cid := string(iter.Key())
@@ -214,14 +218,44 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 				newval += 1
 
 				if newval > maxMisses {
+
+					duplicate := false
+					iter := db.NewIterator(nil, nil)
+					for iter.Next() {
+						c := string(iter.Key())
+						v := string(iter.Value())
+
+						if c[:len(utils.FILE_KEY)] != utils.FILE_KEY {
+							continue
+						}
+
+						c = c[len(utils.FILE_KEY):]
+
+						if c != cid && v == value {
+							ctx.Logger.Info(fmt.Sprintf("%s != %s but it is also %s, so we must keep the file on disk.", c, cid, v))
+							duplicate = true
+							break
+						}
+					}
 					ctx.Logger.Info(fmt.Sprintf("%s is being removed", value))
-					os.RemoveAll(utils.GetStoragePath(clientCtx, value))
+
+					if !duplicate {
+						ctx.Logger.Info("And we are removing the file on disk.")
+
+						err := os.RemoveAll(utils.GetStoragePath(clientCtx, value))
+						if err != nil {
+							ctx.Logger.Error(err.Error())
+							continue
+						}
+					}
 					err = db.Delete(utils.MakeFileKey(cid), nil)
 					if err != nil {
+						ctx.Logger.Error(err.Error())
 						continue
 					}
 					err = db.Delete(utils.MakeDowntimeKey(cid), nil)
 					if err != nil {
+						ctx.Logger.Error(err.Error())
 						continue
 					}
 					continue

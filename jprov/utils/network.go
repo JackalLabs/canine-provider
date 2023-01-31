@@ -17,6 +17,8 @@ import (
 )
 
 func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string, db *leveldb.DB, logger log.Logger) (string, error) {
+	logger.Info(fmt.Sprintf("Getting %s from %s", fid, url))
+
 	resp, err := http.Get(fmt.Sprintf("%s/download/%s", url, fid))
 	if err != nil {
 		return "", err
@@ -36,7 +38,7 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 
 	hashName, err := WriteFileToDisk(cmd, reader, reader, nil, size, logger)
 	if err != nil {
-		return hashName, err
+		return "", err
 	}
 
 	err = SaveToDatabase(hashName, cid, db, logger)
