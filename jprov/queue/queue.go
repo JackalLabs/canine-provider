@@ -91,6 +91,7 @@ func (q *UploadQueue) checkStraysOnce(cmd *cobra.Command, db *leveldb.DB) {
 			the cached file from our filesystem which keeps the file alive)
 			*/
 			if _, err := os.Stat(utils.GetStoragePath(clientCtx, stray.Fid)); os.IsNotExist(err) {
+				ctx.Logger.Info("Nobody, not even I have the file.")
 				continue // If we don't have it and nobody else does, there is nothing we can do.
 			}
 
