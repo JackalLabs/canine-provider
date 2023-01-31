@@ -238,7 +238,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 					ctx.Logger.Info(fmt.Sprintf("%s is being removed", value))
 
 					if !duplicate {
-						ctx.Logger.Info("But we are keeping the file on disk.")
+						ctx.Logger.Info("And we are removing the file on disk.")
 
 						err := os.RemoveAll(utils.GetStoragePath(clientCtx, value))
 						if err != nil {
