@@ -48,70 +48,60 @@ func (q *UploadQueue) checkStraysOnce(cmd *cobra.Command, db *leveldb.DB) {
 	}
 	s := res.Strays
 
-	if len(s) == 0 {
+	if len(s) == 0 { // If there are no strays, the network has claimed them all. We will try again later.
 		return
 	}
 
-	addr, err := crypto.GetAddress(clientCtx)
+	addr, err := crypto.GetAddress(clientCtx) // Getting the address of the provider to compare it to the strays.
 	if err != nil {
 		ctx.Logger.Error(err.Error())
 		return
 	}
-	req := storageTypes.QueryProviderRequest{
+	req := storageTypes.QueryProviderRequest{ // Ask the network what my own IP address is registered to.
 		Address: addr,
 	}
 
-	provs, err := qClient.Providers(cmd.Context(), &req)
+	provs, err := qClient.Providers(cmd.Context(), &req) // Publish the ask.
 	if err != nil {
 		ctx.Logger.Error(err.Error())
 		return
 	}
-	ip := provs.Providers.Address
+	ip := provs.Providers.Address // Our IP address
 
-	for _, stray := range s {
+	for _, stray := range s { // For every stray, we try and claim & download it.
 		ctx.Logger.Info(fmt.Sprintf("Getting info for %s", stray.Cid))
-		address, err := crypto.GetAddress(clientCtx)
+
+		filesres, err := qClient.FindFile(cmd.Context(), &storageTypes.QueryFindFileRequest{Fid: stray.Fid}) // List all providers that currently have the file active.
 		if err != nil {
 			ctx.Logger.Error(err.Error())
-			continue
+			continue // There was an issue, so we pretend like it didn't happen.
 		}
 
-		filesres, err := qClient.FindFile(cmd.Context(), &storageTypes.QueryFindFileRequest{Fid: stray.Fid})
-		if err != nil {
-			ctx.Logger.Error(err.Error())
-			continue
-			// return err
-		}
-
-		var arr []string
+		var arr []string // Create an array of IPs from the request.
 		err = json.Unmarshal([]byte(filesres.ProviderIps), &arr)
 		if err != nil {
 			ctx.Logger.Error(err.Error())
 			continue
 		}
 
-		localCopy := false
 		if len(arr) == 0 {
-			if _, err := os.Stat(utils.GetStoragePath(clientCtx, stray.Fid)); !os.IsNotExist(err) {
-				localCopy = true
+			/**
+			If there are no providers with the file, we check if it's on our provider's filesystem. (We cannot claim
+			strays that we don't own, but if we caused an error when handling the file we can reclaim the stray with
+			the cached file from our filesystem which keeps the file alive)
+			*/
+			if _, err := os.Stat(utils.GetStoragePath(clientCtx, stray.Fid)); os.IsNotExist(err) {
+				continue // If we don't have it and nobody else does, there is nothing we can do.
 			}
-		}
-
-		if !localCopy {
-
+		} else { // If there are providers with this file, we will download it from them instead to keep things consistent
 			if _, err := os.Stat(utils.GetStoragePath(clientCtx, stray.Fid)); !os.IsNotExist(err) {
 				ctx.Logger.Info("Already have this file")
 				continue
 			}
 
-			if len(arr) == 0 {
-				ctx.Logger.Error("No providers have the file we want something is wrong")
-				continue
-			}
-
 			found := false
-			for _, prov := range arr {
-				if prov == ip {
+			for _, prov := range arr { // Check every provider for the file, not just trust chain data.
+				if prov == ip { // Ignore ourselves
 					continue
 				}
 				_, err = utils.DownloadFileFromURL(cmd, prov, stray.Fid, stray.Cid, db, ctx.Logger)
@@ -119,18 +109,18 @@ func (q *UploadQueue) checkStraysOnce(cmd *cobra.Command, db *leveldb.DB) {
 					ctx.Logger.Error(err.Error())
 					continue
 				}
-				found = true
+				found = true // If we can successfully download the file, stop there.
+				break
 			}
 
-			if !found {
+			if !found { // If we never find the file, and we don't have it, something is wrong with the network, nothing we can do.
 				ctx.Logger.Info("Cannot find the file we want, either something is wrong or you have the file already")
 				continue
 			}
-
 		}
 
-		msg := storageTypes.NewMsgClaimStray(
-			address,
+		msg := storageTypes.NewMsgClaimStray( // Attempt to claim the stray, this may fail if someone else has already tried to claim our stray.
+			addr,
 			stray.Cid,
 		)
 		if err := msg.ValidateBasic(); err != nil {
