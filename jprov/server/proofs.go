@@ -183,7 +183,6 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 	}
 
 	for {
-
 		iter := db.NewIterator(nil, nil)
 		for iter.Next() {
 			cid := string(iter.Key())
@@ -219,14 +218,39 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 				newval += 1
 
 				if newval > maxMisses {
-					ctx.Logger.Info(fmt.Sprintf("%s is being removed", value))
-					os.RemoveAll(utils.GetStoragePath(clientCtx, value))
+
+					duplicate := false
+					iter := db.NewIterator(nil, nil)
+					for iter.Next() {
+						c := string(iter.Key())
+						v := string(iter.Value())
+
+						if c[:len(utils.FILE_KEY)] != utils.FILE_KEY {
+							continue
+						}
+
+						if v == value {
+							duplicate = true
+							break
+						}
+					}
+
+					if !duplicate {
+						ctx.Logger.Info(fmt.Sprintf("%s is being removed", value))
+						err := os.RemoveAll(utils.GetStoragePath(clientCtx, value))
+						if err != nil {
+							ctx.Logger.Error(err.Error())
+							continue
+						}
+					}
 					err = db.Delete(utils.MakeFileKey(cid), nil)
 					if err != nil {
+						ctx.Logger.Error(err.Error())
 						continue
 					}
 					err = db.Delete(utils.MakeDowntimeKey(cid), nil)
 					if err != nil {
+						ctx.Logger.Error(err.Error())
 						continue
 					}
 					continue
