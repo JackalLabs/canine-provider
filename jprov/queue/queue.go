@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
@@ -126,6 +127,8 @@ func (q *UploadQueue) checkStraysOnce(cmd *cobra.Command, db *leveldb.DB) {
 			}
 		}
 
+		ctx.Logger.Info(fmt.Sprintf("Attempting to claim %s on chain", stray.Cid))
+
 		msg := storageTypes.NewMsgClaimStray( // Attempt to claim the stray, this may fail if someone else has already tried to claim our stray.
 			addr,
 			stray.Cid,
@@ -135,14 +138,34 @@ func (q *UploadQueue) checkStraysOnce(cmd *cobra.Command, db *leveldb.DB) {
 			continue
 		}
 
+		var wg sync.WaitGroup
+		wg.Add(1)
+
 		u := types.Upload{
 			Message:  msg,
-			Callback: nil,
+			Callback: &wg,
 			Err:      nil,
 			Response: nil,
 		}
 
 		q.Queue = append(q.Queue, &u)
+
+		wg.Wait()
+
+		e := ""
+		if u.Err != nil {
+			e = u.Err.Error()
+		}
+
+		r := ""
+		if u.Response != nil {
+			r = u.Response.String()
+		}
+		_ = r
+		_ = e
+
+		// ctx.Logger.Info(fmt.Sprintf("CID: %s, FID: %s, Error: %s, Res: %s", stray.Cid, stray.Fid, e, r))
+		break
 	}
 }
 
