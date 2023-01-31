@@ -229,7 +229,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 							continue
 						}
 
-						if cid != cid && v == value {
+						if c != cid && v == value {
 							duplicate = true
 							break
 						}
