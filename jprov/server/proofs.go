@@ -229,6 +229,8 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 							continue
 						}
 
+						c = c[len(utils.FILE_KEY):]
+
 						if c != cid && v == value {
 							ctx.Logger.Info(fmt.Sprintf("%s != %s but it is also %s, so we must keep the file on disk.", c, cid, v))
 							duplicate = true
