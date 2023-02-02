@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/cosmos/cosmos-sdk/version"
 
 	"github.com/JackalLabs/jackal-provider/jprov/server"
@@ -33,6 +34,7 @@ func StartServerCommand() *cobra.Command {
 	cmd.Flags().String("port", "3333", "Port to host the server on.")
 	cmd.Flags().Bool("debug", false, "Allow the printing of info messages from the Storage Provider.")
 	cmd.Flags().Uint16("interval", 30, "The interval in seconds for which to check proofs.")
+	cmd.Flags().String(types.VersionFlag, "", "The value exposed by the version api to allow for custom deployments.")
 
 	return cmd
 }
