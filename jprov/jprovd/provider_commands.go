@@ -35,6 +35,7 @@ func StartServerCommand() *cobra.Command {
 	cmd.Flags().Bool("debug", false, "Allow the printing of info messages from the Storage Provider.")
 	cmd.Flags().Uint16("interval", 30, "The interval in seconds for which to check proofs.")
 	cmd.Flags().String(types.VersionFlag, "", "The value exposed by the version api to allow for custom deployments.")
+	cmd.Flags().Bool(types.HaltStraysFlag, false, "Debug flag to stop picking up strays.")
 
 	return cmd
 }

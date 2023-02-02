@@ -219,6 +219,14 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 }
 
 func (q *UploadQueue) StartListener(cmd *cobra.Command) {
+	res, err := cmd.Flags().GetBool(types.HaltStraysFlag)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	if res {
+		return
+	}
 	for {
 		time.Sleep(time.Second * 2)
 

@@ -6,7 +6,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-const VersionFlag = "version"
+const VersionFlag = "Version"
+const HaltStraysFlag = "HaltStrays"
 
 const MaxFileSize = 32 << 30
 
