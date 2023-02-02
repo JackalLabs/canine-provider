@@ -182,11 +182,32 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 		return
 	}
 
+	type IterWrap struct {
+		Key   []byte
+		Value []byte
+	}
+
 	for {
+		start := time.Now()
+		ctx.Logger.Info(fmt.Sprintf("Starting proof commitment at %s", start.Format("2006-01-02 15:04:05.000000")))
+		m := []IterWrap{}
 		iter := db.NewIterator(nil, nil)
 		for iter.Next() {
-			cid := string(iter.Key())
-			value := string(iter.Value())
+			mm := IterWrap{
+				Key:   iter.Key(),
+				Value: iter.Value(),
+			}
+			m = append(m, mm)
+		}
+		iter.Release()
+		err = iter.Error()
+		if err != nil {
+			ctx.Logger.Error("Iterator Error: %s", err.Error())
+		}
+
+		for _, i := range m {
+			cid := string(i.Key)
+			value := string(i.Value)
 
 			if cid[:len(utils.FILE_KEY)] != utils.FILE_KEY {
 				continue
@@ -311,12 +332,15 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 				continue
 			}
 		}
-		iter.Release()
-		err = iter.Error()
-		if err != nil {
-			ctx.Logger.Error("Iterator Error: %s", err.Error())
+
+		end := time.Now().Sub(start)
+		ctx.Logger.Info(fmt.Sprintf("proof took %d", end.Nanoseconds()))
+
+		tm := time.Duration(interval) * time.Second
+
+		if tm.Nanoseconds()-end.Nanoseconds() > 0 {
+			time.Sleep(time.Duration(interval) * time.Second)
 		}
 
-		time.Sleep(time.Duration(interval) * time.Second)
 	}
 }
