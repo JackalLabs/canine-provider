@@ -227,7 +227,6 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 }
 
 func (q *UploadQueue) StartListener(cmd *cobra.Command) {
-
 	for {
 		time.Sleep(time.Second * 2)
 
