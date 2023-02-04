@@ -20,6 +20,8 @@ type StrayManager struct {
 	Context       *utils.Context
 	ClientContext client.Context
 	Address       string
+	Cmd           *cobra.Command
+	Ip            string
 }
 
 func NewStrayManager(cmd *cobra.Command) *StrayManager {
@@ -31,6 +33,18 @@ func NewStrayManager(cmd *cobra.Command) *StrayManager {
 		ctx.Logger.Error(err.Error())
 		return nil
 	}
+	qClient := types.NewQueryClient(clientCtx)
+
+	req := types.QueryProviderRequest{ // Ask the network what my own IP address is registered to.
+		Address: addr,
+	}
+
+	provs, err := qClient.Providers(cmd.Context(), &req) // Publish the ask.
+	if err != nil {
+		ctx.Logger.Error(err.Error())
+		return nil
+	}
+	ip := provs.Providers.Address // Our IP address
 
 	return &StrayManager{
 		hands:         []LittleHand{},
@@ -38,12 +52,16 @@ func NewStrayManager(cmd *cobra.Command) *StrayManager {
 		Context:       ctx,
 		Address:       addr,
 		ClientContext: clientCtx,
+		Cmd:           cmd,
+		Ip:            ip,
 	}
 }
 
 type LittleHand struct {
-	Stray    *types.Strays
-	Waiter   *sync.WaitGroup
-	Database *leveldb.DB
-	Busy     bool
+	Stray         *types.Strays
+	Waiter        *sync.WaitGroup
+	Database      *leveldb.DB
+	Busy          bool
+	Cmd           *cobra.Command
+	ClientContext client.Context
 }

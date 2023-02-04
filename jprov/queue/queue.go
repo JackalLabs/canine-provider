@@ -1,21 +1,14 @@
 package queue
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-	"sync"
 	"time"
 
-	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/cosmos/cosmos-sdk/client"
-	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
-	"github.com/spf13/cobra"
-	"github.com/syndtr/goleveldb/leveldb"
-
 	ctypes "github.com/cosmos/cosmos-sdk/types"
+	"github.com/spf13/cobra"
 )
 
 type UploadQueue struct {
