@@ -14,6 +14,7 @@ import (
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
+	"github.com/JackalLabs/jackal-provider/jprov/strays"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/rs/cors"
@@ -186,7 +187,10 @@ func StartFileServer(cmd *cobra.Command) {
 	go postProofs(cmd, db, &q, ctx)
 	go NatCycle(cmd.Context())
 	go q.StartListener(cmd)
-	go q.CheckStrays(cmd, db)
+
+	manager := strays.NewStrayManager(cmd) // creating and starting the stray management system
+	manager.Init(10, db)
+	go manager.Start(cmd)
 
 	port, err := cmd.Flags().GetString("port")
 	if err != nil {
