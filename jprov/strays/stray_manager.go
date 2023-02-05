@@ -106,6 +106,9 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 
 		found := false
 		for _, prov := range arr { // Check every provider for the file, not just trust chain data.
+			if found {
+				continue
+			}
 			if prov == m.Ip { // Ignore ourselves
 				finish()
 				return
@@ -117,7 +120,6 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 				return
 			}
 			found = true // If we can successfully download the file, stop there.
-			break
 		}
 
 		if !found { // If we never find the file, and we don't have it, something is wrong with the network, nothing we can do.
