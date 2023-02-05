@@ -11,8 +11,6 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
-type StrayQueue struct{}
-
 type StrayManager struct {
 	hands         []LittleHand
 	Waiter        sync.WaitGroup
@@ -64,4 +62,6 @@ type LittleHand struct {
 	Busy          bool
 	Cmd           *cobra.Command
 	ClientContext client.Context
+	Id            uint
+	Address       string
 }

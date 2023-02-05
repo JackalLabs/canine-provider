@@ -184,12 +184,19 @@ func StartFileServer(cmd *cobra.Command) {
 
 	ctx := utils.GetServerContextFromCmd(cmd)
 
+	threads, err := cmd.Flags().GetUint(types.FlagThreads)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	manager := strays.NewStrayManager(cmd) // creating and starting the stray management system
+	manager.Init(cmd, threads, db)
+
 	go postProofs(cmd, db, &q, ctx)
 	go NatCycle(cmd.Context())
 	go q.StartListener(cmd)
 
-	manager := strays.NewStrayManager(cmd) // creating and starting the stray management system
-	manager.Init(10, db)
 	go manager.Start(cmd)
 
 	port, err := cmd.Flags().GetString("port")

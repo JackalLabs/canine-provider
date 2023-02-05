@@ -6,15 +6,34 @@ import (
 	"os"
 	"time"
 
+	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/cosmos/cosmos-sdk/client"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/bech32"
+	"github.com/cosmos/cosmos-sdk/x/feegrant"
 	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
 	"github.com/spf13/cobra"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
-func (m *StrayManager) AddHand(db *leveldb.DB, cmd *cobra.Command) {
+func (m *StrayManager) AddHand(db *leveldb.DB, cmd *cobra.Command, index uint) *LittleHand {
 	clientCtx := client.GetClientContextFromCmd(cmd)
+	pkeyStruct, err := crypto.ReadKey(clientCtx)
+	if err != nil {
+		return nil
+	}
+
+	key, err := indexPrivKey(pkeyStruct.Key, byte(index))
+	if err != nil {
+		return nil
+	}
+
+	address, err := bech32.ConvertAndEncode(storageTypes.AddressPrefix, key.PubKey().Address().Bytes())
+	if err != nil {
+		return nil
+	}
+
 	hand := LittleHand{
 		Waiter:        &m.Waiter,
 		Stray:         nil,
@@ -22,12 +41,18 @@ func (m *StrayManager) AddHand(db *leveldb.DB, cmd *cobra.Command) {
 		Busy:          false,
 		Cmd:           cmd,
 		ClientContext: clientCtx,
+		Id:            index,
+		Address:       address,
 	}
 
 	m.hands = append(m.hands, hand)
+	return &hand
 }
 
 func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process the stray and make the txn, when done, free the hand & delete the stray entry
+	if h.Stray == nil {
+		return
+	}
 	if h.Busy {
 		return
 	}
@@ -107,7 +132,7 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 	msg := storageTypes.NewMsgClaimStray( // Attempt to claim the stray, this may fail if someone else has already tried to claim our stray.
 		m.Address,
 		h.Stray.Cid,
-		m.Address, // TODO need to swap to hands address
+		h.Address,
 	)
 	if err := msg.ValidateBasic(); err != nil {
 		ctx.Logger.Error(err.Error())
@@ -127,7 +152,6 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 	}
 
 	finish()
-
 }
 
 func (m *StrayManager) Distribute() { // Hand out every available stray to an idle hand
@@ -146,11 +170,98 @@ func (m *StrayManager) Distribute() { // Hand out every available stray to an id
 	}
 }
 
-func (m *StrayManager) Init(count int, db *leveldb.DB) { // create all the hands for the manager
+func (m *StrayManager) Init(cmd *cobra.Command, count uint, db *leveldb.DB) { // create all the hands for the manager
+	fmt.Println("Starting initialization...")
+	var i uint
+	clientCtx := client.GetClientContextFromCmd(cmd)
 
-	for i := 0; i < count; i++ {
-		m.AddHand(db, m.Cmd)
+	address, err := crypto.GetAddress(clientCtx)
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
+
+	qClient := storageTypes.NewQueryClient(clientCtx)
+	pres, err := qClient.Providers(cmd.Context(), &storageTypes.QueryProviderRequest{Address: address})
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	currentClaimers := pres.Providers.AuthClaimers
+
+	for i = 1; i < count+1; i++ {
+		fmt.Printf("Processing stray thread %d.\n", i)
+		h := m.AddHand(db, m.Cmd, i)
+
+		found := false
+		for _, claimer := range currentClaimers {
+			if claimer == h.Address {
+				found = true
+				break
+			}
+		}
+		if found {
+			continue
+		}
+
+		fmt.Println("Adding hand to my claim whitelist...")
+
+		msg := storageTypes.NewMsgAddClaimer(address, h.Address)
+
+		res, err := utils.SendTx(clientCtx, cmd.Flags(), msg)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+
+		if res.Code != 0 {
+			fmt.Println(res.RawLog)
+			continue
+		}
+		fmt.Println("Done!")
+
+		fmt.Println("Authorizing hand to transact on my behalf...")
+
+		adr, nerr := sdk.AccAddressFromBech32(address)
+		if nerr != nil {
+			fmt.Println(nerr)
+			continue
+		}
+
+		hadr, nerr := sdk.AccAddressFromBech32(h.Address)
+		if nerr != nil {
+			fmt.Println(nerr)
+			continue
+		}
+
+		allowance := feegrant.BasicAllowance{
+			SpendLimit: nil,
+			Expiration: nil,
+		}
+
+		grantMsg, nerr := feegrant.NewMsgGrantAllowance(&allowance, adr, hadr)
+		if nerr != nil {
+			fmt.Println(nerr)
+			continue
+		}
+
+		grantRes, nerr := utils.SendTx(clientCtx, cmd.Flags(), grantMsg)
+		if nerr != nil {
+			fmt.Println(nerr)
+			continue
+		}
+
+		if grantRes.Code != 0 {
+			fmt.Println(grantRes.RawLog)
+			continue
+		}
+
+		fmt.Println("Done!")
+
+	}
+
+	fmt.Println("Finished Initialization...")
 }
 
 func (m *StrayManager) Start(cmd *cobra.Command) { // loop through stray system

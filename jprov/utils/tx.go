@@ -53,13 +53,7 @@ func SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, msgs ...sdk.Msg) (
 		return nil, err
 	}
 
-	address, err := crypto.GetAddress(clientCtx)
-	if err != nil {
-		return nil, err
-	}
-
 	txf = txf.WithGas(uint64(2000000 * (len(msgs) + 1)))
-	txf.WithSequence(2)
 	if clientCtx.Simulate {
 		return nil, nil
 	}
@@ -70,7 +64,7 @@ func SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, msgs ...sdk.Msg) (
 	}
 
 	tx.SetFeeGranter(clientCtx.GetFeeGranterAddress())
-	err = Sign(txf, clientCtx, address, tx, true)
+	err = Sign(txf, clientCtx, tx, true)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +83,7 @@ func SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, msgs ...sdk.Msg) (
 	return res, err
 }
 
-func Sign(txf txns.Factory, clientCtx client.Context, name string, txBuilder client.TxBuilder, overwriteSig bool) error {
+func Sign(txf txns.Factory, clientCtx client.Context, txBuilder client.TxBuilder, overwriteSig bool) error {
 	signMode := txf.SignMode()
 	if signMode == signing.SignMode_SIGN_MODE_UNSPECIFIED {
 		// use the SignModeHandler's default mode if unspecified
