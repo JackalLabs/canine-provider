@@ -145,7 +145,6 @@ func indexPrivKey(key string, index byte) (*cryptotypes.PrivKey, error) {
 }
 
 func (h *LittleHand) prepareFactory(clientCtx client.Context, txf txns.Factory) (txns.Factory, error) {
-
 	from, err := sdk.AccAddressFromBech32(h.Address)
 	if err != nil {
 		return txf, err
