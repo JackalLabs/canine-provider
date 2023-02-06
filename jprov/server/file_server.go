@@ -10,6 +10,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
@@ -19,6 +20,8 @@ import (
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/rs/cors"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/wealdtech/go-merkletree"
+	"github.com/wealdtech/go-merkletree/sha3"
 
 	"github.com/cosmos/cosmos-sdk/client"
 
@@ -56,6 +59,59 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	}
 	cid := cidhash.Sum(nil)
 	strcid, err := utils.MakeCid(cid)
+	if err != nil {
+		return err
+	}
+
+	files := utils.GetStoragePath(clientCtx, fid)
+
+	f, err := os.Open(files)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	fileInfo, err := f.Readdir(-1)
+	if err != nil {
+		return err
+	}
+
+	var data [][]byte
+
+	lengthFile := len(fileInfo)
+
+	if lengthFile == 0 {
+		return fmt.Errorf("File not found on this machine")
+	}
+
+	for i := 0; i < lengthFile; i++ {
+
+		f, err := os.ReadFile(filepath.Join(files, fmt.Sprintf("%d.jkl", i)))
+		if err != nil {
+			return err
+		}
+
+		h := sha256.New()
+		_, err = io.WriteString(h, fmt.Sprintf("%d%x", i, f))
+		if err != nil {
+			return err
+		}
+		hashName := h.Sum(nil)
+
+		data = append(data, hashName)
+	}
+
+	tree, err := merkletree.NewUsing(data, sha3.New512(), false)
+	if err != nil {
+		return err
+	}
+
+	exportedTree, err := tree.Export()
+	if err != nil {
+		return err
+	}
+
+	err = db.Put(utils.MakeTreeKey(fid), exportedTree, nil)
 	if err != nil {
 		return err
 	}

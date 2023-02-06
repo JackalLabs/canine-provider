@@ -33,6 +33,7 @@ import (
 func CreateMerkleForProof(clientCtx client.Context, filename string, index int, ctx *utils.Context) (string, string, error) {
 	files := utils.GetStoragePath(clientCtx, filename)
 
+	// TODO Read merkle tree from database instead of this mess
 	f, err := os.Open(files)
 	if err != nil {
 		ctx.Logger.Error(err.Error())
@@ -83,6 +84,7 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 	if err != nil {
 		return "", "", err
 	}
+	// TODO this mess
 
 	h := sha256.New()
 	_, err = io.WriteString(h, fmt.Sprintf("%d%x", index, item))

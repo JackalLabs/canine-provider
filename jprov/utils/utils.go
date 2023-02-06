@@ -10,6 +10,7 @@ import (
 const (
 	UPTIME_LEFT_KEY = "UPTL-"
 	FILE_KEY        = "FILE-"
+	TREE_KEY        = "TREE-"
 	DOWNTIME_KEY    = "DWNT-"
 )
 
@@ -19,6 +20,10 @@ func MakeUptimeKey(cid string) []byte {
 
 func MakeFileKey(cid string) []byte {
 	return []byte(fmt.Sprintf("%s%s", FILE_KEY, cid))
+}
+
+func MakeTreeKey(cid string) []byte {
+	return []byte(fmt.Sprintf("%s%s", TREE_KEY, cid))
 }
 
 func MakeDowntimeKey(cid string) []byte {
