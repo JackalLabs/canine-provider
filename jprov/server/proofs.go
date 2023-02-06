@@ -164,7 +164,7 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 }
 
 func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) {
-	interval, err := cmd.Flags().GetUint16("interval")
+	interval, err := cmd.Flags().GetUint16(types.FlagInterval)
 	if err != nil {
 		return
 	}

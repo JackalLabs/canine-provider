@@ -33,7 +33,7 @@ func StartServerCommand() *cobra.Command {
 	AddTxFlagsToCmd(cmd)
 	cmd.Flags().String("port", "3333", "Port to host the server on.")
 	cmd.Flags().Bool("debug", false, "Allow the printing of info messages from the Storage Provider.")
-	cmd.Flags().Uint16("interval", 30, "The interval in seconds for which to check proofs.")
+	cmd.Flags().Uint16(types.FlagInterval, 10, "The interval in seconds for which to check proofs.")
 	cmd.Flags().Uint(types.FlagThreads, 10, "The amount of stray threads.")
 
 	return cmd

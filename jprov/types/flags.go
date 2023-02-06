@@ -1,5 +1,6 @@
 package types
 
 const (
-	FlagThreads = "threads"
+	FlagThreads  = "threads"
+	FlagInterval = "interval"
 )
