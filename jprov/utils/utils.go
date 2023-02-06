@@ -37,6 +37,13 @@ func GetStoragePath(ctx client.Context, fid string) string {
 	return configFilePath
 }
 
+func GetStoragePathForPiece(ctx client.Context, fid string, index int) string {
+	configPath := filepath.Join(ctx.HomeDir, "storage")
+	configFilePath := filepath.Join(configPath, fid, fmt.Sprintf("%d.jkl", index))
+
+	return configFilePath
+}
+
 func GetStorageAllPath(ctx client.Context) string {
 	configPath := filepath.Join(ctx.HomeDir, "storage")
 
