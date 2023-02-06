@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 
 	"github.com/tendermint/tendermint/libs/log"
+	"github.com/wealdtech/go-merkletree"
+	"github.com/wealdtech/go-merkletree/sha3"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/spf13/cobra"
@@ -42,6 +44,64 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 	}
 
 	err = SaveToDatabase(hashName, cid, db, logger)
+	if err != nil {
+		return hashName, err
+	}
+
+	clientCtx, err := client.GetClientTxContext(cmd)
+	if err != nil {
+		return hashName, err
+	}
+
+	files := GetStoragePath(clientCtx, fid)
+
+	f, err := os.Open(files)
+	if err != nil {
+		return hashName, err
+	}
+	defer f.Close()
+
+	fileInfo, err := f.Readdir(-1)
+	if err != nil {
+		return hashName, err
+	}
+
+	var data [][]byte
+
+	lengthFile := len(fileInfo)
+
+	if lengthFile == 0 {
+		return hashName, fmt.Errorf("File not found on this machine")
+	}
+
+	for i := 0; i < lengthFile; i++ {
+
+		f, err := os.ReadFile(filepath.Join(files, fmt.Sprintf("%d.jkl", i)))
+		if err != nil {
+			return hashName, err
+		}
+
+		h := sha256.New()
+		_, err = io.WriteString(h, fmt.Sprintf("%d%x", i, f))
+		if err != nil {
+			return hashName, err
+		}
+		hashName := h.Sum(nil)
+
+		data = append(data, hashName)
+	}
+
+	tree, err := merkletree.NewUsing(data, sha3.New512(), false)
+	if err != nil {
+		return hashName, err
+	}
+
+	exportedTree, err := tree.Export()
+	if err != nil {
+		return hashName, err
+	}
+
+	err = db.Put(MakeTreeKey(fid), exportedTree, nil)
 	if err != nil {
 		return hashName, err
 	}
