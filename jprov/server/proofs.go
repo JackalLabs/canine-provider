@@ -44,6 +44,10 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 	}
 
 	tree, err := merkletree.ImportMerkleTree(rawTree, sha3.New512()) // import the tree instead of creating the tree on the fly
+	if err != nil {
+		ctx.Logger.Error("Error can't import tree!")
+		return "", "", err
+	}
 
 	h := sha256.New()
 	_, err = io.WriteString(h, fmt.Sprintf("%d%x", index, item))
