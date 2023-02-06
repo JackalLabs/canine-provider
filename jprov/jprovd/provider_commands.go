@@ -35,6 +35,7 @@ func StartServerCommand() *cobra.Command {
 	cmd.Flags().Bool("debug", false, "Allow the printing of info messages from the Storage Provider.")
 	cmd.Flags().Uint16(types.FlagInterval, 10, "The interval in seconds for which to check proofs.")
 	cmd.Flags().Uint(types.FlagThreads, 10, "The amount of stray threads.")
+	cmd.Flags().Uint(types.FlagMaxMisses, 16, "The amount of intervals a provider can miss their proofs before removing a file.")
 
 	return cmd
 }

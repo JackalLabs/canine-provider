@@ -174,7 +174,10 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 		return
 	}
 
-	const maxMisses = 8
+	maxMisses, err := cmd.Flags().GetInt(types.FlagMaxMisses)
+	if err != nil {
+		return
+	}
 
 	address, err := crypto.GetAddress(clientCtx)
 	if err != nil {
