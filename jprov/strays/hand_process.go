@@ -119,6 +119,7 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 	res, err := utils.SendTx(h.ClientContext, h.Cmd.Flags(), msg)
 	if err != nil {
 		ctx.Logger.Error(err.Error())
+		ctx.Logger.Error(res.RawLog)
 		finish()
 		return
 	}
