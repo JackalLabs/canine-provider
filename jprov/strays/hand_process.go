@@ -20,14 +20,18 @@ import (
 )
 
 func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process the stray and make the txn, when done, free the hand & delete the stray entry
+	m.Context.Logger.Info(fmt.Sprintf("Processing hand #%d", h.Id))
 	if h.Stray == nil {
+		m.Context.Logger.Info(fmt.Sprintf("Hand #%d is busy.", h.Id))
 		return
 	}
 	if h.Busy {
+		m.Context.Logger.Info(fmt.Sprintf("Hand #%d is busy.", h.Id))
 		return
 	}
 	h.Busy = true
 	finish := func() { // macro to free up hand
+		m.Context.Logger.Info(fmt.Sprintf("Done processing hand #%d.", h.Id))
 		h.Stray = nil
 		h.Busy = false
 	}
