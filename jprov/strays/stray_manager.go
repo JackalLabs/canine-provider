@@ -1,9 +1,7 @@
 package strays
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
@@ -49,113 +47,6 @@ func (m *StrayManager) AddHand(db *leveldb.DB, cmd *cobra.Command, index uint) *
 	return &hand
 }
 
-func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process the stray and make the txn, when done, free the hand & delete the stray entry
-	if h.Stray == nil {
-		return
-	}
-	if h.Busy {
-		return
-	}
-	h.Busy = true
-	finish := func() { // macro to free up hand
-		h.Stray = nil
-		h.Busy = false
-	}
-
-	ctx.Logger.Info(fmt.Sprintf("Getting info for %s", h.Stray.Cid))
-	qClient := storageTypes.NewQueryClient(h.ClientContext)
-	filesres, err := qClient.FindFile(h.Cmd.Context(), &storageTypes.QueryFindFileRequest{Fid: h.Stray.Fid}) // List all providers that currently have the file active.
-	if err != nil {
-		ctx.Logger.Error(err.Error())
-		finish()
-		return // There was an issue, so we pretend like it didn't happen.
-	}
-
-	var arr []string // Create an array of IPs from the request.
-	err = json.Unmarshal([]byte(filesres.ProviderIps), &arr)
-	if err != nil {
-		ctx.Logger.Error(err.Error())
-		finish()
-		return // There was an issue, so we pretend like it didn't happen.
-	}
-
-	if len(arr) == 0 {
-		/**
-		If there are no providers with the file, we check if it's on our provider's filesystem. (We cannot claim
-		strays that we don't own, but if we caused an error when handling the file we can reclaim the stray with
-		the cached file from our filesystem which keeps the file alive)
-		*/
-		if _, err := os.Stat(utils.GetStoragePath(h.ClientContext, h.Stray.Fid)); os.IsNotExist(err) {
-			ctx.Logger.Info("Nobody, not even I have the file.")
-			finish()
-			return // If we don't have it and nobody else does, there is nothing we can do.
-		}
-
-		err = utils.SaveToDatabase(h.Stray.Fid, h.Stray.Cid, h.Database, ctx.Logger) // Add the file back to the database since it's never being downloaded
-		if err != nil {
-			ctx.Logger.Error(err.Error())
-			finish()
-			return
-		}
-	} else { // If there are providers with this file, we will download it from them instead to keep things consistent
-		if _, err := os.Stat(utils.GetStoragePath(h.ClientContext, h.Stray.Fid)); !os.IsNotExist(err) {
-			ctx.Logger.Info("Already have this file")
-			finish()
-			return
-		}
-
-		found := false
-		for _, prov := range arr { // Check every provider for the file, not just trust chain data.
-			if found {
-				continue
-			}
-			if prov == m.Ip { // Ignore ourselves
-				finish()
-				return
-			}
-			_, err = utils.DownloadFileFromURL(h.Cmd, prov, h.Stray.Fid, h.Stray.Cid, h.Database, ctx.Logger)
-			if err != nil {
-				ctx.Logger.Error(err.Error())
-				finish()
-				return
-			}
-			found = true // If we can successfully download the file, stop there.
-		}
-
-		if !found { // If we never find the file, and we don't have it, something is wrong with the network, nothing we can do.
-			ctx.Logger.Info("Cannot find the file we want, either something is wrong or you have the file already")
-			finish()
-			return
-		}
-	}
-
-	ctx.Logger.Info(fmt.Sprintf("Attempting to claim %s on chain", h.Stray.Cid))
-
-	msg := storageTypes.NewMsgClaimStray( // Attempt to claim the stray, this may fail if someone else has already tried to claim our stray.
-		m.Address,
-		h.Stray.Cid,
-		h.Address,
-	)
-	if err := msg.ValidateBasic(); err != nil {
-		ctx.Logger.Error(err.Error())
-		finish()
-		return
-	}
-
-	res, err := utils.SendTx(h.ClientContext, h.Cmd.Flags(), msg)
-	if err != nil {
-		ctx.Logger.Error(err.Error())
-		finish()
-		return
-	}
-
-	if res.Code != 0 {
-		ctx.Logger.Error(res.RawLog)
-	}
-
-	finish()
-}
-
 func (m *StrayManager) Distribute() { // Hand out every available stray to an idle hand
 	for i := 0; i < len(m.hands); i++ {
 		h := m.hands[i]
@@ -183,7 +74,7 @@ func (m *StrayManager) Init(cmd *cobra.Command, count uint, db *leveldb.DB) { //
 		return
 	}
 
-	qClient := storageTypes.NewQueryClient(clientCtx)
+	qClient := storageTypes.NewQueryClient(clientCtx) // get my address from the chain
 	pres, err := qClient.Providers(cmd.Context(), &storageTypes.QueryProviderRequest{Address: address})
 	if err != nil {
 		fmt.Println(err)
