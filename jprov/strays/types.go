@@ -12,7 +12,7 @@ import (
 )
 
 type StrayManager struct {
-	hands         []LittleHand
+	hands         []*LittleHand
 	Waiter        sync.WaitGroup
 	Strays        []*types.Strays
 	Context       *utils.Context
@@ -45,7 +45,7 @@ func NewStrayManager(cmd *cobra.Command) *StrayManager {
 	ip := provs.Providers.Address // Our IP address
 
 	return &StrayManager{
-		hands:         []LittleHand{},
+		hands:         []*LittleHand{},
 		Strays:        []*types.Strays{},
 		Context:       ctx,
 		Address:       addr,

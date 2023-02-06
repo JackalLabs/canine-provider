@@ -43,7 +43,7 @@ func (m *StrayManager) AddHand(db *leveldb.DB, cmd *cobra.Command, index uint) *
 		Address:       address,
 	}
 
-	m.hands = append(m.hands, hand)
+	m.hands = append(m.hands, &hand)
 	return &hand
 }
 
@@ -63,9 +63,8 @@ func (m *StrayManager) Distribute() { // Hand out every available stray to an id
 			m.Context.Logger.Info("There are no more strays in the pile.")
 			return
 		}
-
-		h.Stray, m.Strays = m.Strays[0], m.Strays[1:] // pop the first element off the queue & assign it to the hand
-
+		h.Stray = m.Strays[0]
+		m.Strays = m.Strays[1:] // pop the first element off the queue & assign it to the hand
 	}
 }
 
