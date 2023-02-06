@@ -321,6 +321,7 @@ func (m *StrayManager) CollectStrays(cmd *cobra.Command) {
 	}
 
 	for _, newStray := range s { // Only add new strays to the queue
+		m.Context.Logger.Info(fmt.Sprintf("Ingress of %s...", newStray.Cid))
 		clean := true
 		for _, oldStray := range m.Strays {
 			if newStray.Cid == oldStray.Cid {
