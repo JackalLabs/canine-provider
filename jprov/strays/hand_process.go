@@ -144,13 +144,9 @@ func indexPrivKey(key string, index byte) (*cryptotypes.PrivKey, error) {
 	return &k, nil
 }
 
-func prepareFactory(clientCtx client.Context, txf txns.Factory) (txns.Factory, error) {
-	address, err := crypto.GetAddress(clientCtx)
-	if err != nil {
-		return txf, err
-	}
+func (h *LittleHand) prepareFactory(clientCtx client.Context, txf txns.Factory) (txns.Factory, error) {
 
-	from, err := sdk.AccAddressFromBech32(address)
+	from, err := sdk.AccAddressFromBech32(h.Address)
 	if err != nil {
 		return txf, err
 	}
@@ -181,7 +177,7 @@ func prepareFactory(clientCtx client.Context, txf txns.Factory) (txns.Factory, e
 func (h *LittleHand) SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, msgs ...sdk.Msg) (*sdk.TxResponse, error) {
 	txf := txns.NewFactoryCLI(clientCtx, flagSet)
 
-	txf, err := prepareFactory(clientCtx, txf)
+	txf, err := h.prepareFactory(clientCtx, txf)
 	if err != nil {
 		return nil, err
 	}
