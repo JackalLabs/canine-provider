@@ -27,7 +27,15 @@ func BuildApi(cmd *cobra.Command, q *queue.UploadQueue, router *httprouter.Route
 
 	// DATA
 	router.GET("/api/data/dump", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		data.DumpDB(cmd, w, r, ps, db)
+		data.DumpDB(w, db)
+	})
+
+	router.GET("/api/data/downtime", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		data.DumpDowntimes(w, db)
+	})
+
+	router.GET("/api/data/fids", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		data.DumpFids(w, db)
 	})
 
 	// NETWORK
