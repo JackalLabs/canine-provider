@@ -138,7 +138,7 @@ func fileUpload(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, db 
 	// ParseMultipartForm parses a request body as multipart/form-data
 	err := r.ParseMultipartForm(types.MaxFileSize) // MAX file size lives here
 	if err != nil {
-		ctx.Logger.Error("Error with form file!")
+		ctx.Logger.Error("Error with parsing form!")
 		v := types.ErrorResponse{
 			Error: err.Error(),
 		}

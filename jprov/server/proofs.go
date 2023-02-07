@@ -178,16 +178,19 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) {
 	interval, err := cmd.Flags().GetUint16(types.FlagInterval)
 	if err != nil {
+		ctx.Logger.Error(err.Error())
 		return
 	}
 
 	clientCtx, err := client.GetClientTxContext(cmd)
 	if err != nil {
+		ctx.Logger.Error(err.Error())
 		return
 	}
 
 	maxMisses, err := cmd.Flags().GetInt(types.FlagMaxMisses)
 	if err != nil {
+		ctx.Logger.Error(err.Error())
 		return
 	}
 
@@ -330,7 +333,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 				continue
 			}
 
-			block, berr := queryBlock(&clientCtx, string(cid))
+			block, berr := queryBlock(&clientCtx, cid)
 			if berr != nil {
 				ctx.Logger.Error("Query Error: %v", berr)
 				continue
