@@ -81,6 +81,8 @@ func downfil(cmd *cobra.Command, w http.ResponseWriter, ps httprouter.Params, ct
 		data = append(data, f...)
 	}
 
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(data)))
+
 	_, err = w.Write(data)
 	if err != nil {
 		return
