@@ -114,27 +114,27 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 	return fmt.Sprintf("%x", item), string(jproof), nil
 }
 
-func postProof(clientCtx client.Context, cid string, block string, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) (*sdk.TxResponse, error) {
+func postProof(clientCtx client.Context, cid string, block string, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) error {
 	dex, ok := sdk.NewIntFromString(block)
 	ctx.Logger.Debug(fmt.Sprintf("BlockToProve: %s", block))
 	if !ok {
-		return nil, fmt.Errorf("cannot parse block number")
+		return fmt.Errorf("cannot parse block number")
 	}
 
 	data, err := db.Get(utils.MakeFileKey(cid), nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), int(dex.Int64()), ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	address, err := crypto.GetAddress(clientCtx)
 	if err != nil {
 		ctx.Logger.Error(err.Error())
-		return nil, err
+		return err
 	}
 
 	msg := storagetypes.NewMsgPostproof(
@@ -144,7 +144,7 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 		cid,
 	)
 	if err := msg.ValidateBasic(); err != nil {
-		return nil, err
+		return err
 	}
 
 	var wg sync.WaitGroup
@@ -157,10 +157,22 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 		Response: nil,
 	}
 
-	q.Append(&u)
-	wg.Wait()
+	go func() {
+		q.Append(&u)
+		wg.Wait()
 
-	return u.Response, u.Err
+		if u.Err != nil {
+			ctx.Logger.Error(fmt.Sprintf("Posting Error: %s", u.Err.Error()))
+			return
+		}
+
+		if u.Response.Code != 0 {
+			ctx.Logger.Error("Contract Response Error: %s", fmt.Errorf(u.Response.RawLog))
+			return
+		}
+	}()
+
+	return nil
 }
 
 func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) {
@@ -185,8 +197,29 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 		return
 	}
 
+	//type IterWrap struct {
+	//	Key   []byte
+	//	Value []byte
+	//}
+
 	for {
+		start := time.Now()
+		ctx.Logger.Info(fmt.Sprintf("Starting proof commitment at %s", start.Format("2006-01-02 15:04:05.000000")))
+		// m := []IterWrap{}
 		iter := db.NewIterator(nil, nil)
+		//for iter.Next() {
+		//	mm := IterWrap{
+		//		Key:   iter.Key(),
+		//		Value: iter.Value(),
+		//	}
+		//	m = append(m, mm)
+		//}
+		//iter.Release()
+		//err = iter.Error()
+		//if err != nil {
+		//	ctx.Logger.Error("Iterator Error: %s", err.Error())
+		//}
+
 		for iter.Next() {
 			cid := string(iter.Key())
 			value := string(iter.Value())
@@ -303,23 +336,28 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 				continue
 			}
 
-			res, err := postProof(clientCtx, cid, block, db, q, ctx)
+			err = postProof(clientCtx, cid, block, db, q, ctx)
 			if err != nil {
-				ctx.Logger.Error(fmt.Sprintf("Posting Error: %s", err.Error()))
+				ctx.Logger.Error("Query Error: %v", err)
 				continue
 			}
 
-			if res.Code != 0 {
-				ctx.Logger.Error("Contract Response Error: %s", fmt.Errorf(res.RawLog))
-				continue
-			}
 		}
+
 		iter.Release()
 		err = iter.Error()
 		if err != nil {
 			ctx.Logger.Error("Iterator Error: %s", err.Error())
 		}
 
-		time.Sleep(time.Duration(interval) * time.Second)
+		end := time.Since(start)
+		ctx.Logger.Info(fmt.Sprintf("proof took %d", end.Nanoseconds()))
+
+		tm := time.Duration(interval) * time.Second
+
+		if tm.Nanoseconds()-end.Nanoseconds() > 0 {
+			time.Sleep(time.Duration(interval) * time.Second)
+		}
+
 	}
 }
