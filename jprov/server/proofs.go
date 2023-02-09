@@ -339,11 +339,12 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 				continue
 			}
 
-			err = postProof(clientCtx, cid, block, db, q, ctx)
-			if err != nil {
-				ctx.Logger.Error("Query Error: %v", err)
-				continue
-			}
+			go func() {
+				err := postProof(clientCtx, cid, block, db, q, ctx)
+				if err != nil {
+					ctx.Logger.Error(err.Error())
+				}
+			}()
 
 		}
 
