@@ -23,9 +23,9 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 
-	storagetypes "github.com/jackalLabs/canine-chain/x/storage/types"
+	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
 
-	merkletree "github.com/wealdtech/go-merkletree"
+	"github.com/wealdtech/go-merkletree"
 
 	"github.com/spf13/cobra"
 )
@@ -38,7 +38,12 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 		ctx.Logger.Error(err.Error())
 		return "", "", err
 	}
-	defer f.Close()
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+			ctx.Logger.Error(err.Error())
+		}
+	}(f)
 
 	fileInfo, err := f.Readdir(-1)
 	if err != nil {
@@ -54,7 +59,7 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 	lengthFile := len(fileInfo)
 
 	if lengthFile == 0 {
-		return "", "", fmt.Errorf("File not found on this machine")
+		return "", "", fmt.Errorf("file not found on this machine")
 	}
 
 	for i := 0; i < lengthFile; i++ {
@@ -89,19 +94,19 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 	if err != nil {
 		return "", "", err
 	}
-	ditem := h.Sum(nil)
+	dItem := h.Sum(nil)
 
-	proof, err := tree.GenerateProof(ditem, 0)
+	proof, err := tree.GenerateProof(dItem, 0)
 	if err != nil {
 		return "", "", err
 	}
 
-	jproof, err := json.Marshal(*proof)
+	jProof, err := json.Marshal(*proof)
 	if err != nil {
 		return "", "", err
 	}
 
-	verified, err := merkletree.VerifyProofUsing(ditem, false, proof, [][]byte{tree.Root()}, sha3.New512())
+	verified, err := merkletree.VerifyProofUsing(dItem, false, proof, [][]byte{tree.Root()}, sha3.New512())
 	if err != nil {
 		ctx.Logger.Error(err.Error())
 		return "", "", err
@@ -111,7 +116,7 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 		ctx.Logger.Info("Cannot verify")
 	}
 
-	return fmt.Sprintf("%x", item), string(jproof), nil
+	return fmt.Sprintf("%x", item), string(jProof), nil
 }
 
 func postProof(clientCtx client.Context, cid string, block string, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) error {
@@ -126,7 +131,7 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 		return err
 	}
 
-	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), int(dex.Int64()), ctx)
+	item, hashList, err := CreateMerkleForProof(clientCtx, string(data), int(dex.Int64()), ctx)
 	if err != nil {
 		return err
 	}
@@ -137,10 +142,10 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 		return err
 	}
 
-	msg := storagetypes.NewMsgPostproof(
+	msg := storageTypes.NewMsgPostproof(
 		address,
 		item,
-		hashlist,
+		hashList,
 		cid,
 	)
 	if err := msg.ValidateBasic(); err != nil {
@@ -237,26 +242,26 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 
 			ctx.Logger.Debug(fmt.Sprintf("CID: %s", cid))
 
-			ver, verr := checkVerified(&clientCtx, cid, address)
-			if verr != nil {
-				ctx.Logger.Error(verr.Error())
-				rr := strings.Contains(verr.Error(), "key not found")
-				ny := strings.Contains(verr.Error(), ErrNotYours)
+			ver, vErr := checkVerified(&clientCtx, cid, address)
+			if vErr != nil {
+				ctx.Logger.Error(vErr.Error())
+				rr := strings.Contains(vErr.Error(), "key not found")
+				ny := strings.Contains(vErr.Error(), ErrNotYours)
 				if !rr && !ny {
 					continue
 				}
 				val, err := db.Get(utils.MakeDowntimeKey(cid), nil)
-				newval := 0
+				newVal := 0
 				if err == nil {
-					newval, err = strconv.Atoi(string(val))
+					newVal, err = strconv.Atoi(string(val))
 					if err != nil {
 						continue
 					}
 				}
 
-				newval += 1
+				newVal += 1
 
-				if newval > maxMisses {
+				if newVal > maxMisses {
 
 					duplicate := false
 					iter := db.NewIterator(nil, nil)
@@ -300,9 +305,9 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 					continue
 				}
 
-				ctx.Logger.Info(fmt.Sprintf("%s will be removed in %d cycles", value, (maxMisses+1)-newval))
+				ctx.Logger.Info(fmt.Sprintf("%s will be removed in %d cycles", value, (maxMisses+1)-newVal))
 
-				err = db.Put(utils.MakeDowntimeKey(cid), []byte(fmt.Sprintf("%d", newval)), nil)
+				err = db.Put(utils.MakeDowntimeKey(cid), []byte(fmt.Sprintf("%d", newVal)), nil)
 				if err != nil {
 					continue
 				}
@@ -310,20 +315,20 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 			}
 
 			val, err := db.Get(utils.MakeDowntimeKey(cid), nil)
-			newval := 0
+			newVal := 0
 			if err == nil {
-				newval, err = strconv.Atoi(string(val))
+				newVal, err = strconv.Atoi(string(val))
 				if err != nil {
 					continue
 				}
 			}
 
-			newval -= 1 // lower the downtime counter to only account for consecutive misses.
-			if newval < 0 {
-				newval = 0
+			newVal -= 1 // lower the downtime counter to only account for consecutive misses.
+			if newVal < 0 {
+				newVal = 0
 			}
 
-			err = db.Put(utils.MakeDowntimeKey(cid), []byte(fmt.Sprintf("%d", newval)), nil)
+			err = db.Put(utils.MakeDowntimeKey(cid), []byte(fmt.Sprintf("%d", newVal)), nil)
 			if err != nil {
 				continue
 			}
@@ -333,9 +338,9 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 				continue
 			}
 
-			block, berr := queryBlock(&clientCtx, cid)
-			if berr != nil {
-				ctx.Logger.Error("Query Error: %v", berr)
+			block, bErr := queryBlock(&clientCtx, cid)
+			if bErr != nil {
+				ctx.Logger.Error("Query Error: %v", bErr)
 				continue
 			}
 
