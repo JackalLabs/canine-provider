@@ -127,6 +127,8 @@ func MakeContract(cmd *cobra.Command, fid string, sender string, wg *sync.WaitGr
 		return nil, err
 	}
 
+	ctx.Logger.Info(fmt.Sprintf("Contract being pushed: %s", msg.String()))
+
 	u := types.Upload{
 		Message:  msg,
 		Callback: wg,

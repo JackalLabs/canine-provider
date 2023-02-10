@@ -38,9 +38,15 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 		ctx.Logger.Error(err.Error())
 		return "", "", err
 	}
-	defer f.Close()
 
 	fileInfo, err := f.Readdir(-1)
+	if err != nil {
+		ctx.Logger.Error(err.Error())
+
+		return "", "", err
+	}
+
+	err = f.Close()
 	if err != nil {
 		ctx.Logger.Error(err.Error())
 
