@@ -284,7 +284,6 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 						err := os.RemoveAll(utils.GetStoragePath(clientCtx, value))
 						if err != nil {
 							ctx.Logger.Error(err.Error())
-							continue
 						}
 					}
 					err = db.Delete(utils.MakeFileKey(cid), nil)
