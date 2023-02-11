@@ -38,14 +38,15 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 		ctx.Logger.Error(err.Error())
 		return "", "", err
 	}
-	defer func(f *os.File) {
-		err := f.Close()
-		if err != nil {
-			ctx.Logger.Error(err.Error())
-		}
-	}(f)
 
 	fileInfo, err := f.Readdir(-1)
+	if err != nil {
+		ctx.Logger.Error(err.Error())
+
+		return "", "", err
+	}
+
+	err = f.Close()
 	if err != nil {
 		ctx.Logger.Error(err.Error())
 
@@ -289,7 +290,6 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 						err := os.RemoveAll(utils.GetStoragePath(clientCtx, value))
 						if err != nil {
 							ctx.Logger.Error(err.Error())
-							continue
 						}
 					}
 					err = db.Delete(utils.MakeFileKey(cid), nil)

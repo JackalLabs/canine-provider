@@ -33,6 +33,8 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 		return
 	}
 
+	ctx := utils.GetServerContextFromCmd(cmd)
+
 	l := len(q.Queue)
 
 	if l == 0 {
@@ -45,6 +47,8 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 		upload := q.Queue[i]
 		uploads = append(uploads, upload)
 		msg = append(msg, upload.Message)
+		ctx.Logger.Info(fmt.Sprintf("Message being sent to chain: %s", upload.Message.String()))
+
 	}
 
 	clientCtx := client.GetClientContextFromCmd(cmd)
