@@ -46,11 +46,24 @@ func indexres(cmd *cobra.Command, w http.ResponseWriter) {
 	}
 }
 
-func checkVersion(w http.ResponseWriter, ctx *utils.Context) {
-	v := types.VersionResponse{
-		Version: version.Version,
+func checkVersion(cmd *cobra.Command, w http.ResponseWriter, ctx *utils.Context) {
+	res, err := cmd.Flags().GetString(types.VersionFlag)
+	if err != nil {
+		ctx.Logger.Error(err.Error())
 	}
-	err := json.NewEncoder(w).Encode(v)
+
+	var v types.VersionResponse
+	if len(res) > 0 {
+		v = types.VersionResponse{
+			Version: res,
+		}
+	} else {
+		v = types.VersionResponse{
+			Version: version.Version,
+		}
+	}
+
+	err = json.NewEncoder(w).Encode(v)
 	if err != nil {
 		ctx.Logger.Error(err.Error())
 	}
@@ -99,7 +112,7 @@ func GetRoutes(cmd *cobra.Command, router *httprouter.Router, db *leveldb.DB, q 
 	}
 
 	router.GET("/version", func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-		checkVersion(w, ctx)
+		checkVersion(cmd, w, ctx)
 	})
 	router.GET("/download/:file", dfil)
 
@@ -125,7 +138,7 @@ func fileUpload(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, db 
 	// ParseMultipartForm parses a request body as multipart/form-data
 	err := r.ParseMultipartForm(types.MaxFileSize) // MAX file size lives here
 	if err != nil {
-		ctx.Logger.Error("Error with form file!")
+		ctx.Logger.Error("Error with parsing form!")
 		v := types.ErrorResponse{
 			Error: err.Error(),
 		}

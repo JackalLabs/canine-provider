@@ -33,8 +33,11 @@ func StartServerCommand() *cobra.Command {
 	AddTxFlagsToCmd(cmd)
 	cmd.Flags().String("port", "3333", "Port to host the server on.")
 	cmd.Flags().Bool("debug", false, "Allow the printing of info messages from the Storage Provider.")
+	cmd.Flags().String(types.VersionFlag, "", "The value exposed by the version api to allow for custom deployments.")
+	cmd.Flags().Bool(types.HaltStraysFlag, false, "Debug flag to stop picking up strays.")
 	cmd.Flags().Uint16(types.FlagInterval, 10, "The interval in seconds for which to check proofs.")
 	cmd.Flags().Uint(types.FlagThreads, 10, "The amount of stray threads.")
+	cmd.Flags().Int(types.FlagMaxMisses, 16, "The amount of intervals a provider can miss their proofs before removing a file.")
 
 	return cmd
 }
