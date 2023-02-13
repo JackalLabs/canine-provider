@@ -34,6 +34,10 @@ type BalanceResponse struct {
 	Balance *sdk.Coin `json:"balance"`
 }
 
+type StatusResponse struct {
+	Status string `json:"status"`
+}
+
 type SpaceResponse struct {
 	Total int64 `json:"total_space"`
 	Used  int64 `json:"used_space"`

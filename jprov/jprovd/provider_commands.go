@@ -48,6 +48,7 @@ func DataCmd() *cobra.Command {
 		CmdSetProviderTotalspace(),
 		CmdSetProviderIP(),
 		CmdSetProviderKeybase(),
+		CmdDumpDatabase(),
 	}
 
 	for _, c := range cmds {
