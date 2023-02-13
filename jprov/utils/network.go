@@ -38,7 +38,7 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 
 	reader := bytes.NewReader(buff.Bytes())
 
-	hashName, err := WriteFileToDisk(cmd, reader, reader, nil, size, logger)
+	hashName, _, err := WriteFileToDisk(cmd, reader, reader, nil, size, db, logger)
 	if err != nil {
 		return "", err
 	}
@@ -109,18 +109,19 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 	return hashName, nil
 }
 
-func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, closer io.Closer, size int64, logger log.Logger) (string, error) {
+func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, closer io.Closer, size int64, db *leveldb.DB, logger log.Logger) (string, [][]byte, error) {
+	var data [][]byte
 	clientCtx := client.GetClientContextFromCmd(cmd)
 
 	h := sha256.New()
 	_, err := io.Copy(h, reader)
 	if err != nil {
-		return "", err
+		return "", data, err
 	}
 	hashName := h.Sum(nil)
 	fid, err := MakeFid(hashName)
 	if err != nil {
-		return "", err
+		return "", data, err
 	}
 
 	path := GetStoragePath(clientCtx, fid)
@@ -128,7 +129,7 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 	// This is path which we want to store the file
 	direrr := os.MkdirAll(path, os.ModePerm)
 	if direrr != nil {
-		return fid, direrr
+		return fid, data, direrr
 	}
 
 	var blocksize int64 = 1024
@@ -136,7 +137,7 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 	for i = 0; i < size; i += blocksize {
 		f, err := os.OpenFile(filepath.Join(path, fmt.Sprintf("%d.jkl", i/blocksize)), os.O_WRONLY|os.O_CREATE, 0o666)
 		if err != nil {
-			return fid, err
+			return fid, data, err
 		}
 
 		firstx := make([]byte, blocksize)
@@ -144,19 +145,46 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 		logger.Debug(fmt.Sprintf("Bytes read: %d", read))
 
 		if err != nil && err != io.EOF {
-			return fid, err
+			return fid, data, err
 		}
 		firstx = firstx[:read]
 		_, writeerr := f.Write(firstx)
 		if writeerr != nil {
-			return fid, err
+			return fid, data, err
 		}
-		f.Close()
+
+		h := sha256.New()
+		_, err = io.WriteString(h, fmt.Sprintf("%d%x", i/blocksize, firstx))
+		if err != nil {
+			return fid, data, err
+		}
+		hashName := h.Sum(nil)
+		data = append(data, hashName)
+		err = f.Close()
+		if err != nil {
+			return fid, data, err
+		}
 	}
 	if closer != nil {
 		closer.Close()
 	}
-	return fid, nil
+
+	tree, err := merkletree.NewUsing(data, sha3.New512(), false)
+	if err != nil {
+		return fid, data, err
+	}
+
+	exportedTree, err := tree.Export()
+	if err != nil {
+		return fid, data, err
+	}
+
+	err = db.Put(MakeTreeKey(fid), exportedTree, nil)
+	if err != nil {
+		return fid, data, err
+	}
+
+	return fid, data, nil
 }
 
 func SaveToDatabase(fid string, strcid string, db *leveldb.DB, logger log.Logger) error {
