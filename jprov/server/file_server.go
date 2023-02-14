@@ -101,7 +101,6 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 }
 
 func MakeContract(cmd *cobra.Command, fid string, sender string, wg *sync.WaitGroup, q *queue.UploadQueue, merkleroot string, filesize string) (*types.Upload, error) {
-
 	ctx := utils.GetServerContextFromCmd(cmd)
 	clientCtx, err := client.GetClientTxContext(cmd)
 	if err != nil {

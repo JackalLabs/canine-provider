@@ -72,7 +72,6 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 }
 
 func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, closer io.Closer, size int64, db *leveldb.DB, logger log.Logger) (string, string, [][]byte, error) {
-
 	var data [][]byte
 	clientCtx := client.GetClientContextFromCmd(cmd)
 
@@ -157,6 +156,7 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 		return fid, r, data, err
 	}
 
+	// nolint
 	exportedTree = nil
 
 	runtime.GC()
