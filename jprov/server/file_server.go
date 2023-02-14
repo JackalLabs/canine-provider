@@ -26,6 +26,8 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/cobra"
+
+	_ "net/http/pprof"
 )
 
 func saveFile(file multipart.File, handler *multipart.FileHeader, sender string, cmd *cobra.Command, db *leveldb.DB, w *http.ResponseWriter, q *queue.UploadQueue) error {
@@ -181,6 +183,7 @@ func StartFileServer(cmd *cobra.Command) {
 
 	GetRoutes(cmd, router, db, &q)
 	PostRoutes(cmd, router, db, &q)
+	PProfRoutes(router)
 
 	handler := cors.Default().Handler(router)
 

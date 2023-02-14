@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"path/filepath"
 
@@ -128,6 +129,18 @@ func PostRoutes(cmd *cobra.Command, router *httprouter.Router, db *leveldb.DB, q
 
 	router.POST("/upload", upfil)
 	router.POST("/u", upfil)
+}
+
+func PProfRoutes(router *httprouter.Router) {
+	router.HandlerFunc(http.MethodGet, "/debug/pprof/", pprof.Index)
+	router.HandlerFunc(http.MethodGet, "/debug/pprof/cmdline", pprof.Cmdline)
+	router.HandlerFunc(http.MethodGet, "/debug/pprof/profile", pprof.Profile)
+	router.HandlerFunc(http.MethodGet, "/debug/pprof/symbol", pprof.Symbol)
+	router.HandlerFunc(http.MethodGet, "/debug/pprof/trace", pprof.Trace)
+	router.Handler(http.MethodGet, "/debug/pprof/goroutine", pprof.Handler("goroutine"))
+	router.Handler(http.MethodGet, "/debug/pprof/heap", pprof.Handler("heap"))
+	router.Handler(http.MethodGet, "/debug/pprof/threadcreate", pprof.Handler("threadcreate"))
+	router.Handler(http.MethodGet, "/debug/pprof/block", pprof.Handler("block"))
 }
 
 // This function returns the filename(to save in database) of the saved file
