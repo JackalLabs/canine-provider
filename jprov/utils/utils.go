@@ -10,6 +10,7 @@ import (
 const (
 	UPTIME_LEFT_KEY = "UPTL-"
 	FILE_KEY        = "FILE-"
+	TREE_KEY        = "TREE-"
 	DOWNTIME_KEY    = "DWNT-"
 )
 
@@ -21,6 +22,10 @@ func MakeFileKey(cid string) []byte {
 	return []byte(fmt.Sprintf("%s%s", FILE_KEY, cid))
 }
 
+func MakeTreeKey(cid string) []byte {
+	return []byte(fmt.Sprintf("%s%s", TREE_KEY, cid))
+}
+
 func MakeDowntimeKey(cid string) []byte {
 	return []byte(fmt.Sprintf("%s%s", DOWNTIME_KEY, cid))
 }
@@ -28,6 +33,13 @@ func MakeDowntimeKey(cid string) []byte {
 func GetStoragePath(ctx client.Context, fid string) string {
 	configPath := filepath.Join(ctx.HomeDir, "storage")
 	configFilePath := filepath.Join(configPath, fid)
+
+	return configFilePath
+}
+
+func GetStoragePathForPiece(ctx client.Context, fid string, index int) string {
+	configPath := filepath.Join(ctx.HomeDir, "storage")
+	configFilePath := filepath.Join(configPath, fid, fmt.Sprintf("%d.jkl", index))
 
 	return configFilePath
 }

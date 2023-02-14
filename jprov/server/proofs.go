@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -30,63 +29,25 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func CreateMerkleForProof(clientCtx client.Context, filename string, index int, ctx *utils.Context) (string, string, error) {
-	files := utils.GetStoragePath(clientCtx, filename)
+func CreateMerkleForProof(clientCtx client.Context, filename string, index int, ctx *utils.Context, db *leveldb.DB) (string, string, error) {
+	files := utils.GetStoragePathForPiece(clientCtx, filename, index)
 
-	f, err := os.Open(files)
+	item, err := os.ReadFile(files) // read only the chunk we need
 	if err != nil {
-		ctx.Logger.Error(err.Error())
+		ctx.Logger.Error("Error can't open file!")
+		return "", "", err
+	}
+	rawTree, err := db.Get(utils.MakeTreeKey(filename), nil)
+
+	if err != nil {
+		ctx.Logger.Error("Error can't find tree!")
 		return "", "", err
 	}
 
-	fileInfo, err := f.Readdir(-1)
+	tree, err := merkletree.ImportMerkleTree(rawTree, sha3.New512()) // import the tree instead of creating the tree on the fly
+
 	if err != nil {
-		ctx.Logger.Error(err.Error())
-
-		return "", "", err
-	}
-
-	err = f.Close()
-	if err != nil {
-		ctx.Logger.Error(err.Error())
-
-		return "", "", err
-	}
-
-	var data [][]byte
-
-	var item []byte
-
-	lengthFile := len(fileInfo)
-
-	if lengthFile == 0 {
-		return "", "", fmt.Errorf("File not found on this machine")
-	}
-
-	for i := 0; i < lengthFile; i++ {
-
-		f, err := os.ReadFile(filepath.Join(files, fmt.Sprintf("%d.jkl", i)))
-		if err != nil {
-			ctx.Logger.Error("Error can't open file!")
-			return "", "", err
-		}
-
-		if i == index {
-			item = f
-		}
-
-		h := sha256.New()
-		_, err = io.WriteString(h, fmt.Sprintf("%d%x", i, f))
-		if err != nil {
-			return "", "", err
-		}
-		hashName := h.Sum(nil)
-
-		data = append(data, hashName)
-	}
-
-	tree, err := merkletree.NewUsing(data, sha3.New512(), false)
-	if err != nil {
+		ctx.Logger.Error("Error can't import tree!")
 		return "", "", err
 	}
 
@@ -132,7 +93,7 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 		return err
 	}
 
-	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), int(dex.Int64()), ctx)
+	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), int(dex.Int64()), ctx, db)
 	if err != nil {
 		return err
 	}

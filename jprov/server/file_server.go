@@ -17,10 +17,9 @@ import (
 	"github.com/JackalLabs/jackal-provider/jprov/strays"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/rs/cors"
 	"github.com/syndtr/goleveldb/leveldb"
-
-	"github.com/cosmos/cosmos-sdk/client"
 
 	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
 
@@ -33,7 +32,7 @@ import (
 func saveFile(file multipart.File, handler *multipart.FileHeader, sender string, cmd *cobra.Command, db *leveldb.DB, w *http.ResponseWriter, q *queue.UploadQueue) error {
 	size := handler.Size
 	ctx := utils.GetServerContextFromCmd(cmd)
-	fid, err := utils.WriteFileToDisk(cmd, file, file, file, size, ctx.Logger)
+	fid, _, err := utils.WriteFileToDisk(cmd, file, file, file, size, db, ctx.Logger)
 	if err != nil {
 		ctx.Logger.Error("Write To Disk Error: %v", err)
 		return err
