@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/tendermint/tendermint/libs/log"
 	"github.com/wealdtech/go-merkletree"
@@ -155,6 +156,8 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 	if err != nil {
 		return fid, r, data, err
 	}
+
+	runtime.GC()
 
 	return fid, r, data, nil
 }
