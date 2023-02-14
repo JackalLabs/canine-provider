@@ -135,7 +135,7 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 
 	blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
 	if err != nil {
-		return fid, direrr
+		return fid, data, direrr
 	}
 
 	var i int64
@@ -159,7 +159,7 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 		}
 
 		h := sha256.New()
-		_, err = io.WriteString(h, fmt.Sprintf("%d%x", i/blocksize, firstx))
+		_, err = io.WriteString(h, fmt.Sprintf("%d%x", i/blockSize, firstx))
 		if err != nil {
 			return fid, data, err
 		}

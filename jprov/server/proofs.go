@@ -38,14 +38,12 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 		return "", "", err
 	}
 	rawTree, err := db.Get(utils.MakeTreeKey(filename), nil)
-
 	if err != nil {
 		ctx.Logger.Error("Error can't find tree!")
 		return "", "", err
 	}
 
 	tree, err := merkletree.ImportMerkleTree(rawTree, sha3.New512()) // import the tree instead of creating the tree on the fly
-
 	if err != nil {
 		ctx.Logger.Error("Error can't import tree!")
 		return "", "", err
