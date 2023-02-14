@@ -101,8 +101,7 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 		return fid, "", data, direrr
 	}
 
-	var i int64
-	for i = 0; i < size; i += blockSize {
+	for i := int64(0); i < size; i += blockSize {
 		f, err := os.OpenFile(filepath.Join(path, fmt.Sprintf("%d.jkl", i/blockSize)), os.O_WRONLY|os.O_CREATE, 0o666)
 		if err != nil {
 			return fid, "", data, err
@@ -116,8 +115,12 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 			return fid, "", data, err
 		}
 		firstx = firstx[:read]
-		_, writeerr := f.Write(firstx)
-		if writeerr != nil {
+		_, writeErr := f.Write(firstx)
+		if writeErr != nil {
+			return fid, "", data, err
+		}
+		err = f.Close()
+		if err != nil {
 			return fid, "", data, err
 		}
 
@@ -128,13 +131,13 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 		}
 		hashName := hash.Sum(nil)
 		data[i/blockSize] = hashName
-		err = f.Close()
+
+	}
+	if closer != nil {
+		err := closer.Close()
 		if err != nil {
 			return fid, "", data, err
 		}
-	}
-	if closer != nil {
-		closer.Close()
 	}
 
 	GetServerContextFromCmd(cmd).Logger.Info("Starting merkle tree construction...")
