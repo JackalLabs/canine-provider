@@ -11,6 +11,7 @@ import (
 
 	"github.com/tendermint/tendermint/libs/log"
 
+	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/spf13/cobra"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -71,15 +72,19 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 		return fid, direrr
 	}
 
-	var blocksize int64 = 1024
+	blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
+	if err != nil {
+		return fid, direrr
+	}
+
 	var i int64
-	for i = 0; i < size; i += blocksize {
-		f, err := os.OpenFile(filepath.Join(path, fmt.Sprintf("%d.jkl", i/blocksize)), os.O_WRONLY|os.O_CREATE, 0o666)
+	for i = 0; i < size; i += blockSize {
+		f, err := os.OpenFile(filepath.Join(path, fmt.Sprintf("%d.jkl", i/blockSize)), os.O_WRONLY|os.O_CREATE, 0o666)
 		if err != nil {
 			return fid, err
 		}
 
-		firstx := make([]byte, blocksize)
+		firstx := make([]byte, blockSize)
 		read, err := file.ReadAt(firstx, i)
 		logger.Debug(fmt.Sprintf("Bytes read: %d", read))
 

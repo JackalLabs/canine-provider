@@ -4,4 +4,5 @@ const (
 	FlagThreads   = "threads"
 	FlagInterval  = "interval"
 	FlagMaxMisses = "max-misses"
+	FlagChunkSize = "chunk-size"
 )
