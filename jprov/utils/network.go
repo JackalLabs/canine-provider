@@ -3,6 +3,7 @@ package utils
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -39,7 +40,7 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 
 	reader := bytes.NewReader(buff.Bytes())
 
-	hashName, _, err := WriteFileToDisk(cmd, reader, reader, nil, size, db, logger)
+	hashName, _, _, err := WriteFileToDisk(cmd, reader, reader, nil, size, db, logger)
 	if err != nil {
 		return "", err
 	}
@@ -110,19 +111,19 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 	return hashName, nil
 }
 
-func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, closer io.Closer, size int64, db *leveldb.DB, logger log.Logger) (string, [][]byte, error) {
+func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, closer io.Closer, size int64, db *leveldb.DB, logger log.Logger) (string, string, [][]byte, error) {
 	var data [][]byte
 	clientCtx := client.GetClientContextFromCmd(cmd)
 
 	h := sha256.New()
 	_, err := io.Copy(h, reader)
 	if err != nil {
-		return "", data, err
+		return "", "", data, err
 	}
 	hashName := h.Sum(nil)
 	fid, err := MakeFid(hashName)
 	if err != nil {
-		return "", data, err
+		return "", "", data, err
 	}
 
 	path := GetStoragePath(clientCtx, fid)
@@ -130,19 +131,19 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 	// This is path which we want to store the file
 	direrr := os.MkdirAll(path, os.ModePerm)
 	if direrr != nil {
-		return fid, data, direrr
+		return fid, "", data, direrr
 	}
 
 	blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
 	if err != nil {
-		return fid, data, direrr
+		return fid, "", data, direrr
 	}
 
 	var i int64
 	for i = 0; i < size; i += blockSize {
 		f, err := os.OpenFile(filepath.Join(path, fmt.Sprintf("%d.jkl", i/blockSize)), os.O_WRONLY|os.O_CREATE, 0o666)
 		if err != nil {
-			return fid, data, err
+			return fid, "", data, err
 		}
 
 		firstx := make([]byte, blockSize)
@@ -150,24 +151,24 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 		logger.Debug(fmt.Sprintf("Bytes read: %d", read))
 
 		if err != nil && err != io.EOF {
-			return fid, data, err
+			return fid, "", data, err
 		}
 		firstx = firstx[:read]
 		_, writeerr := f.Write(firstx)
 		if writeerr != nil {
-			return fid, data, err
+			return fid, "", data, err
 		}
 
 		h := sha256.New()
 		_, err = io.WriteString(h, fmt.Sprintf("%d%x", i/blockSize, firstx))
 		if err != nil {
-			return fid, data, err
+			return fid, "", data, err
 		}
 		hashName := h.Sum(nil)
 		data = append(data, hashName)
 		err = f.Close()
 		if err != nil {
-			return fid, data, err
+			return fid, "", data, err
 		}
 	}
 	if closer != nil {
@@ -176,20 +177,20 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 
 	tree, err := merkletree.NewUsing(data, sha3.New512(), false)
 	if err != nil {
-		return fid, data, err
+		return fid, "", data, err
 	}
 
 	exportedTree, err := tree.Export()
 	if err != nil {
-		return fid, data, err
+		return fid, hex.EncodeToString(tree.Root()), data, err
 	}
 
 	err = db.Put(MakeTreeKey(fid), exportedTree, nil)
 	if err != nil {
-		return fid, data, err
+		return fid, hex.EncodeToString(tree.Root()), data, err
 	}
 
-	return fid, data, nil
+	return fid, hex.EncodeToString(tree.Root()), data, nil
 }
 
 func SaveToDatabase(fid string, strcid string, db *leveldb.DB, logger log.Logger) error {

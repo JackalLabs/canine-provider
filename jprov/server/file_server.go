@@ -32,7 +32,7 @@ import (
 func saveFile(file multipart.File, handler *multipart.FileHeader, sender string, cmd *cobra.Command, db *leveldb.DB, w *http.ResponseWriter, q *queue.UploadQueue) error {
 	size := handler.Size
 	ctx := utils.GetServerContextFromCmd(cmd)
-	fid, _, err := utils.WriteFileToDisk(cmd, file, file, file, size, db, ctx.Logger)
+	fid, merkle, _, err := utils.WriteFileToDisk(cmd, file, file, file, size, db, ctx.Logger)
 	if err != nil {
 		ctx.Logger.Error("Write To Disk Error: %v", err)
 		return err
@@ -64,7 +64,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	msg, ctrerr := MakeContract(cmd, fid, sender, &wg, q)
+	msg, ctrerr := MakeContract(cmd, fid, sender, &wg, q, merkle, fmt.Sprintf("%d", size))
 	if ctrerr != nil {
 		ctx.Logger.Error("CONTRACT ERROR: %v", ctrerr)
 		return ctrerr
@@ -100,11 +100,8 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	return nil
 }
 
-func MakeContract(cmd *cobra.Command, fid string, sender string, wg *sync.WaitGroup, q *queue.UploadQueue) (*types.Upload, error) {
-	merkleroot, filesize, err := HashData(cmd, fid)
-	if err != nil {
-		return nil, err
-	}
+func MakeContract(cmd *cobra.Command, fid string, sender string, wg *sync.WaitGroup, q *queue.UploadQueue, merkleroot string, filesize string) (*types.Upload, error) {
+
 	ctx := utils.GetServerContextFromCmd(cmd)
 	clientCtx, err := client.GetClientTxContext(cmd)
 	if err != nil {
