@@ -157,6 +157,8 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 		return fid, r, data, err
 	}
 
+	exportedTree = nil
+
 	runtime.GC()
 
 	return fid, r, data, nil
