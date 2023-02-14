@@ -40,7 +40,7 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 
 	reader := bytes.NewReader(buff.Bytes())
 
-	hashName, _, _, err := WriteFileToDisk(cmd, reader, reader, nil, size, db, logger)
+	hashName, _, data, err := WriteFileToDisk(cmd, reader, reader, nil, size, db, logger)
 	if err != nil {
 		return "", err
 	}
@@ -48,49 +48,6 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 	err = SaveToDatabase(hashName, cid, db, logger)
 	if err != nil {
 		return hashName, err
-	}
-
-	clientCtx, err := client.GetClientTxContext(cmd)
-	if err != nil {
-		return hashName, err
-	}
-
-	files := GetStoragePath(clientCtx, fid)
-
-	f, err := os.Open(files)
-	if err != nil {
-		return hashName, err
-	}
-	defer f.Close()
-
-	fileInfo, err := f.Readdir(-1)
-	if err != nil {
-		return hashName, err
-	}
-
-	var data [][]byte
-
-	lengthFile := len(fileInfo)
-
-	if lengthFile == 0 {
-		return hashName, fmt.Errorf("File not found on this machine")
-	}
-
-	for i := 0; i < lengthFile; i++ {
-
-		f, err := os.ReadFile(filepath.Join(files, fmt.Sprintf("%d.jkl", i)))
-		if err != nil {
-			return hashName, err
-		}
-
-		h := sha256.New()
-		_, err = io.WriteString(h, fmt.Sprintf("%d%x", i, f))
-		if err != nil {
-			return hashName, err
-		}
-		hashName := h.Sum(nil)
-
-		data = append(data, hashName)
 	}
 
 	tree, err := merkletree.NewUsing(data, sha3.New512(), false)
@@ -103,6 +60,8 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 		return hashName, err
 	}
 
+	tree = nil
+
 	err = db.Put(MakeTreeKey(fid), exportedTree, nil)
 	if err != nil {
 		return hashName, err
@@ -112,6 +71,7 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 }
 
 func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, closer io.Closer, size int64, db *leveldb.DB, logger log.Logger) (string, string, [][]byte, error) {
+
 	var data [][]byte
 	clientCtx := client.GetClientContextFromCmd(cmd)
 
@@ -175,22 +135,28 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 		closer.Close()
 	}
 
+	GetServerContextFromCmd(cmd).Logger.Info("Starting merkle tree construction...")
+
 	tree, err := merkletree.NewUsing(data, sha3.New512(), false)
 	if err != nil {
 		return fid, "", data, err
 	}
 
+	r := hex.EncodeToString(tree.Root())
+
 	exportedTree, err := tree.Export()
 	if err != nil {
-		return fid, hex.EncodeToString(tree.Root()), data, err
+		return fid, r, data, err
 	}
+
+	tree = nil // for GC
 
 	err = db.Put(MakeTreeKey(fid), exportedTree, nil)
 	if err != nil {
-		return fid, hex.EncodeToString(tree.Root()), data, err
+		return fid, r, data, err
 	}
 
-	return fid, hex.EncodeToString(tree.Root()), data, nil
+	return fid, r, data, nil
 }
 
 func SaveToDatabase(fid string, strcid string, db *leveldb.DB, logger log.Logger) error {
