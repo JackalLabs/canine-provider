@@ -72,11 +72,16 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 }
 
 func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, closer io.Closer, size int64, db *leveldb.DB, logger log.Logger) (string, string, [][]byte, error) {
-	var data [][]byte
+	blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
+	if err != nil {
+		return "", "", nil, err
+	}
+
+	data := make([][]byte, size/blockSize+1)
 	clientCtx := client.GetClientContextFromCmd(cmd)
 
 	h := sha256.New()
-	_, err := io.Copy(h, reader)
+	_, err = io.Copy(h, reader)
 	if err != nil {
 		return "", "", data, err
 	}
@@ -86,16 +91,13 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 		return "", "", data, err
 	}
 
+	h = nil // marking for removal from gc
+
 	path := GetStoragePath(clientCtx, fid)
 
 	// This is path which we want to store the file
 	direrr := os.MkdirAll(path, os.ModePerm)
 	if direrr != nil {
-		return fid, "", data, direrr
-	}
-
-	blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
-	if err != nil {
 		return fid, "", data, direrr
 	}
 
@@ -119,13 +121,13 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 			return fid, "", data, err
 		}
 
-		h := sha256.New()
-		_, err = io.WriteString(h, fmt.Sprintf("%d%x", i/blockSize, firstx))
+		hash := sha256.New()
+		_, err = io.WriteString(hash, fmt.Sprintf("%d%x", i/blockSize, firstx))
 		if err != nil {
 			return fid, "", data, err
 		}
-		hashName := h.Sum(nil)
-		data = append(data, hashName)
+		hashName := hash.Sum(nil)
+		data[i/blockSize] = hashName
 		err = f.Close()
 		if err != nil {
 			return fid, "", data, err
