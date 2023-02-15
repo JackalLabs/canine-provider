@@ -41,7 +41,7 @@ func DumpDowntimes(w http.ResponseWriter, db *leveldb.DB) {
 	iter := db.NewIterator(nil, nil)
 
 	for iter.Next() {
-		if string(iter.Key())[:5] == utils.DOWNTIME_KEY {
+		if string(iter.Key())[:5] == utils.DowntimeKey {
 			i, err := strconv.Atoi(string(iter.Value()))
 			if err != nil {
 				continue
@@ -70,7 +70,7 @@ func DumpFids(w http.ResponseWriter, db *leveldb.DB) {
 	iter := db.NewIterator(nil, nil)
 
 	for iter.Next() {
-		if string(iter.Key())[:5] == utils.FILE_KEY {
+		if string(iter.Key())[:5] == utils.FileKey {
 
 			d := types.FidBlock{
 				CID: string(iter.Key())[5:],

@@ -63,7 +63,17 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 
 	tree = nil
 
-	err = db.Put(MakeTreeKey(fid), exportedTree, nil)
+	ctx := client.GetClientContextFromCmd(cmd)
+
+	f, err := os.OpenFile(GetStoragePathForTree(ctx, fid), os.O_WRONLY|os.O_CREATE, 0o666)
+	if err != nil {
+		return hashName, err
+	}
+	_, err = f.Write(exportedTree)
+	if err != nil {
+		return hashName, err
+	}
+	err = f.Close()
 	if err != nil {
 		return hashName, err
 	}
@@ -156,7 +166,15 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 
 	tree = nil // for GC
 
-	err = db.Put(MakeTreeKey(fid), exportedTree, nil)
+	f, err := os.OpenFile(GetStoragePathForTree(clientCtx, fid), os.O_WRONLY|os.O_CREATE, 0o666)
+	if err != nil {
+		return fid, r, data, err
+	}
+	_, err = f.Write(exportedTree)
+	if err != nil {
+		return fid, r, data, err
+	}
+	err = f.Close()
 	if err != nil {
 		return fid, r, data, err
 	}

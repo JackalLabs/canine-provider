@@ -37,7 +37,8 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 		ctx.Logger.Error("Error can't open file!")
 		return "", "", err
 	}
-	rawTree, err := db.Get(utils.MakeTreeKey(filename), nil)
+
+	rawTree, err := os.ReadFile(utils.GetStoragePathForTree(clientCtx, filename))
 	if err != nil {
 		ctx.Logger.Error("Error can't find tree!")
 		return "", "", err
@@ -192,11 +193,12 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 			cid := string(iter.Key())
 			value := string(iter.Value())
 
-			if cid[:len(utils.FILE_KEY)] != utils.FILE_KEY {
+			if cid[:len(utils.FileKey)] != utils.FileKey {
 				continue
 			}
+			fid := value
 
-			cid = cid[len(utils.FILE_KEY):]
+			cid = cid[len(utils.FileKey):]
 
 			ctx.Logger.Debug(fmt.Sprintf("filename: %s", value))
 
@@ -229,11 +231,11 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 						c := string(iter.Key())
 						v := string(iter.Value())
 
-						if c[:len(utils.FILE_KEY)] != utils.FILE_KEY {
+						if c[:len(utils.FileKey)] != utils.FileKey {
 							continue
 						}
 
-						c = c[len(utils.FILE_KEY):]
+						c = c[len(utils.FileKey):]
 
 						if c != cid && v == value {
 							ctx.Logger.Info(fmt.Sprintf("%s != %s but it is also %s, so we must keep the file on disk.", c, cid, v))
@@ -256,7 +258,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 						ctx.Logger.Error(err.Error())
 						continue
 					}
-					err = db.Delete(utils.MakeTreeKey(cid), nil)
+					err = os.Remove(utils.GetStoragePathForTree(clientCtx, fid))
 					if err != nil {
 						ctx.Logger.Error(err.Error())
 						continue
