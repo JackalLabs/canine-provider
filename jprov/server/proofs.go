@@ -29,7 +29,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func CreateMerkleForProof(clientCtx client.Context, filename string, index int, ctx *utils.Context, db *leveldb.DB) (string, string, error) {
+func CreateMerkleForProof(clientCtx client.Context, filename string, index int, ctx *utils.Context) (string, string, error) {
 	files := utils.GetStoragePathForPiece(clientCtx, filename, index)
 
 	item, err := os.ReadFile(files) // read only the chunk we need
@@ -92,7 +92,7 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 		return err
 	}
 
-	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), int(dex.Int64()), ctx, db)
+	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), int(dex.Int64()), ctx)
 	if err != nil {
 		return err
 	}
@@ -306,13 +306,13 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 
 			block, berr := queryBlock(&clientCtx, cid)
 			if berr != nil {
-				ctx.Logger.Error("Query Error: %v", berr)
+				ctx.Logger.Error(fmt.Sprintf("Query Error: %v", berr))
 				continue
 			}
 
 			err = postProof(clientCtx, cid, block, db, q, ctx)
 			if err != nil {
-				ctx.Logger.Error("Query Error: %v", err)
+				ctx.Logger.Error(fmt.Sprintf("Posting Proof Error: %v", err))
 				continue
 			}
 
