@@ -338,8 +338,8 @@ func (m *StrayManager) CollectStrays(cmd *cobra.Command) {
 		//}
 		//if clean {
 		m.Context.Logger.Info(fmt.Sprintf("Got metadata for %s", newStray.Cid))
-
-		m.Strays = append(m.Strays, &newStray)
+		k := newStray
+		m.Strays = append(m.Strays, &k)
 		//}
 	}
 }
