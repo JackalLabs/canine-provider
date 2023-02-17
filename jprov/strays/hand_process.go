@@ -322,24 +322,24 @@ func (m *StrayManager) CollectStrays(cmd *cobra.Command) {
 
 	for _, newStray := range s { // Only add new strays to the queue
 		m.Context.Logger.Info(fmt.Sprintf("Ingress of %s...", newStray.Cid))
-		//clean := true
-		//for _, oldStray := range m.Strays {
-		//	if newStray.Cid == oldStray.Cid {
-		//		clean = false
-		//	}
-		//}
-		//for _, hands := range m.hands { // check active processes too
-		//	if hands.Stray == nil {
-		//		continue
-		//	}
-		//	if newStray.Cid == hands.Stray.Cid {
-		//		clean = false
-		//	}
-		//}
-		//if clean {
-		m.Context.Logger.Info(fmt.Sprintf("Got metadata for %s", newStray.Cid))
-		k := newStray
-		m.Strays = append(m.Strays, &k)
-		//}
+		clean := true
+		for _, oldStray := range m.Strays {
+			if newStray.Cid == oldStray.Cid {
+				clean = false
+			}
+		}
+		for _, hands := range m.hands { // check active processes too
+			if hands.Stray == nil {
+				continue
+			}
+			if newStray.Cid == hands.Stray.Cid {
+				clean = false
+			}
+		}
+		if clean {
+			m.Context.Logger.Info(fmt.Sprintf("Got metadata for %s", newStray.Cid))
+			k := newStray
+			m.Strays = append(m.Strays, &k)
+		}
 	}
 }
