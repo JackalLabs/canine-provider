@@ -10,6 +10,16 @@ type DataBlock struct {
 	Value string `json:"block_data"`
 }
 
+type DowntimeBlock struct {
+	CID      string `json:"cid"`
+	Downtime int    `json:"downtime"`
+}
+
+type FidBlock struct {
+	CID string `json:"cid"`
+	FID string `json:"fid"`
+}
+
 type ListResponse struct {
 	Files []string `json:"files"`
 }
@@ -20,6 +30,14 @@ type QueueResponse struct {
 
 type DBResponse struct {
 	Data []DataBlock `json:"data"`
+}
+
+type DowntimeResponse struct {
+	Data []DowntimeBlock `json:"data"`
+}
+
+type FidResponse struct {
+	Data []FidBlock `json:"data"`
 }
 
 type DealsResponse struct {

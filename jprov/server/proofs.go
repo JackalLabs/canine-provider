@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -31,56 +30,23 @@ import (
 )
 
 func CreateMerkleForProof(clientCtx client.Context, filename string, index int, ctx *utils.Context) (string, string, error) {
-	files := utils.GetStoragePath(clientCtx, filename)
+	files := utils.GetStoragePathForPiece(clientCtx, filename, index)
 
-	f, err := os.Open(files)
+	item, err := os.ReadFile(files) // read only the chunk we need
 	if err != nil {
-		ctx.Logger.Error(err.Error())
-		return "", "", err
-	}
-	defer f.Close()
-
-	fileInfo, err := f.Readdir(-1)
-	if err != nil {
-		ctx.Logger.Error(err.Error())
-
+		ctx.Logger.Error("Error can't open file!")
 		return "", "", err
 	}
 
-	var data [][]byte
-
-	var item []byte
-
-	lengthFile := len(fileInfo)
-
-	if lengthFile == 0 {
-		return "", "", fmt.Errorf("File not found on this machine")
-	}
-
-	for i := 0; i < lengthFile; i++ {
-
-		f, err := os.ReadFile(filepath.Join(files, fmt.Sprintf("%d.jkl", i)))
-		if err != nil {
-			ctx.Logger.Error("Error can't open file!")
-			return "", "", err
-		}
-
-		if i == index {
-			item = f
-		}
-
-		h := sha256.New()
-		_, err = io.WriteString(h, fmt.Sprintf("%d%x", i, f))
-		if err != nil {
-			return "", "", err
-		}
-		hashName := h.Sum(nil)
-
-		data = append(data, hashName)
-	}
-
-	tree, err := merkletree.NewUsing(data, sha3.New512(), false)
+	rawTree, err := os.ReadFile(utils.GetStoragePathForTree(clientCtx, filename))
 	if err != nil {
+		ctx.Logger.Error("Error can't find tree!")
+		return "", "", err
+	}
+
+	tree, err := merkletree.ImportMerkleTree(rawTree, sha3.New512()) // import the tree instead of creating the tree on the fly
+	if err != nil {
+		ctx.Logger.Error("Error can't import tree!")
 		return "", "", err
 	}
 
@@ -114,27 +80,27 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 	return fmt.Sprintf("%x", item), string(jproof), nil
 }
 
-func postProof(clientCtx client.Context, cid string, block string, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) (*sdk.TxResponse, error) {
+func postProof(clientCtx client.Context, cid string, block string, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) error {
 	dex, ok := sdk.NewIntFromString(block)
 	ctx.Logger.Debug(fmt.Sprintf("BlockToProve: %s", block))
 	if !ok {
-		return nil, fmt.Errorf("cannot parse block number")
+		return fmt.Errorf("cannot parse block number")
 	}
 
 	data, err := db.Get(utils.MakeFileKey(cid), nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), int(dex.Int64()), ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	address, err := crypto.GetAddress(clientCtx)
 	if err != nil {
 		ctx.Logger.Error(err.Error())
-		return nil, err
+		return err
 	}
 
 	msg := storagetypes.NewMsgPostproof(
@@ -144,7 +110,7 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 		cid,
 	)
 	if err := msg.ValidateBasic(); err != nil {
-		return nil, err
+		return err
 	}
 
 	var wg sync.WaitGroup
@@ -157,24 +123,42 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 		Response: nil,
 	}
 
-	q.Append(&u)
-	wg.Wait()
+	go func() {
+		q.Append(&u)
+		wg.Wait()
 
-	return u.Response, u.Err
+		if u.Err != nil {
+			ctx.Logger.Error(fmt.Sprintf("Posting Error: %s", u.Err.Error()))
+			return
+		}
+
+		if u.Response.Code != 0 {
+			ctx.Logger.Error("Contract Response Error: %s", fmt.Errorf(u.Response.RawLog))
+			return
+		}
+	}()
+
+	return nil
 }
 
 func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) {
-	interval, err := cmd.Flags().GetUint16("interval")
+	interval, err := cmd.Flags().GetUint16(types.FlagInterval)
 	if err != nil {
+		ctx.Logger.Error(err.Error())
 		return
 	}
 
 	clientCtx, err := client.GetClientTxContext(cmd)
 	if err != nil {
+		ctx.Logger.Error(err.Error())
 		return
 	}
 
-	const maxMisses = 8
+	maxMisses, err := cmd.Flags().GetInt(types.FlagMaxMisses)
+	if err != nil {
+		ctx.Logger.Error(err.Error())
+		return
+	}
 
 	address, err := crypto.GetAddress(clientCtx)
 	if err != nil {
@@ -182,17 +166,39 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 		return
 	}
 
+	//type IterWrap struct {
+	//	Key   []byte
+	//	Value []byte
+	//}
+
 	for {
+		start := time.Now()
+		ctx.Logger.Info(fmt.Sprintf("Starting proof commitment at %s", start.Format("2006-01-02 15:04:05.000000")))
+		// m := []IterWrap{}
 		iter := db.NewIterator(nil, nil)
+		//for iter.Next() {
+		//	mm := IterWrap{
+		//		Key:   iter.Key(),
+		//		Value: iter.Value(),
+		//	}
+		//	m = append(m, mm)
+		//}
+		//iter.Release()
+		//err = iter.Error()
+		//if err != nil {
+		//	ctx.Logger.Error("Iterator Error: %s", err.Error())
+		//}
+
 		for iter.Next() {
 			cid := string(iter.Key())
 			value := string(iter.Value())
 
-			if cid[:len(utils.FILE_KEY)] != utils.FILE_KEY {
+			if cid[:len(utils.FileKey)] != utils.FileKey {
 				continue
 			}
+			fid := value
 
-			cid = cid[len(utils.FILE_KEY):]
+			cid = cid[len(utils.FileKey):]
 
 			ctx.Logger.Debug(fmt.Sprintf("filename: %s", value))
 
@@ -225,11 +231,11 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 						c := string(iter.Key())
 						v := string(iter.Value())
 
-						if c[:len(utils.FILE_KEY)] != utils.FILE_KEY {
+						if c[:len(utils.FileKey)] != utils.FileKey {
 							continue
 						}
 
-						c = c[len(utils.FILE_KEY):]
+						c = c[len(utils.FileKey):]
 
 						if c != cid && v == value {
 							ctx.Logger.Info(fmt.Sprintf("%s != %s but it is also %s, so we must keep the file on disk.", c, cid, v))
@@ -245,10 +251,14 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 						err := os.RemoveAll(utils.GetStoragePath(clientCtx, value))
 						if err != nil {
 							ctx.Logger.Error(err.Error())
-							continue
 						}
 					}
 					err = db.Delete(utils.MakeFileKey(cid), nil)
+					if err != nil {
+						ctx.Logger.Error(err.Error())
+						continue
+					}
+					err = os.Remove(utils.GetStoragePathForTree(clientCtx, fid))
 					if err != nil {
 						ctx.Logger.Error(err.Error())
 						continue
@@ -294,29 +304,34 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 				continue
 			}
 
-			block, berr := queryBlock(&clientCtx, string(cid))
+			block, berr := queryBlock(&clientCtx, cid)
 			if berr != nil {
-				ctx.Logger.Error("Query Error: %v", berr)
+				ctx.Logger.Error(fmt.Sprintf("Query Error: %v", berr))
 				continue
 			}
 
-			res, err := postProof(clientCtx, cid, block, db, q, ctx)
+			err = postProof(clientCtx, cid, block, db, q, ctx)
 			if err != nil {
-				ctx.Logger.Error(fmt.Sprintf("Posting Error: %s", err.Error()))
+				ctx.Logger.Error(fmt.Sprintf("Posting Proof Error: %v", err))
 				continue
 			}
 
-			if res.Code != 0 {
-				ctx.Logger.Error("Contract Response Error: %s", fmt.Errorf(res.RawLog))
-				continue
-			}
 		}
+
 		iter.Release()
 		err = iter.Error()
 		if err != nil {
 			ctx.Logger.Error("Iterator Error: %s", err.Error())
 		}
 
-		time.Sleep(time.Duration(interval) * time.Second)
+		end := time.Since(start)
+		ctx.Logger.Info(fmt.Sprintf("proof took %d", end.Nanoseconds()))
+
+		tm := time.Duration(interval) * time.Second
+
+		if tm.Nanoseconds()-end.Nanoseconds() > 0 {
+			time.Sleep(time.Duration(interval) * time.Second)
+		}
+
 	}
 }

@@ -14,23 +14,25 @@ import (
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
+	"github.com/JackalLabs/jackal-provider/jprov/strays"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/rs/cors"
 	"github.com/syndtr/goleveldb/leveldb"
-
-	"github.com/cosmos/cosmos-sdk/client"
 
 	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/cobra"
+
+	_ "net/http/pprof"
 )
 
 func saveFile(file multipart.File, handler *multipart.FileHeader, sender string, cmd *cobra.Command, db *leveldb.DB, w *http.ResponseWriter, q *queue.UploadQueue) error {
 	size := handler.Size
 	ctx := utils.GetServerContextFromCmd(cmd)
-	fid, err := utils.WriteFileToDisk(cmd, file, file, file, size, ctx.Logger)
+	fid, merkle, _, err := utils.WriteFileToDisk(cmd, file, file, file, size, db, ctx.Logger)
 	if err != nil {
 		ctx.Logger.Error("Write To Disk Error: %v", err)
 		return err
@@ -62,7 +64,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	msg, ctrerr := MakeContract(cmd, fid, sender, &wg, q)
+	msg, ctrerr := MakeContract(cmd, fid, sender, &wg, q, merkle, fmt.Sprintf("%d", size))
 	if ctrerr != nil {
 		ctx.Logger.Error("CONTRACT ERROR: %v", ctrerr)
 		return ctrerr
@@ -98,11 +100,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	return nil
 }
 
-func MakeContract(cmd *cobra.Command, fid string, sender string, wg *sync.WaitGroup, q *queue.UploadQueue) (*types.Upload, error) {
-	merkleroot, filesize, err := HashData(cmd, fid)
-	if err != nil {
-		return nil, err
-	}
+func MakeContract(cmd *cobra.Command, fid string, sender string, wg *sync.WaitGroup, q *queue.UploadQueue, merkleroot string, filesize string) (*types.Upload, error) {
 	ctx := utils.GetServerContextFromCmd(cmd)
 	clientCtx, err := client.GetClientTxContext(cmd)
 	if err != nil {
@@ -125,6 +123,8 @@ func MakeContract(cmd *cobra.Command, fid string, sender string, wg *sync.WaitGr
 	if err := msg.ValidateBasic(); err != nil {
 		return nil, err
 	}
+
+	ctx.Logger.Info(fmt.Sprintf("Contract being pushed: %s", msg.String()))
 
 	u := types.Upload{
 		Message:  msg,
@@ -178,15 +178,36 @@ func StartFileServer(cmd *cobra.Command) {
 
 	GetRoutes(cmd, router, db, &q)
 	PostRoutes(cmd, router, db, &q)
+	PProfRoutes(router)
 
 	handler := cors.Default().Handler(router)
 
 	ctx := utils.GetServerContextFromCmd(cmd)
 
+	threads, err := cmd.Flags().GetUint(types.FlagThreads)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	strs, err := cmd.Flags().GetBool(types.HaltStraysFlag)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	manager := strays.NewStrayManager(cmd) // creating and starting the stray management system
+	if !strs {
+		manager.Init(cmd, threads, db)
+	}
+
 	go postProofs(cmd, db, &q, ctx)
 	go NatCycle(cmd.Context())
 	go q.StartListener(cmd)
-	go q.CheckStrays(cmd, db)
+
+	if !strs {
+		go manager.Start(cmd)
+	}
 
 	port, err := cmd.Flags().GetString("port")
 	if err != nil {

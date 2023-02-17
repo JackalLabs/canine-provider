@@ -6,6 +6,11 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
+const (
+	VersionFlag    = "version"
+	HaltStraysFlag = "no-strays"
+)
+
 const MaxFileSize = 32 << 30
 
 const AppName = "jprovd"
