@@ -61,8 +61,9 @@ func (m *StrayManager) Distribute() { // Hand out every available stray to an id
 
 		if len(m.Strays) <= 0 { // make sure there are strays to distribute
 			m.Context.Logger.Info("There are no more strays in the pile.")
-			return
+			continue
 		}
+
 		h.Stray = m.Strays[0]
 		m.Strays = m.Strays[1:] // pop the first element off the queue & assign it to the hand
 	}
