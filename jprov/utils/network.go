@@ -46,11 +46,6 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 		return "", err
 	}
 
-	err = SaveToDatabase(hashName, cid, db, logger)
-	if err != nil {
-		return hashName, err
-	}
-
 	return hashName, nil
 }
 

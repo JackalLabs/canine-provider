@@ -65,12 +65,6 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 			return // If we don't have it and nobody else does, there is nothing we can do.
 		}
 
-		err = utils.SaveToDatabase(h.Stray.Fid, h.Stray.Cid, h.Database, ctx.Logger) // Add the file back to the database since it's never being downloaded
-		if err != nil {
-			ctx.Logger.Error(err.Error())
-			finish()
-			return
-		}
 	} else { // If there are providers with this file, we will download it from them instead to keep things consistent
 		if _, err := os.Stat(utils.GetStoragePath(h.ClientContext, h.Stray.Fid)); !os.IsNotExist(err) {
 			ctx.Logger.Info("Already have this file")
@@ -126,6 +120,15 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 
 	if res.Code != 0 {
 		ctx.Logger.Error(res.RawLog)
+		finish()
+		return
+	}
+
+	err = utils.SaveToDatabase(h.Stray.Fid, h.Stray.Cid, h.Database, ctx.Logger)
+	if err != nil {
+		ctx.Logger.Error(err.Error())
+		finish()
+		return
 	}
 
 	finish()
