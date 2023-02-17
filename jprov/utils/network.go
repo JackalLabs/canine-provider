@@ -41,39 +41,12 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 
 	reader := bytes.NewReader(buff.Bytes())
 
-	hashName, _, data, err := WriteFileToDisk(cmd, reader, reader, nil, size, db, logger)
+	hashName, _, _, err := WriteFileToDisk(cmd, reader, reader, nil, size, db, logger)
 	if err != nil {
 		return "", err
 	}
 
 	err = SaveToDatabase(hashName, cid, db, logger)
-	if err != nil {
-		return hashName, err
-	}
-
-	tree, err := merkletree.NewUsing(data, sha3.New512(), false)
-	if err != nil {
-		return hashName, err
-	}
-
-	exportedTree, err := tree.Export()
-	if err != nil {
-		return hashName, err
-	}
-
-	tree = nil
-
-	ctx := client.GetClientContextFromCmd(cmd)
-
-	f, err := os.OpenFile(GetStoragePathForTree(ctx, fid), os.O_WRONLY|os.O_CREATE, 0o666)
-	if err != nil {
-		return hashName, err
-	}
-	_, err = f.Write(exportedTree)
-	if err != nil {
-		return hashName, err
-	}
-	err = f.Close()
 	if err != nil {
 		return hashName, err
 	}
