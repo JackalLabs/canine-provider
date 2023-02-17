@@ -39,6 +39,7 @@ func StartServerCommand() *cobra.Command {
 	cmd.Flags().Uint(types.FlagThreads, 10, "The amount of stray threads.")
 	cmd.Flags().Int(types.FlagMaxMisses, 16, "The amount of intervals a provider can miss their proofs before removing a file.")
 	cmd.Flags().Int64(types.FlagChunkSize, 10240, "The size of a single chunk.")
+	cmd.Flags().Int64(types.FlagStrayInterval, 10, "The interval in seconds to check for new strays.")
 
 	return cmd
 }

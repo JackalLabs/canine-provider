@@ -1,8 +1,9 @@
 package types
 
 const (
-	FlagThreads   = "threads"
-	FlagInterval  = "interval"
-	FlagMaxMisses = "max-misses"
-	FlagChunkSize = "chunk-size"
+	FlagThreads       = "threads"
+	FlagInterval      = "interval"
+	FlagMaxMisses     = "max-misses"
+	FlagChunkSize     = "chunk-size"
+	FlagStrayInterval = "stray-interval"
 )

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
+	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -164,12 +165,16 @@ func (m *StrayManager) Init(cmd *cobra.Command, count uint, db *leveldb.DB) { //
 }
 
 func (m *StrayManager) Start(cmd *cobra.Command) { // loop through stray system
+	tm, err := cmd.Flags().GetInt64(types.FlagStrayInterval)
+	if err != nil {
+		panic(err)
+	}
 	for {
 		m.CollectStrays(cmd)           // query strays from the chain
 		m.Distribute()                 // hands strays out to hands
 		for _, hand := range m.hands { // process every stray in parallel
 			go hand.Process(m.Context, m)
 		}
-		time.Sleep(time.Second * 20) // loop every 20 seconds
+		time.Sleep(time.Second * time.Duration(tm)) // loop every 20 seconds
 	}
 }
