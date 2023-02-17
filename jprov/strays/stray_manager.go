@@ -59,7 +59,7 @@ func (m *StrayManager) Distribute() { // Hand out every available stray to an id
 			continue
 		}
 
-		if len(m.Strays) <= 0 { // make sure there are strays to distribute
+		if len(m.Strays) == 0 { // make sure there are strays to distribute
 			m.Context.Logger.Info("There are no more strays in the pile.")
 			continue
 		}
