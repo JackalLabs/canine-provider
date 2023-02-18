@@ -44,7 +44,21 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 	msg := make([]ctypes.Msg, 0)
 	uploads := make([]*types.Upload, 0)
 	for i := 0; i < l; i++ {
+		msgSize := 0 // keep track of total messages size estimate
+		for _, m := range msg {
+			msgSize += len(m.String())
+		}
+
 		upload := q.Queue[i]
+
+		uploadSize := len(upload.Message.String())
+
+		// if the size of the upload would put us past our cap, we cut off the queue and send only what fits
+		if msgSize+uploadSize > 20_000_000 {
+			l = i
+			break
+		}
+
 		uploads = append(uploads, upload)
 		msg = append(msg, upload.Message)
 		ctx.Logger.Info(fmt.Sprintf("Message being sent to chain: %s", upload.Message.String()))
@@ -69,7 +83,7 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 		}
 	}
 
-	q.Queue = q.Queue[l:]
+	q.Queue = q.Queue[l:] // pop every upload that fit off the queue
 }
 
 func (q *UploadQueue) StartListener(cmd *cobra.Command) {
