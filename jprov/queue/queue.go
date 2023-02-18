@@ -32,6 +32,10 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 	if q.Locked {
 		return
 	}
+	q.Locked = true
+	defer func() {
+		q.Locked = false
+	}()
 
 	ctx := utils.GetServerContextFromCmd(cmd)
 
@@ -74,6 +78,9 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 
 	res, err := utils.SendTx(clientCtx, cmd.Flags(), msg...)
 	for _, v := range uploads {
+		if v == nil {
+			continue
+		}
 		if err != nil {
 			v.Err = err
 		} else {
