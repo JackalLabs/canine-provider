@@ -118,6 +118,13 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 		return
 	}
 
+	if res == nil {
+		ctx.Logger.Error(err.Error())
+		ctx.Logger.Error(res.RawLog)
+		finish()
+		return
+	}
+
 	if res.Code != 0 {
 		ctx.Logger.Error(res.RawLog)
 		finish()

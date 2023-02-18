@@ -77,10 +77,12 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 		if err != nil {
 			v.Err = err
 		} else {
-			if res.Code != 0 {
-				v.Err = fmt.Errorf(res.RawLog)
-			} else {
-				v.Response = res
+			if res != nil {
+				if res.Code != 0 {
+					v.Err = fmt.Errorf(res.RawLog)
+				} else {
+					v.Response = res
+				}
 			}
 		}
 		if v.Callback != nil {
