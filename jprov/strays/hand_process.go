@@ -30,26 +30,24 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 		return
 	}
 	h.Busy = true
-	finish := func() { // macro to free up hand
+	defer func() { // macro to free up hand
 		m.Context.Logger.Info(fmt.Sprintf("Done processing hand #%d.", h.Id))
 		h.Stray = nil
 		h.Busy = false
-	}
+	}()
 
 	ctx.Logger.Info(fmt.Sprintf("Getting info for %s", h.Stray.Cid))
 	qClient := storageTypes.NewQueryClient(h.ClientContext)
-	filesres, err := qClient.FindFile(h.Cmd.Context(), &storageTypes.QueryFindFileRequest{Fid: h.Stray.Fid}) // List all providers that currently have the file active.
+	fileRes, err := qClient.FindFile(h.Cmd.Context(), &storageTypes.QueryFindFileRequest{Fid: h.Stray.Fid}) // List all providers that currently have the file active.
 	if err != nil {
 		ctx.Logger.Error(err.Error())
-		finish()
 		return // There was an issue, so we pretend like it didn't happen.
 	}
 
 	var arr []string // Create an array of IPs from the request.
-	err = json.Unmarshal([]byte(filesres.ProviderIps), &arr)
+	err = json.Unmarshal([]byte(fileRes.ProviderIps), &arr)
 	if err != nil {
 		ctx.Logger.Error(err.Error())
-		finish()
 		return // There was an issue, so we pretend like it didn't happen.
 	}
 
@@ -61,14 +59,12 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 		*/
 		if _, err := os.Stat(utils.GetStoragePath(h.ClientContext, h.Stray.Fid)); os.IsNotExist(err) {
 			ctx.Logger.Info("Nobody, not even I have the file.")
-			finish()
 			return // If we don't have it and nobody else does, there is nothing we can do.
 		}
 
 	} else { // If there are providers with this file, we will download it from them instead to keep things consistent
 		if _, err := os.Stat(utils.GetStoragePath(h.ClientContext, h.Stray.Fid)); !os.IsNotExist(err) {
 			ctx.Logger.Info("Already have this file")
-			finish()
 			return
 		}
 
@@ -78,13 +74,11 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 				continue
 			}
 			if prov == m.Ip { // Ignore ourselves
-				finish()
 				return
 			}
 			_, err = utils.DownloadFileFromURL(h.Cmd, prov, h.Stray.Fid, h.Stray.Cid, h.Database, ctx.Logger)
 			if err != nil {
 				ctx.Logger.Error(err.Error())
-				finish()
 				return
 			}
 			found = true // If we can successfully download the file, stop there.
@@ -92,7 +86,6 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 
 		if !found { // If we never find the file, and we don't have it, something is wrong with the network, nothing we can do.
 			ctx.Logger.Info("Cannot find the file we want, either something is wrong or you have the file already")
-			finish()
 			return
 		}
 	}
@@ -106,7 +99,6 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 	)
 	if err := msg.ValidateBasic(); err != nil {
 		ctx.Logger.Error(err.Error())
-		finish()
 		return
 	}
 
@@ -114,31 +106,26 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 	if err != nil {
 		ctx.Logger.Error(err.Error())
 		ctx.Logger.Error(res.RawLog)
-		finish()
 		return
 	}
 
 	if res == nil {
 		ctx.Logger.Error(err.Error())
 		ctx.Logger.Error(res.RawLog)
-		finish()
 		return
 	}
 
 	if res.Code != 0 {
 		ctx.Logger.Error(res.RawLog)
-		finish()
 		return
 	}
 
 	err = utils.SaveToDatabase(h.Stray.Fid, h.Stray.Cid, h.Database, ctx.Logger)
 	if err != nil {
 		ctx.Logger.Error(err.Error())
-		finish()
 		return
 	}
 
-	finish()
 }
 
 func indexPrivKey(key string, index byte) (*cryptotypes.PrivKey, error) {
