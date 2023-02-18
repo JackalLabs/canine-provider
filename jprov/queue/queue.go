@@ -41,6 +41,11 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 		return
 	}
 
+	maxSize, err := cmd.Flags().GetInt(types.FlagMessageSize)
+	if err != nil {
+		ctx.Logger.Error(err.Error())
+	}
+
 	msg := make([]ctypes.Msg, 0)
 	uploads := make([]*types.Upload, 0)
 	for i := 0; i < l; i++ {
@@ -54,7 +59,7 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 		uploadSize := len(upload.Message.String())
 
 		// if the size of the upload would put us past our cap, we cut off the queue and send only what fits
-		if msgSize+uploadSize > 20_000_000 {
+		if msgSize+uploadSize > maxSize {
 			l = i
 			break
 		}
