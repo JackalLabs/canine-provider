@@ -113,7 +113,7 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 	}
 
 	if res == nil {
-		ctx.Logger.Error(err.Error())
+		ctx.Logger.Error("res is nil")
 		return
 	}
 
