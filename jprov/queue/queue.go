@@ -32,6 +32,10 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 	if q.Locked {
 		return
 	}
+	q.Locked = true
+	defer func() {
+		q.Locked = false
+	}()
 
 	ctx := utils.GetServerContextFromCmd(cmd)
 
@@ -41,10 +45,29 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 		return
 	}
 
+	maxSize, err := cmd.Flags().GetInt(types.FlagMessageSize)
+	if err != nil {
+		ctx.Logger.Error(err.Error())
+	}
+
 	msg := make([]ctypes.Msg, 0)
 	uploads := make([]*types.Upload, 0)
 	for i := 0; i < l; i++ {
+		msgSize := 0 // keep track of total messages size estimate
+		for _, m := range msg {
+			msgSize += len(m.String())
+		}
+
 		upload := q.Queue[i]
+
+		uploadSize := len(upload.Message.String())
+
+		// if the size of the upload would put us past our cap, we cut off the queue and send only what fits
+		if msgSize+uploadSize > maxSize {
+			l = i
+			break
+		}
+
 		uploads = append(uploads, upload)
 		msg = append(msg, upload.Message)
 		ctx.Logger.Info(fmt.Sprintf("Message being sent to chain: %s", upload.Message.String()))
@@ -55,13 +78,18 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 
 	res, err := utils.SendTx(clientCtx, cmd.Flags(), msg...)
 	for _, v := range uploads {
+		if v == nil {
+			continue
+		}
 		if err != nil {
 			v.Err = err
 		} else {
-			if res.Code != 0 {
-				v.Err = fmt.Errorf(res.RawLog)
-			} else {
-				v.Response = res
+			if res != nil {
+				if res.Code != 0 {
+					v.Err = fmt.Errorf(res.RawLog)
+				} else {
+					v.Response = res
+				}
 			}
 		}
 		if v.Callback != nil {
@@ -69,7 +97,7 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 		}
 	}
 
-	q.Queue = q.Queue[l:]
+	q.Queue = q.Queue[l:] // pop every upload that fit off the queue
 }
 
 func (q *UploadQueue) StartListener(cmd *cobra.Command) {
