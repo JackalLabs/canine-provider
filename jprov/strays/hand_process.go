@@ -44,6 +44,10 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 		return // There was an issue, so we pretend like it didn't happen.
 	}
 
+	if fileRes == nil {
+		return
+	}
+
 	var arr []string // Create an array of IPs from the request.
 	err = json.Unmarshal([]byte(fileRes.ProviderIps), &arr)
 	if err != nil {
@@ -105,13 +109,11 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 	res, err := h.SendTx(h.ClientContext, h.Cmd.Flags(), msg)
 	if err != nil {
 		ctx.Logger.Error(err.Error())
-		ctx.Logger.Error(res.RawLog)
 		return
 	}
 
 	if res == nil {
 		ctx.Logger.Error(err.Error())
-		ctx.Logger.Error(res.RawLog)
 		return
 	}
 
