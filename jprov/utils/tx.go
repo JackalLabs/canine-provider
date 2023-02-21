@@ -2,6 +2,7 @@ package utils
 
 import (
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
+	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	txns "github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -53,7 +54,12 @@ func SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, msgs ...sdk.Msg) (
 		return nil, err
 	}
 
-	txf = txf.WithGas(uint64(2000000 * (len(msgs) + 1)))
+	gas, err := flagSet.GetInt(types.FlagGasCap)
+	if err != nil {
+		return nil, err
+	}
+
+	txf = txf.WithGas(uint64(gas * (len(msgs) + 1)))
 	if clientCtx.Simulate {
 		return nil, nil
 	}
