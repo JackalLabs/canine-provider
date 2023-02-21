@@ -51,5 +51,4 @@ func BuildApi(cmd *cobra.Command, q *queue.UploadQueue, router *httprouter.Route
 	router.GET("/api/network/status", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		network.GetStatus(cmd, w, r, ps)
 	})
-
 }
