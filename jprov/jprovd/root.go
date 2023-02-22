@@ -68,6 +68,7 @@ func NewRootCmd() *cobra.Command {
 
 	init := CmdInitProvider()
 	AddTxFlagsToCmd(init)
+	init.Flags().Int(types.FlagGasCap, 3_000_000, "The maximum gas to be used per message.")
 
 	rootCmd.AddCommand(
 		StartServerCommand(),
