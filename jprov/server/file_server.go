@@ -209,14 +209,14 @@ func StartFileServer(cmd *cobra.Command) {
 		go manager.Start(cmd)
 	}
 
-	port, err := cmd.Flags().GetString("port")
+	port, err := cmd.Flags().GetInt(types.FlagPort)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	fmt.Printf("🌍 Started Provider: http://0.0.0.0:%s\n", port)
-	err = http.ListenAndServe(fmt.Sprintf("0.0.0.0:%s", port), handler)
+	fmt.Printf("🌍 Started Provider: http://0.0.0.0:%d\n", port)
+	err = http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", port), handler)
 	if err != nil {
 		fmt.Println(err)
 		return
