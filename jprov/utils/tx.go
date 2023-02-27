@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"fmt"
+
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -83,6 +85,9 @@ func SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, msgs ...sdk.Msg) (
 	// broadcast to a Tendermint node
 	res, err := clientCtx.BroadcastTx(txBytes)
 	if err != nil {
+		if res != nil {
+			fmt.Println(res.RawLog)
+		}
 		return nil, err
 	}
 
