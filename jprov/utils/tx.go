@@ -61,7 +61,7 @@ func SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, msgs ...sdk.Msg) (
 		return nil, err
 	}
 
-	txf = txf.WithGas(uint64(gas * (len(msgs) + 1)))
+	txf = txf.WithGas(uint64(gas))
 	if clientCtx.Simulate {
 		return nil, nil
 	}
