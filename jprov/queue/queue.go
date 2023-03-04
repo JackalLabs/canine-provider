@@ -25,6 +25,12 @@ func New() UploadQueue {
 }
 
 func (q *UploadQueue) Append(upload *types.Upload) {
+	for _, item := range q.Queue {
+		if item.Message == upload.Message {
+			return
+		}
+	}
+
 	q.Queue = append(q.Queue, upload)
 }
 

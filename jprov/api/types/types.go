@@ -61,3 +61,17 @@ type SpaceResponse struct {
 	Used  int64 `json:"used_space"`
 	Free  int64 `json:"free_space"`
 }
+
+type BuildResponse struct {
+	Port          int    `json:"port"`
+	Version       string `json:"version_override"`
+	NoStrays      bool   `json:"disable_strays"`
+	Interval      uint16 `json:"proof_interval"`
+	Threads       uint   `json:"thread_count"`
+	MaxMisses     int    `json:"max_proof_misses"`
+	ChunkSize     int64  `json:"chunk_size"`
+	StrayInterval int64  `json:"stray_interval"`
+	MessageSize   int    `json:"max_message_size"`
+	GasPerProof   int    `json:"gas_per_proof"`
+	MaxFileSize   int    `json:"max_file_size"`
+}

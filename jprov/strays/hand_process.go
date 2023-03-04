@@ -65,7 +65,6 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 			ctx.Logger.Info("Nobody, not even I have the file.")
 			return // If we don't have it and nobody else does, there is nothing we can do.
 		}
-
 	} else { // If there are providers with this file, we will download it from them instead to keep things consistent
 		if _, err := os.Stat(utils.GetStoragePath(h.ClientContext, h.Stray.Fid)); !os.IsNotExist(err) {
 			ctx.Logger.Info("Already have this file")
@@ -127,7 +126,6 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 		ctx.Logger.Error(err.Error())
 		return
 	}
-
 }
 
 func indexPrivKey(key string, index byte) (*cryptotypes.PrivKey, error) {

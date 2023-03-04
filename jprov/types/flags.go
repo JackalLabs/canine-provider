@@ -7,4 +7,7 @@ const (
 	FlagChunkSize     = "chunk-size"
 	FlagStrayInterval = "stray-interval"
 	FlagMessageSize   = "max-msg-size"
+	FlagPort          = "port"
+	FlagGasCap        = "gas-cap"
+	FlagMaxFileSize   = "max-file-size"
 )

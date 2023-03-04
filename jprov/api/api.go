@@ -24,6 +24,9 @@ func BuildApi(cmd *cobra.Command, q *queue.UploadQueue, router *httprouter.Route
 	router.GET("/api/client/space", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		client.GetSpace(cmd, w, r, ps)
 	})
+	router.GET("/api/client/build_info", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		client.GetBuildInfo(cmd, w, r, ps)
+	})
 
 	// DATA
 	router.GET("/api/data/dump", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -51,5 +54,4 @@ func BuildApi(cmd *cobra.Command, q *queue.UploadQueue, router *httprouter.Route
 	router.GET("/api/network/status", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		network.GetStatus(cmd, w, r, ps)
 	})
-
 }

@@ -54,5 +54,5 @@ func TestAppend(t *testing.T) {
 	data, err = json.Marshal(q)
 	require.NoError(err)
 
-	require.NotEqual(stringQueue, string(data))
+	require.Equal(stringQueue, string(data))
 }
