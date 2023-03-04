@@ -73,4 +73,5 @@ type BuildResponse struct {
 	StrayInterval int64  `json:"stray_interval"`
 	MessageSize   int    `json:"max_message_size"`
 	GasPerProof   int    `json:"gas_per_proof"`
+	MaxFileSize   int    `json:"max_file_size"`
 }

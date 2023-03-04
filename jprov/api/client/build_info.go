@@ -65,6 +65,11 @@ func GetBuildInfo(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps
 		fmt.Println(err)
 		return
 	}
+	maxFileSize, err := cmd.Flags().GetInt(provTypes.FlagMaxFileSize)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	v := types.BuildResponse{
 		Port:          port,
@@ -77,6 +82,7 @@ func GetBuildInfo(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps
 		StrayInterval: strayInterval,
 		MessageSize:   messageSize,
 		GasPerProof:   gasProof,
+		MaxFileSize:   maxFileSize,
 	}
 
 	err = json.NewEncoder(w).Encode(v)

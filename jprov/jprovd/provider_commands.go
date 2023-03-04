@@ -41,6 +41,8 @@ func StartServerCommand() *cobra.Command {
 	cmd.Flags().Int64(types.FlagStrayInterval, 10, "The interval in seconds to check for new strays.")
 	cmd.Flags().Int(types.FlagMessageSize, 20_000_000, "The max message size in bytes to submit to the chain at one time.")
 	cmd.Flags().Int(types.FlagGasCap, 20_000, "The maximum gas to be used per message.")
+	cmd.Flags().Int(types.FlagMaxFileSize, 32000, "The maximum size allowed to be sent to this provider in mbs. (only for monitoring services)")
+
 	return cmd
 }
 

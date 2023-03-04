@@ -9,4 +9,5 @@ const (
 	FlagMessageSize   = "max-msg-size"
 	FlagPort          = "port"
 	FlagGasCap        = "gas-cap"
+	FlagMaxFileSize   = "max-file-size"
 )
