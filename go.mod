@@ -6,7 +6,7 @@ require (
 	github.com/cosmos/cosmos-sdk v0.45.11
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/huin/goupnp v1.0.3
-	github.com/jackalLabs/canine-chain v1.2.0-beta.6
+	github.com/jackalLabs/canine-chain v1.2.0-beta.7
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/rs/cors v1.8.2
 	github.com/rs/zerolog v1.27.0

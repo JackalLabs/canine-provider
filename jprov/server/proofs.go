@@ -13,8 +13,10 @@ import (
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
+	"github.com/JackalLabs/jackal-provider/jprov/testutils"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
+
 	"github.com/wealdtech/go-merkletree/sha3"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -127,8 +129,12 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 		q.Append(&u)
 		wg.Wait()
 
+		logger, logFile := testutils.CreateLogger()
+
 		if u.Err != nil {
+			logger.Printf("The error is %s\n", u.Err)
 			ctx.Logger.Error(fmt.Sprintf("Posting Error: %s", u.Err.Error()))
+			logFile.Close()
 			return
 		}
 
