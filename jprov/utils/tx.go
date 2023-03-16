@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
+	"github.com/JackalLabs/jackal-provider/jprov/testutils"
 	"github.com/cosmos/cosmos-sdk/client"
 	txns "github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -55,11 +56,18 @@ func SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, msgs ...sdk.Msg) (
 	if err != nil {
 		return nil, err
 	}
+	logger, logFile := testutils.CreateLogger("sendTxLogs")
+
+	logger.Printf("The initial estimated gas is %d\n", txf.Gas()) // Prints out 200000
 
 	//gas, err := flagSet.GetInt(types.FlagGasCap)
 	//if err != nil {
 	//	return nil, err
 	//}
+	logger.Printf("txf.SimulateAndExecute() is %t\n", txf.SimulateAndExecute())
+	logger.Printf("clientCtx.Simulate is %t\n", clientCtx.Simulate)
+
+	// Both these values are false so the if block will not execute and gas will not be simulated
 
 	if txf.SimulateAndExecute() || clientCtx.Simulate {
 		_, adjusted, err := txns.CalculateGas(clientCtx, txf, msgs...)
@@ -70,9 +78,25 @@ func SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, msgs ...sdk.Msg) (
 		txf = txf.WithGas(adjusted)
 		_, _ = fmt.Fprintf(os.Stderr, "%s\n", txns.GasEstimateResponse{GasEstimate: txf.Gas()})
 	}
+	// This if block below never executes
 	if clientCtx.Simulate {
 		return nil, nil
 	}
+	logger.Printf("The estimated gas after the loop is %d\n", txf.Gas()) // Always prints out 200000 which is the default factory value
+
+	// Attempting to calculate...
+
+	_, adjusted, err := txns.CalculateGas(clientCtx, txf.WithSimulateAndExecute(true), msgs...)
+	if err != nil {
+		return nil, err
+	}
+
+	txf = txf.WithGas(adjusted)
+	logger.Printf("Did it actually get estimated? %d\n", txf.Gas()) // ?????
+
+	_, _ = fmt.Fprintf(os.Stderr, "%s\n", txns.GasEstimateResponse{GasEstimate: txf.Gas()})
+
+	logFile.Close()
 
 	tx, err := txns.BuildUnsignedTx(txf, msgs...)
 	if err != nil {

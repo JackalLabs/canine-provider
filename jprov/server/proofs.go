@@ -129,10 +129,11 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 		q.Append(&u)
 		wg.Wait()
 
-		logger, logFile := testutils.CreateLogger()
+		logger, logFile := testutils.CreateLogger("proofLogs")
 
 		if u.Err != nil {
-			logger.Printf("The error is %s\n", u.Err)
+			logger.Printf("The error is: %s\n", u.Err)
+
 			ctx.Logger.Error(fmt.Sprintf("Posting Error: %s", u.Err.Error()))
 			logFile.Close()
 			return
