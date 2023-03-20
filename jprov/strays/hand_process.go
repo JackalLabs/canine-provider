@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
-	"github.com/JackalLabs/jackal-provider/jprov/testutils"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/cosmos/cosmos-sdk/client"
 	txns "github.com/cosmos/cosmos-sdk/client/tx"
@@ -191,10 +190,6 @@ func (h *LittleHand) SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, ms
 	if clientCtx.Simulate {
 		return nil, nil
 	}
-
-	logger, logFile := testutils.CreateLogger("handProcessSendTx")
-	logger.Printf("Cost of claiming stray is%d\n", txf.Gas())
-	logFile.Close()
 
 	tx, err := txns.BuildUnsignedTx(txf, msgs...)
 	if err != nil {

@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
-	"github.com/JackalLabs/jackal-provider/jprov/testutils"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	txns "github.com/cosmos/cosmos-sdk/client/tx"
@@ -72,10 +71,6 @@ func SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, msgs ...sdk.Msg) (
 		txf = txf.WithGas(adjusted)
 		_, _ = fmt.Fprintf(os.Stderr, "%s\n", txns.GasEstimateResponse{GasEstimate: txf.Gas()})
 	}
-
-	logger, logFile := testutils.CreateLogger("generalSendTxCosts")
-	logger.Printf("Cost of other transactions is%d\n", txf.Gas())
-	logFile.Close()
 
 	if clientCtx.Simulate {
 		return nil, nil
