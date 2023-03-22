@@ -15,6 +15,7 @@ import (
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
+
 	"github.com/wealdtech/go-merkletree/sha3"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -128,6 +129,7 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 		wg.Wait()
 
 		if u.Err != nil {
+
 			ctx.Logger.Error(fmt.Sprintf("Posting Error: %s", u.Err.Error()))
 			return
 		}

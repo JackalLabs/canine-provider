@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	txns "github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -70,6 +71,7 @@ func SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, msgs ...sdk.Msg) (
 		txf = txf.WithGas(adjusted)
 		_, _ = fmt.Fprintf(os.Stderr, "%s\n", txns.GasEstimateResponse{GasEstimate: txf.Gas()})
 	}
+
 	if clientCtx.Simulate {
 		return nil, nil
 	}
