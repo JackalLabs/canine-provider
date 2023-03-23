@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
@@ -33,7 +32,6 @@ func ClientCmd() *cobra.Command {
 		GetBalanceCmd(),
 		GetAddressCmd(),
 		WithdrawCommand(),
-		ImportKeyCommand(),
 	)
 
 	return cmd
@@ -202,71 +200,7 @@ func GenKeyCommand() *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Your new mnemonic is:\n%s\n\nMake sure to keep this hidden at all times and back it up securely.\n", mnemonic)
 			fmt.Printf("Your new address is %s\n", address)
-
-			return nil
-		},
-	}
-
-	return cmd
-}
-
-func ImportKeyCommand() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "import-key",
-		Short: "Import an existing private key",
-		Long:  `Creates a new Jackal address and private key combination from an existing seed phrase to interact with the blockchain.`,
-		Args:  cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
-			if err != nil {
-				return err
-			}
-
-			alreadyKey := crypto.KeyExists(clientCtx)
-			buf := bufio.NewReader(cmd.InOrStdin())
-			if alreadyKey {
-				yes, err := input.GetConfirmation("Key already exists, would you like to overwrite it? If so please make sure you have created a backup.", buf, cmd.ErrOrStderr())
-				if err != nil {
-					return err
-				}
-
-				if !yes {
-					return nil
-				}
-			}
-
-			buff := bufio.NewReader(clientCtx.Input)
-
-			mnemonic, err := input.GetString("Enter your bip39 mnemonic", buff)
-			if err != nil {
-				return err
-			}
-
-			if !bip39.IsMnemonicValid(mnemonic) {
-				return errors.New("invalid mnemonic")
-			}
-
-			pKey := secp256k1.GenPrivKeyFromSecret([]byte(mnemonic))
-
-			// pKey := secp256k1.GenPrivKey()
-			address, err := bech32.ConvertAndEncode(stortypes.AddressPrefix, pKey.PubKey().Address().Bytes())
-			if err != nil {
-				return err
-			}
-
-			keyExport := crypto.StorPrivKey{
-				Address: address,
-				Key:     crypto.ExportPrivKey(pKey),
-			}
-
-			err = crypto.WriteKey(clientCtx, &keyExport)
-			if err != nil {
-				return err
-			}
-
-			fmt.Printf("Your imported address is %s\n", address)
 
 			return nil
 		},
