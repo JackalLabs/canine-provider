@@ -77,7 +77,7 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 
 		uploads = append(uploads, upload)
 		msg = append(msg, upload.Message)
-		ctx.Logger.Info(fmt.Sprintf("Message being sent to chain: %s", upload.Message.String()))
+		//ctx.Logger.Info(fmt.Sprintf("Message being sent to chain: %s", upload.Message.String()))
 
 	}
 
