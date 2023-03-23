@@ -202,7 +202,6 @@ func GenKeyCommand() *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Your new mnemonic is:\n%s\n\nMake sure to keep this hidden at all times and back it up securely.\n", mnemonic)
 			fmt.Printf("Your new address is %s\n", address)
 
 			return nil
