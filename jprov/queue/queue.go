@@ -63,29 +63,30 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 
 	logger.Printf("length of queue is : %d\n", l)
 
-	msg := make([]ctypes.Msg, 0)
+	msgs := make([]ctypes.Msg, 0)
 	uploads := make([]*types.Upload, 0)
+	totalSizeOfMsgs := 0 // keep track of total messages size estimate
+
 	for i := 0; i < l; i++ {
-		msgSize := 0 // keep track of total messages size estimate
-		for _, m := range msg {
-			msgSize += len(m.String())
+		for _, m := range msgs {
+			totalSizeOfMsgs += len(m.String())
 		}
 
 		upload := q.Queue[i]
 
 		uploadSize := len(upload.Message.String())
-		logger.Printf("msgSize is now : %d --getting bigger?\n", l)
+		logger.Printf("totalSizeOfMsgs is now : %d --getting bigger?\n", l)
 
 		// if the size of the upload would put us past our cap, we cut off the queue and send only what fits
-		if msgSize+uploadSize > maxSize {
-			logger.Printf("msgSize + uploadSize is : %d, which is bigger than %d\n", l, maxSize)
-			msg = msg[:len(msg)-1]
+		if totalSizeOfMsgs+uploadSize > maxSize {
+			logger.Printf("totalSizeOfMsgs+uploadSize is : %d, which is bigger than %d\n", l, maxSize)
+			msgs = msgs[:len(msgs)-1]
 			l = i
 			break
 		}
 
 		uploads = append(uploads, upload)
-		msg = append(msg, upload.Message)
+		msgs = append(msgs, upload.Message)
 		// ctx.Logger.Info(fmt.Sprintf("Message being sent to chain: %s", upload.Message.String()))
 
 	}
@@ -93,7 +94,7 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 
 	clientCtx := client.GetClientContextFromCmd(cmd)
 
-	res, err := utils.SendTx(clientCtx, cmd.Flags(), msg...)
+	res, err := utils.SendTx(clientCtx, cmd.Flags(), msgs...)
 	for _, v := range uploads {
 		if v == nil {
 			continue
