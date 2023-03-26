@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/JackalLabs/jackal-provider/jprov/testutils"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 
@@ -57,6 +58,11 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 		ctx.Logger.Error(err.Error())
 	}
 
+	logger, logFile := testutils.CreateLogger("cutTheQueue")
+	logger.Println("===============BROADCASTING NEW BATCH====================")
+
+	logger.Printf("length of queue is : %d\n", l)
+
 	msg := make([]ctypes.Msg, 0)
 	uploads := make([]*types.Upload, 0)
 	for i := 0; i < l; i++ {
@@ -68,9 +74,11 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 		upload := q.Queue[i]
 
 		uploadSize := len(upload.Message.String())
+		logger.Printf("msgSize is now : %d --getting bigger?\n", l)
 
 		// if the size of the upload would put us past our cap, we cut off the queue and send only what fits
 		if msgSize+uploadSize > maxSize {
+			logger.Printf("msgSize + uploadSize is : %d, which is bigger than\n", l, maxSize)
 			msg = msg[:len(msg)-1]
 			l = i
 			break
