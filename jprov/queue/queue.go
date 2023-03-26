@@ -78,7 +78,7 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 
 		// if the size of the upload would put us past our cap, we cut off the queue and send only what fits
 		if msgSize+uploadSize > maxSize {
-			logger.Printf("msgSize + uploadSize is : %d, which is bigger than\n", l, maxSize)
+			logger.Printf("msgSize + uploadSize is : %d, which is bigger than %d\n", l, maxSize)
 			msg = msg[:len(msg)-1]
 			l = i
 			break
@@ -89,6 +89,7 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 		// ctx.Logger.Info(fmt.Sprintf("Message being sent to chain: %s", upload.Message.String()))
 
 	}
+	logFile.Close()
 
 	clientCtx := client.GetClientContextFromCmd(cmd)
 
