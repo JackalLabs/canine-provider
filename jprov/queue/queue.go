@@ -68,9 +68,10 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 	totalSizeOfMsgs := 0 // keep track of total messages size estimate
 
 	for i := 0; i < l; i++ {
-		for _, m := range msgs {
-			totalSizeOfMsgs += len(m.String())
-		}
+		// for _, m := range msgs {
+		// 	totalSizeOfMsgs += len(m.String())
+		// }
+		totalSizeOfMsgs += len(msgs[i-1].String()) // Add length of large msg that was added
 
 		upload := q.Queue[i]
 
