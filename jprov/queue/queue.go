@@ -63,16 +63,11 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 
 	logger.Printf("length of queue is : %d\n", l)
 
+	var totalSizeOfMsgs int
 	msgs := make([]ctypes.Msg, 0)
 	uploads := make([]*types.Upload, 0)
 
-	for i := 0; i < l; i++ {
-		totalSizeOfMsgs := 0 // keep track of total messages size estimate
-
-		for _, m := range msgs {
-			logger.Printf("len(m.String() is?: %d --bigger than 1?\n", len(m.String()))
-			totalSizeOfMsgs += len(m.String())
-		}
+	for i := 0; i < l; i++ { // loop through entire queue
 
 		upload := q.Queue[i]
 
@@ -91,6 +86,7 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 		} else {
 			uploads = append(uploads, upload)
 			msgs = append(msgs, upload.Message)
+			totalSizeOfMsgs += len(upload.Message.String())
 			logger.Printf("length of msgs array is now : %d\n", len(msgs))
 		}
 
