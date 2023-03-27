@@ -81,7 +81,7 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 
 		// if the size of the upload would put us past our cap, we cut off the queue and send only what fits
 		if totalSizeOfMsgs+uploadSize > maxSize {
-			logger.Printf("totalSizeOfMsgs+uploadSize is : %d, which is bigger than %d\n", l, maxSize)
+			logger.Printf("totalSizeOfMsgs+uploadSize is : %d, which is bigger than %d\n", totalSizeOfMsgs, maxSize)
 			msgs = msgs[:len(msgs)-1]
 			l = i
 			break
