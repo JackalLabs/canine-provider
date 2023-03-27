@@ -83,6 +83,7 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 		if totalSizeOfMsgs+uploadSize > maxSize {
 			logger.Printf("totalSizeOfMsgs+uploadSize is : %d, which is bigger than %d\n", totalSizeOfMsgs+uploadSize, maxSize)
 			msgs = msgs[:len(msgs)-1]
+			logger.Printf("length of msgs array--last element popped--is now : %d\n", msgs)
 			l = i
 			break
 		}
@@ -90,11 +91,15 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 		uploads = append(uploads, upload)
 		msgs = append(msgs, upload.Message)
 		// ctx.Logger.Info(fmt.Sprintf("Message being sent to chain: %s", upload.Message.String()))
+		logger.Printf("length of msgs array is now : %d\n", msgs)
 
 	}
-	logFile.Close()
 
 	clientCtx := client.GetClientContextFromCmd(cmd)
+
+	// length of messages?
+
+	logFile.Close()
 
 	res, err := utils.SendTx(clientCtx, cmd.Flags(), msgs...)
 	for _, v := range uploads {
