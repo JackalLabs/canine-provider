@@ -70,6 +70,7 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 		totalSizeOfMsgs := 0 // keep track of total messages size estimate
 
 		for _, m := range msgs {
+			logger.Printf("len(m.String() is?: %d --bigger than 1?\n", len(m.String()))
 			totalSizeOfMsgs += len(m.String())
 		}
 
