@@ -82,7 +82,7 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 			_, err = utils.DownloadFileFromURL(h.Cmd, prov, h.Stray.Fid, h.Stray.Cid, h.Database, ctx.Logger)
 			if err != nil {
 				ctx.Logger.Error(err.Error())
-				return
+				continue
 			}
 			found = true // If we can successfully download the file, stop there.
 		}
