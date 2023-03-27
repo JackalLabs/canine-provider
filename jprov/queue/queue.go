@@ -91,7 +91,6 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 			uploads = append(uploads, upload)
 			msgs = append(msgs, upload.Message)
 			logger.Printf("length of msgs array is now : %d\n", len(msgs))
-			l = i
 		}
 
 	}
