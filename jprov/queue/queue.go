@@ -9,7 +9,7 @@ import (
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 
 	"github.com/cosmos/cosmos-sdk/client"
-	ctypes "github.com/cosmos/cosmos-sdk/types"
+	cosmosTypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 )
 
@@ -64,7 +64,7 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 	logger.Printf("length of queue is : %d\n", l)
 
 	var totalSizeOfMsgs int
-	msgs := make([]ctypes.Msg, 0)
+	msgs := make([]cosmosTypes.Msg, 0)
 	uploads := make([]*types.Upload, 0)
 
 	for i := 0; i < l; i++ { // loop through entire queue
@@ -95,8 +95,10 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 	clientCtx := client.GetClientContextFromCmd(cmd)
 
 	logger.Printf("len(msgs) right before being broadcast? : %d\n", len(msgs))
-	logFile.Close()
-
+	err = logFile.Close()
+	if err != nil {
+		fmt.Println(err)
+	}
 	res, err := utils.SendTx(clientCtx, cmd.Flags(), msgs...)
 	for _, v := range uploads {
 		if v == nil {
