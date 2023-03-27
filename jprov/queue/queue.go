@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/JackalLabs/jackal-provider/jprov/testutils"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 
 	"github.com/cosmos/cosmos-sdk/client"
-	ctypes "github.com/cosmos/cosmos-sdk/types"
+	cosmosTypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 )
 
@@ -57,33 +58,48 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 		ctx.Logger.Error(err.Error())
 	}
 
-	msg := make([]ctypes.Msg, 0)
+	logger, logFile := testutils.CreateLogger("cutTheQueue")
+	logger.Println("===============BROADCASTING NEW BATCH====================")
+
+	logger.Printf("length of queue is : %d\n", l)
+
+	var totalSizeOfMsgs int
+	msgs := make([]cosmosTypes.Msg, 0)
 	uploads := make([]*types.Upload, 0)
-	for i := 0; i < l; i++ {
-		msgSize := 0 // keep track of total messages size estimate
-		for _, m := range msg {
-			msgSize += len(m.String())
-		}
+
+	for i := 0; i < l; i++ { // loop through entire queue
 
 		upload := q.Queue[i]
 
 		uploadSize := len(upload.Message.String())
+		logger.Printf("totalSizeOfMsgs is now : %d --getting bigger?\n", totalSizeOfMsgs)
 
 		// if the size of the upload would put us past our cap, we cut off the queue and send only what fits
-		if msgSize+uploadSize > maxSize {
+		if totalSizeOfMsgs+uploadSize > maxSize {
+			logger.Printf("totalSizeOfMsgs+uploadSize is : %d, which is bigger than %d\n", totalSizeOfMsgs+uploadSize, maxSize)
+			msgs = msgs[:len(msgs)-1]
+			uploads = uploads[:len(uploads)-1]
+			logger.Printf("length of msgs array--last element popped--is now : %d\n", len(msgs))
 			l = i
-			break
-		}
 
-		uploads = append(uploads, upload)
-		msg = append(msg, upload.Message)
-		//ctx.Logger.Info(fmt.Sprintf("Message being sent to chain: %s", upload.Message.String()))
+			break
+		} else {
+			uploads = append(uploads, upload)
+			msgs = append(msgs, upload.Message)
+			totalSizeOfMsgs += len(upload.Message.String())
+			logger.Printf("length of msgs array is now : %d\n", len(msgs))
+		}
 
 	}
 
 	clientCtx := client.GetClientContextFromCmd(cmd)
 
-	res, err := utils.SendTx(clientCtx, cmd.Flags(), msg...)
+	logger.Printf("len(msgs) right before being broadcast? : %d\n", len(msgs))
+	err = logFile.Close()
+	if err != nil {
+		fmt.Println(err)
+	}
+	res, err := utils.SendTx(clientCtx, cmd.Flags(), msgs...)
 	for _, v := range uploads {
 		if v == nil {
 			continue
@@ -109,7 +125,11 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 
 func (q *UploadQueue) StartListener(cmd *cobra.Command) {
 	for {
-		time.Sleep(time.Second * 2)
+		interval, err := cmd.Flags().GetInt64(types.FlagQueueInterval)
+		if err != nil {
+			interval = 2
+		}
+		time.Sleep(time.Second * time.Duration(interval))
 
 		q.listenOnce(cmd)
 	}

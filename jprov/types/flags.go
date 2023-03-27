@@ -10,4 +10,5 @@ const (
 	FlagPort          = "port"
 	FlagGasCap        = "gas-cap"
 	FlagMaxFileSize   = "max-file-size"
+	FlagQueueInterval = "queue-interval"
 )

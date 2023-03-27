@@ -175,7 +175,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 
 	for {
 		start := time.Now()
-		//ctx.Logger.Info(fmt.Sprintf("Starting proof commitment at %s", start.Format("2006-01-02 15:04:05.000000")))
+		// ctx.Logger.Info(fmt.Sprintf("Starting proof commitment at %s", start.Format("2006-01-02 15:04:05.000000")))
 		// m := []IterWrap{}
 		iter := db.NewIterator(nil, nil)
 		//for iter.Next() {
