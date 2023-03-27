@@ -84,8 +84,6 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 			logger.Printf("totalSizeOfMsgs+uploadSize is : %d, which is bigger than %d\n", totalSizeOfMsgs+uploadSize, maxSize)
 			msgs = msgs[:len(msgs)-1]
 			logger.Printf("length of msgs array--last element popped--is now : %d\n", len(msgs))
-			uploads = append(uploads, upload)
-			msgs = append(msgs, upload.Message)
 			l = i
 
 			break
