@@ -97,6 +97,7 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 
 	clientCtx := client.GetClientContextFromCmd(cmd)
 
+	logger.Printf("len(msgs) right before being broadcast? : %d\n", len(msgs))
 	logFile.Close()
 
 	res, err := utils.SendTx(clientCtx, cmd.Flags(), msgs...)
