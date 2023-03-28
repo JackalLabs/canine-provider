@@ -43,7 +43,7 @@ func CmdInitProvider() *cobra.Command {
 				fmt.Println(err)
 				return err
 			}
-			res, err := utils.SendTx(clientCtx, cmd.Flags(), msg)
+			res, err := utils.SendTx(clientCtx, cmd.Flags(), "", msg)
 			if err != nil {
 				fmt.Println(err)
 				return err
