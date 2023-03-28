@@ -34,5 +34,4 @@ func main() {
 	totalTime = totalTime / total
 
 	fmt.Printf("Took: %d microseconds on average.\n", totalTime)
-
 }
