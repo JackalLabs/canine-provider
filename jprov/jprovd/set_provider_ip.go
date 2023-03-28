@@ -36,7 +36,7 @@ func CmdSetProviderIP() *cobra.Command {
 			if err := msg.ValidateBasic(); err != nil {
 				return err
 			}
-			_, err = utils.SendTx(clientCtx, cmd.Flags(), msg)
+			_, err = utils.SendTx(clientCtx, cmd.Flags(), "", msg)
 			return err
 		},
 	}

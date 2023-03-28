@@ -1,0 +1,46 @@
+name: Deploy Nightly
+on:
+  schedule:
+    - cron: '0 2 * * *' # run at 2 AM UTC
+
+jobs:
+  native-build-cli:
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, macos-latest]
+    steps:
+      - uses: actions/checkout@v3.5.0
+      - uses: actions/setup-go@v4
+        with:
+          go-version: 1.18.1 # The Go version to download (if necessary) and use.
+      - name: Build CLI
+        shell: bash
+        run: |
+          make build
+          cp "build/jprovd" "jprovd-$RUNNER_OS"
+      - uses: actions/upload-artifact@v3
+        with:
+          name: jprovd-${{runner.os}}
+          path: jprovd-${{runner.os}}
+
+  Release:
+    needs:
+      [native-build-cli]
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3.5.0
+      - uses: actions/download-artifact@v3
+        with:
+          name: jprovd-Linux
+      - uses: actions/download-artifact@v3
+        with:
+          name: jprovd-macOS
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          prerelease: true
+          name: nightly
+          files: |
+            jprovd-macOS
+            jprovd-Linux

@@ -74,6 +74,7 @@ func WithdrawCommand() *cobra.Command {
 			if res != nil {
 				fmt.Println(res.RawLog)
 			}
+
 			return err
 		},
 	}
