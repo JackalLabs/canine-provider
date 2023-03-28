@@ -14,7 +14,6 @@ import (
 	txns "github.com/cosmos/cosmos-sdk/client/tx"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
@@ -315,19 +314,7 @@ func (m *StrayManager) CollectStrays(cmd *cobra.Command) {
 	m.Context.Logger.Info("Collecting strays from chain...")
 	qClient := storageTypes.NewQueryClient(m.ClientContext)
 
-	reverse := rand.Intn(2) == 0
-
-	max := uint64(len(m.hands))
-	if max > 50 {
-		max = 50
-	}
-
-	pagination := &query.PageRequest{
-		Limit:   max,
-		Reverse: reverse,
-	}
-
-	res, err := qClient.StraysAll(cmd.Context(), &storageTypes.QueryAllStraysRequest{Pagination: pagination})
+	res, err := qClient.StraysAll(cmd.Context(), &storageTypes.QueryAllStraysRequest{})
 	if err != nil {
 		m.Context.Logger.Error(err.Error())
 		return
