@@ -71,7 +71,9 @@ func WithdrawCommand() *cobra.Command {
 			msg := banktypes.NewMsgSend(fromAddr, toAddr, coins)
 
 			res, err := utils.SendTx(clientCtx, cmd.Flags(), msg)
-			fmt.Println(res.RawLog)
+			if res != nil {
+				fmt.Println(res.RawLog)
+			}
 			return err
 		},
 	}
