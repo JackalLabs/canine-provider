@@ -82,12 +82,12 @@ func SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, memo string, msgs 
 	}
 
 	tx.SetFeeGranter(clientCtx.GetFeeGranterAddress())
+	tx.SetMemo(memo)
+
 	err = Sign(txf, clientCtx, tx, true)
 	if err != nil {
 		return nil, err
 	}
-
-	tx.SetMemo(memo)
 
 	txBytes, err := clientCtx.TxConfig.TxEncoder()(tx.GetTx())
 	if err != nil {
