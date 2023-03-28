@@ -49,7 +49,7 @@ func prepareFactory(clientCtx client.Context, txf txns.Factory) (txns.Factory, e
 	return txf, nil
 }
 
-func SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, msgs ...sdk.Msg) (*sdk.TxResponse, error) {
+func SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, memo string, msgs ...sdk.Msg) (*sdk.TxResponse, error) {
 	txf := txns.NewFactoryCLI(clientCtx, flagSet)
 
 	txf, err := prepareFactory(clientCtx, txf)
@@ -86,6 +86,8 @@ func SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, msgs ...sdk.Msg) (
 	if err != nil {
 		return nil, err
 	}
+
+	tx.SetMemo(memo)
 
 	txBytes, err := clientCtx.TxConfig.TxEncoder()(tx.GetTx())
 	if err != nil {

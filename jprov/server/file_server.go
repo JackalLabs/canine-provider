@@ -196,6 +196,11 @@ func StartFileServer(cmd *cobra.Command) {
 		return
 	}
 
+	providerName, err := cmd.Flags().GetString(types.FlagProviderName)
+	if err != nil {
+		providerName = "A Storage Provider"
+	}
+
 	manager := strays.NewStrayManager(cmd) // creating and starting the stray management system
 	if !strs {
 		manager.Init(cmd, threads, db)
@@ -203,7 +208,7 @@ func StartFileServer(cmd *cobra.Command) {
 
 	go postProofs(cmd, db, &q, ctx)
 	go NatCycle(cmd.Context())
-	go q.StartListener(cmd)
+	go q.StartListener(cmd, providerName)
 
 	if !strs {
 		go manager.Start(cmd)

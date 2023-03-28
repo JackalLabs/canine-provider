@@ -109,7 +109,7 @@ func (m *StrayManager) Init(cmd *cobra.Command, count uint, db *leveldb.DB) { //
 
 		msg := storageTypes.NewMsgAddClaimer(address, h.Address)
 
-		res, err := utils.SendTx(clientCtx, cmd.Flags(), msg)
+		res, err := utils.SendTx(clientCtx, cmd.Flags(), "", msg)
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -146,7 +146,7 @@ func (m *StrayManager) Init(cmd *cobra.Command, count uint, db *leveldb.DB) { //
 			continue
 		}
 
-		grantRes, nerr := utils.SendTx(clientCtx, cmd.Flags(), grantMsg)
+		grantRes, nerr := utils.SendTx(clientCtx, cmd.Flags(), "", grantMsg)
 		if nerr != nil {
 			fmt.Println(nerr)
 			continue

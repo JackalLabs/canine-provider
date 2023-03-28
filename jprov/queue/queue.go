@@ -36,7 +36,7 @@ func (q *UploadQueue) Append(upload *types.Upload) {
 	q.Queue = append(q.Queue, upload)
 }
 
-func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
+func (q *UploadQueue) listenOnce(cmd *cobra.Command, providerName string) {
 	if q.Locked {
 		return
 	}
@@ -99,7 +99,7 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	res, err := utils.SendTx(clientCtx, cmd.Flags(), msgs...)
+	res, err := utils.SendTx(clientCtx, cmd.Flags(), fmt.Sprintf("Storage Provided by %s.", providerName), msgs...)
 	for _, v := range uploads {
 		if v == nil {
 			continue
@@ -123,7 +123,7 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command) {
 	q.Queue = q.Queue[l:] // pop every upload that fit off the queue
 }
 
-func (q *UploadQueue) StartListener(cmd *cobra.Command) {
+func (q *UploadQueue) StartListener(cmd *cobra.Command, providerName string) {
 	for {
 		interval, err := cmd.Flags().GetInt64(types.FlagQueueInterval)
 		if err != nil {
@@ -131,6 +131,6 @@ func (q *UploadQueue) StartListener(cmd *cobra.Command) {
 		}
 		time.Sleep(time.Second * time.Duration(interval))
 
-		q.listenOnce(cmd)
+		q.listenOnce(cmd, providerName)
 	}
 }
