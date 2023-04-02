@@ -168,28 +168,10 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 		return
 	}
 
-	//type IterWrap struct {
-	//	Key   []byte
-	//	Value []byte
-	//}
-
 	for {
 		start := time.Now()
-		// ctx.Logger.Info(fmt.Sprintf("Starting proof commitment at %s", start.Format("2006-01-02 15:04:05.000000")))
-		// m := []IterWrap{}
+
 		iter := db.NewIterator(nil, nil)
-		//for iter.Next() {
-		//	mm := IterWrap{
-		//		Key:   iter.Key(),
-		//		Value: iter.Value(),
-		//	}
-		//	m = append(m, mm)
-		//}
-		//iter.Release()
-		//err = iter.Error()
-		//if err != nil {
-		//	ctx.Logger.Error("Iterator Error: %s", err.Error())
-		//}
 
 		for iter.Next() {
 			cid := string(iter.Key())

@@ -68,9 +68,11 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 			return // If we don't have it and nobody else does, there is nothing we can do.
 		}
 	} else { // If there are providers with this file, we will download it from them instead to keep things consistent
-		if _, err := os.Stat(utils.GetStoragePath(h.ClientContext, h.Stray.Fid)); !os.IsNotExist(err) {
-			ctx.Logger.Info("Already have this file")
-			return
+
+		for _, prov := range arr {
+			if prov == m.Ip { // Ignore ourselves
+				return
+			}
 		}
 
 		found := false
@@ -78,9 +80,7 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 			if found {
 				continue
 			}
-			if prov == m.Ip { // Ignore ourselves
-				return
-			}
+
 			_, err = utils.DownloadFileFromURL(h.Cmd, prov, h.Stray.Fid, h.Stray.Cid, h.Database, ctx.Logger)
 			if err != nil {
 				ctx.Logger.Error(err.Error())
