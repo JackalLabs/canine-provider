@@ -227,34 +227,13 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 
 				if newval > maxMisses {
 
-					duplicate := false
-					iter := db.NewIterator(nil, nil)
-					for iter.Next() {
-						c := string(iter.Key())
-						v := string(iter.Value())
+					ctx.Logger.Info(fmt.Sprintf("%s is being removed from disk", value))
 
-						if c[:len(utils.FileKey)] != utils.FileKey {
-							continue
-						}
-
-						c = c[len(utils.FileKey):]
-
-						if c != cid && v == value {
-							ctx.Logger.Info(fmt.Sprintf("%s != %s but it is also %s, so we must keep the file on disk.", c, cid, v))
-							duplicate = true
-							break
-						}
+					err := os.RemoveAll(utils.GetStoragePath(clientCtx, value))
+					if err != nil {
+						ctx.Logger.Error(err.Error())
 					}
-					ctx.Logger.Info(fmt.Sprintf("%s is being removed", value))
 
-					if !duplicate {
-						ctx.Logger.Info("And we are removing the file on disk.")
-
-						err := os.RemoveAll(utils.GetStoragePath(clientCtx, value))
-						if err != nil {
-							ctx.Logger.Error(err.Error())
-						}
-					}
 					err = db.Delete(utils.MakeFileKey(cid), nil)
 					if err != nil {
 						ctx.Logger.Error(err.Error())
