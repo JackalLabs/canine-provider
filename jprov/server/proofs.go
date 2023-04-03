@@ -168,28 +168,10 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 		return
 	}
 
-	//type IterWrap struct {
-	//	Key   []byte
-	//	Value []byte
-	//}
-
 	for {
 		start := time.Now()
-		// ctx.Logger.Info(fmt.Sprintf("Starting proof commitment at %s", start.Format("2006-01-02 15:04:05.000000")))
-		// m := []IterWrap{}
+
 		iter := db.NewIterator(nil, nil)
-		//for iter.Next() {
-		//	mm := IterWrap{
-		//		Key:   iter.Key(),
-		//		Value: iter.Value(),
-		//	}
-		//	m = append(m, mm)
-		//}
-		//iter.Release()
-		//err = iter.Error()
-		//if err != nil {
-		//	ctx.Logger.Error("Iterator Error: %s", err.Error())
-		//}
 
 		for iter.Next() {
 			cid := string(iter.Key())
@@ -198,7 +180,6 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 			if cid[:len(utils.FileKey)] != utils.FileKey {
 				continue
 			}
-			fid := value
 
 			cid = cid[len(utils.FileKey):]
 
@@ -245,7 +226,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 							break
 						}
 					}
-					ctx.Logger.Info(fmt.Sprintf("%s is being removed", value))
+					ctx.Logger.Info(fmt.Sprintf("%s is being removed", cid))
 
 					if !duplicate {
 						ctx.Logger.Info("And we are removing the file on disk.")
@@ -254,17 +235,19 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 						if err != nil {
 							ctx.Logger.Error(err.Error())
 						}
+
+						err = os.Remove(utils.GetStoragePathForTree(clientCtx, value))
+						if err != nil {
+							ctx.Logger.Error(err.Error())
+							continue
+						}
 					}
 					err = db.Delete(utils.MakeFileKey(cid), nil)
 					if err != nil {
 						ctx.Logger.Error(err.Error())
 						continue
 					}
-					err = os.Remove(utils.GetStoragePathForTree(clientCtx, fid))
-					if err != nil {
-						ctx.Logger.Error(err.Error())
-						continue
-					}
+
 					err = db.Delete(utils.MakeDowntimeKey(cid), nil)
 					if err != nil {
 						ctx.Logger.Error(err.Error())
