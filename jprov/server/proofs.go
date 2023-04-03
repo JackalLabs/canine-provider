@@ -180,7 +180,6 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 			if cid[:len(utils.FileKey)] != utils.FileKey {
 				continue
 			}
-			fid := value
 
 			cid = cid[len(utils.FileKey):]
 
@@ -227,7 +226,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 							break
 						}
 					}
-					ctx.Logger.Info(fmt.Sprintf("%s is being removed", value))
+					ctx.Logger.Info(fmt.Sprintf("%s is being removed", cid))
 
 					if !duplicate {
 						ctx.Logger.Info("And we are removing the file on disk.")
@@ -237,7 +236,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 							ctx.Logger.Error(err.Error())
 						}
 
-						err = os.Remove(utils.GetStoragePathForTree(clientCtx, fid))
+						err = os.Remove(utils.GetStoragePathForTree(clientCtx, value))
 						if err != nil {
 							ctx.Logger.Error(err.Error())
 							continue
