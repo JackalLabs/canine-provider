@@ -236,17 +236,19 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 						if err != nil {
 							ctx.Logger.Error(err.Error())
 						}
+
+						err = os.Remove(utils.GetStoragePathForTree(clientCtx, fid))
+						if err != nil {
+							ctx.Logger.Error(err.Error())
+							continue
+						}
 					}
 					err = db.Delete(utils.MakeFileKey(cid), nil)
 					if err != nil {
 						ctx.Logger.Error(err.Error())
 						continue
 					}
-					err = os.Remove(utils.GetStoragePathForTree(clientCtx, fid))
-					if err != nil {
-						ctx.Logger.Error(err.Error())
-						continue
-					}
+
 					err = db.Delete(utils.MakeDowntimeKey(cid), nil)
 					if err != nil {
 						ctx.Logger.Error(err.Error())
