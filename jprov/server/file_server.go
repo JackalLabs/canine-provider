@@ -7,10 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
@@ -206,6 +208,7 @@ func StartFileServer(cmd *cobra.Command) {
 		manager.Init(cmd, threads, db)
 	}
 
+	rand.Seed(time.Now().UnixNano())
 	go postProofs(cmd, db, &q, ctx)
 	go NatCycle(cmd.Context())
 	go q.StartListener(cmd, providerName)
