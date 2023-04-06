@@ -316,6 +316,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 
 		if tm.Nanoseconds()-end.Nanoseconds() > 0 {
 			time.Sleep(time.Duration(interval) * time.Second)
+			ctx.Logger.Info(fmt.Sprintf("We are sleeping now ZZZZZZZZZ"))
 		}
 
 	}
