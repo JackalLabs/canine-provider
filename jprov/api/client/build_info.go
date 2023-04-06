@@ -55,7 +55,7 @@ func GetBuildInfo(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps
 		fmt.Println(err)
 		return
 	}
-	messageSize, err := cmd.Flags().GetInt(provTypes.FlagMessageSize)
+	messageSize, err := cmd.Flags().GetInt(provTypes.FlagAllMessagesSize)
 	if err != nil {
 		fmt.Println(err)
 		return

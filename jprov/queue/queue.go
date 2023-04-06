@@ -52,7 +52,7 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command, providerName string) {
 		return
 	}
 
-	maxSize, err := cmd.Flags().GetInt(types.FlagMessageSize)
+	maxSize, err := cmd.Flags().GetInt(types.FlagAllMessagesSize)
 	if err != nil {
 		ctx.Logger.Error(err.Error())
 	}
