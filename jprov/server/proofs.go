@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
@@ -144,11 +145,9 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 }
 
 func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) {
-	interval, err := cmd.Flags().GetUint16(types.FlagInterval)
-	if err != nil {
-		ctx.Logger.Error(err.Error())
-		return
-	}
+	rand.Seed(time.Now().UnixNano())
+	interval := uint16(rand.Intn(91) + 30)
+	ctx.Logger.Info(fmt.Sprintf("The interval between proofs is now %d", interval))
 
 	clientCtx, err := client.GetClientTxContext(cmd)
 	if err != nil {
