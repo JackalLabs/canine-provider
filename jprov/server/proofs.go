@@ -165,7 +165,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 
 	for {
 		rand.Seed(time.Now().UnixNano())
-		interval := uint16(rand.Intn(91) + 30)
+		interval := uint16(rand.Intn(8) + 3)
 		ctx.Logger.Info(fmt.Sprintf("The interval between proofs is now %d", interval))
 		start := time.Now()
 
