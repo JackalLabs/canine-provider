@@ -145,6 +145,12 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 }
 
 func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) {
+	intervalFromCMD, err := cmd.Flags().GetUint16(types.FlagInterval)
+	if err != nil {
+		ctx.Logger.Error(err.Error())
+		return
+	}
+
 	clientCtx, err := client.GetClientTxContext(cmd)
 	if err != nil {
 		ctx.Logger.Error(err.Error())
@@ -164,8 +170,13 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 	}
 
 	for {
-		rand.Seed(time.Now().UnixNano())
-		interval := uint16(rand.Intn(8) + 3)
+		interval := intervalFromCMD
+
+		if interval < 120 { // If the provider picked an interval that's less than 2 minutes, we generate a random interval for them anyways
+			rand.Seed(time.Now().UnixNano())
+			interval = uint16(rand.Intn(8) + 3)
+
+		}
 		ctx.Logger.Info(fmt.Sprintf("The interval between proofs is now %d", interval))
 		start := time.Now()
 
