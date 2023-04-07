@@ -178,7 +178,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 			interval = uint16(r.Intn(91) + 30)
 
 		}
-		ctx.Logger.Info(fmt.Sprintf("The interval between proofs is now %d", interval))
+		ctx.Logger.Debug(fmt.Sprintf("The interval between proofs is now %d", interval))
 		start := time.Now()
 
 		iter := db.NewIterator(nil, nil)
