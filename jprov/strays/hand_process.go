@@ -327,8 +327,8 @@ func (m *StrayManager) CollectStrays(cmd *cobra.Command) {
 		return
 	}
 
-	rand.Seed(time.Now().UnixNano())
-	rand.Shuffle(len(s), func(i, j int) { s[i], s[j] = s[j], s[i] })
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r.Shuffle(len(s), func(i, j int) { s[i], s[j] = s[j], s[i] })
 
 	for _, newStray := range s { // Only add new strays to the queue
 
