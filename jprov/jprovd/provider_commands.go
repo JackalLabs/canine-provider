@@ -44,7 +44,7 @@ func StartServerCommand() *cobra.Command {
 	cmd.Flags().Int(types.FlagMaxFileSize, 32000, "The maximum size allowed to be sent to this provider in mbs. (only for monitoring services)")
 	cmd.Flags().Int64(types.FlagQueueInterval, 4, "The time, in seconds, between running a queue loop.")
 	cmd.Flags().String(types.FlagProviderName, "A Storage Provider", "The name to identify this provider in block explorers.")
-	cmd.Flags().String(types.FlagTendermintLoglevel, "info", "The logging level for the tendermint logger (debug|info|error) (default 'info')")
+	cmd.Flags().String(types.FlagTendermintLoglevel, "info", "The logging level for the tendermint logger. (debug|info|error) (default 'info')")
 	return cmd
 }
 
@@ -170,7 +170,7 @@ func AddTxFlagsToCmd(cmd *cobra.Command) {
 	cmd.Flags().Uint64P(flags.FlagSequence, "s", 0, "The sequence number of the signing account (offline mode only)")
 	cmd.Flags().String(flags.FlagNote, "", "Note to add a description to the transaction (previously --memo)")
 	cmd.Flags().String(flags.FlagFees, "", "Fees to pay along with transaction; eg: 10ujkl")
-	cmd.Flags().String(flags.FlagGasPrices, "0.02ujkl", "Gas prices in decimal format to determine the transaction fee (e.g. 0.1ujkl)")
+	cmd.Flags().String(flags.FlagGasPrices, "0.004ujkl", "Gas prices in decimal format to determine the transaction fee (e.g. 0.1ujkl)")
 	cmd.Flags().String(flags.FlagNode, "tcp://localhost:26657", "<host>:<port> to tendermint rpc interface for this chain")
 	cmd.Flags().Bool(flags.FlagUseLedger, false, "Use a connected Ledger device")
 	cmd.Flags().Float64(flags.FlagGasAdjustment, 1.75, "adjustment factor to be multiplied against the estimate returned by the tx simulation; if the gas limit is set manually this flag is ignored ")
