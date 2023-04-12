@@ -1,0 +1,26 @@
+🌍 Started Provider: http://0.0.0.0:3333
+D[2023-04-12|17:03:50.247] The interval between proofs is now 1202      
+D[2023-04-12|17:03:50.247] filename: jklf1xlc58t02fw9y6d7923gxw5w2zm79xcn0zq03wsshprz95thtwz6sydknr5 
+D[2023-04-12|17:03:50.247] CID: jklc1l6dsx3c3kexmd4tkve33fvmjl4twl55fulcp0wapn8hqg65r4tfqc6ggy9 
+D[2023-04-12|17:03:50.248] BlockToProve: 135                            
+D[2023-04-12|17:03:50.249] filename: jklf1qmws4e060dxl9dhukynypj8xnlrk4aestaspe4uv3zhs5zac9j0qyezlzv 
+D[2023-04-12|17:03:50.249] CID: jklc1wv9c4ha2mtqw20m69u3gcy8sl78az349yrwtcpm4qjc9zfcrlrmqen8jyj 
+D[2023-04-12|17:03:50.250] BlockToProve: 226                            
+D[2023-04-12|17:03:50.251] filename: jklf1je2p75yuwsdwrhavqj2wjr4dvnymzlq2ekys2m3cfgpdzxh69knsexe923 
+D[2023-04-12|17:03:50.251] CID: jklc1z840cpz83dd3xxwjzqh8qfhpqjv6hhu24l0wc668jvushlf8jdhqxm8ndw 
+D[2023-04-12|17:03:50.252] BlockToProve: 225                            
+multiple or no services found
+gas estimate: 1207332
+D[2023-04-12|17:23:52.255] The interval between proofs is now 1663      
+D[2023-04-12|17:23:52.255] filename: jklf1xlc58t02fw9y6d7923gxw5w2zm79xcn0zq03wsshprz95thtwz6sydknr5 
+D[2023-04-12|17:23:52.255] CID: jklc1l6dsx3c3kexmd4tkve33fvmjl4twl55fulcp0wapn8hqg65r4tfqc6ggy9 
+E[2023-04-12|17:23:52.257] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+I[2023-04-12|17:23:52.257] jklf1xlc58t02fw9y6d7923gxw5w2zm79xcn0zq03wsshprz95thtwz6sydknr5 will be removed in 15 cycles 
+D[2023-04-12|17:23:52.257] filename: jklf1qmws4e060dxl9dhukynypj8xnlrk4aestaspe4uv3zhs5zac9j0qyezlzv 
+D[2023-04-12|17:23:52.257] CID: jklc1wv9c4ha2mtqw20m69u3gcy8sl78az349yrwtcpm4qjc9zfcrlrmqen8jyj 
+E[2023-04-12|17:23:52.258] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+I[2023-04-12|17:23:52.258] jklf1qmws4e060dxl9dhukynypj8xnlrk4aestaspe4uv3zhs5zac9j0qyezlzv will be removed in 15 cycles 
+D[2023-04-12|17:23:52.258] filename: jklf1je2p75yuwsdwrhavqj2wjr4dvnymzlq2ekys2m3cfgpdzxh69knsexe923 
+D[2023-04-12|17:23:52.258] CID: jklc1z840cpz83dd3xxwjzqh8qfhpqjv6hhu24l0wc668jvushlf8jdhqxm8ndw 
+E[2023-04-12|17:23:52.259] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+I[2023-04-12|17:23:52.259] jklf1je2p75yuwsdwrhavqj2wjr4dvnymzlq2ekys2m3cfgpdzxh69knsexe923 will be removed in 15 cycles 

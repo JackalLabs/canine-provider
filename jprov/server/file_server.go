@@ -182,14 +182,21 @@ func StartFileServer(cmd *cobra.Command) {
 
 	handler := cors.Default().Handler(router)
 
-	// logLevel, err := cmd.Flags().GetString(types.FlagTendermintLoglevel)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
+	logLevel, err := cmd.Flags().GetString(types.FlagTendermintLoglevel)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	ctx := utils.GetServerContextFromCmd(cmd)
-	(*&ctx.Config.BaseConfig).LogLevel = "debug"
+	// Get the existing base config
+	baseConfig := ctx.Config.BaseConfig
+
+	// Set the log level to "logLevel" from CMD
+	baseConfig.LogLevel = logLevel
+
+	// Update the context with the modified base config
+	ctx.Config.BaseConfig = baseConfig
 
 	threads, err := cmd.Flags().GetUint(types.FlagThreads)
 	if err != nil {
