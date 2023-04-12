@@ -38,7 +38,7 @@ func NewContext(v *viper.Viper, config *Config, logger tmlog.Logger) *Context {
 
 func DefaultBaseConfig() BaseConfig {
 	return BaseConfig{
-		LogLevel:  tmcfg.DefaultLogLevel,
+		LogLevel:  "debug",
 		LogFormat: tmcfg.LogFormatPlain,
 	}
 }
