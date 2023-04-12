@@ -189,7 +189,7 @@ func StartFileServer(cmd *cobra.Command) {
 	}
 
 	ctx := utils.GetServerContextFromCmd(cmd)
-	(*&ctx.Config.BaseConfig).LogLevel = logLevel
+	ctx.Config.BaseConfig.LogLevel = logLevel
 
 	threads, err := cmd.Flags().GetUint(types.FlagThreads)
 	if err != nil {
