@@ -189,14 +189,9 @@ func StartFileServer(cmd *cobra.Command) {
 	}
 
 	ctx := utils.GetServerContextFromCmd(cmd)
-	// Get the existing base config
-	baseConfig := ctx.Config.BaseConfig
+	ctx.Config.BaseConfig.LogLevel = logLevel
 
-	// Set the log level to "logLevel" from CMD
-	baseConfig.LogLevel = logLevel
-
-	// Update the context with the modified base config
-	ctx.Config.BaseConfig = baseConfig
+	newCtx := ctx
 
 	threads, err := cmd.Flags().GetUint(types.FlagThreads)
 	if err != nil {
@@ -220,7 +215,7 @@ func StartFileServer(cmd *cobra.Command) {
 		manager.Init(cmd, threads, db)
 	}
 
-	go postProofs(cmd, db, &q, ctx)
+	go postProofs(cmd, db, &q, newCtx)
 	go NatCycle(cmd.Context())
 	go q.StartListener(cmd, providerName)
 

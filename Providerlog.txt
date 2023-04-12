@@ -1,26 +1,26 @@
 🌍 Started Provider: http://0.0.0.0:3333
-D[2023-04-12|17:03:50.247] The interval between proofs is now 1202      
-D[2023-04-12|17:03:50.247] filename: jklf1xlc58t02fw9y6d7923gxw5w2zm79xcn0zq03wsshprz95thtwz6sydknr5 
-D[2023-04-12|17:03:50.247] CID: jklc1l6dsx3c3kexmd4tkve33fvmjl4twl55fulcp0wapn8hqg65r4tfqc6ggy9 
-D[2023-04-12|17:03:50.248] BlockToProve: 135                            
-D[2023-04-12|17:03:50.249] filename: jklf1qmws4e060dxl9dhukynypj8xnlrk4aestaspe4uv3zhs5zac9j0qyezlzv 
-D[2023-04-12|17:03:50.249] CID: jklc1wv9c4ha2mtqw20m69u3gcy8sl78az349yrwtcpm4qjc9zfcrlrmqen8jyj 
-D[2023-04-12|17:03:50.250] BlockToProve: 226                            
-D[2023-04-12|17:03:50.251] filename: jklf1je2p75yuwsdwrhavqj2wjr4dvnymzlq2ekys2m3cfgpdzxh69knsexe923 
-D[2023-04-12|17:03:50.251] CID: jklc1z840cpz83dd3xxwjzqh8qfhpqjv6hhu24l0wc668jvushlf8jdhqxm8ndw 
-D[2023-04-12|17:03:50.252] BlockToProve: 225                            
+E[2023-04-12|17:27:16.224] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+I[2023-04-12|17:27:16.224] jklf1xlc58t02fw9y6d7923gxw5w2zm79xcn0zq03wsshprz95thtwz6sydknr5 will be removed in 14 cycles 
+E[2023-04-12|17:27:16.224] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+I[2023-04-12|17:27:16.224] jklf1qmws4e060dxl9dhukynypj8xnlrk4aestaspe4uv3zhs5zac9j0qyezlzv will be removed in 14 cycles 
+E[2023-04-12|17:27:16.225] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+I[2023-04-12|17:27:16.225] jklf1je2p75yuwsdwrhavqj2wjr4dvnymzlq2ekys2m3cfgpdzxh69knsexe923 will be removed in 14 cycles 
 multiple or no services found
-gas estimate: 1207332
-D[2023-04-12|17:23:52.255] The interval between proofs is now 1663      
-D[2023-04-12|17:23:52.255] filename: jklf1xlc58t02fw9y6d7923gxw5w2zm79xcn0zq03wsshprz95thtwz6sydknr5 
-D[2023-04-12|17:23:52.255] CID: jklc1l6dsx3c3kexmd4tkve33fvmjl4twl55fulcp0wapn8hqg65r4tfqc6ggy9 
-E[2023-04-12|17:23:52.257] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
-I[2023-04-12|17:23:52.257] jklf1xlc58t02fw9y6d7923gxw5w2zm79xcn0zq03wsshprz95thtwz6sydknr5 will be removed in 15 cycles 
-D[2023-04-12|17:23:52.257] filename: jklf1qmws4e060dxl9dhukynypj8xnlrk4aestaspe4uv3zhs5zac9j0qyezlzv 
-D[2023-04-12|17:23:52.257] CID: jklc1wv9c4ha2mtqw20m69u3gcy8sl78az349yrwtcpm4qjc9zfcrlrmqen8jyj 
-E[2023-04-12|17:23:52.258] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
-I[2023-04-12|17:23:52.258] jklf1qmws4e060dxl9dhukynypj8xnlrk4aestaspe4uv3zhs5zac9j0qyezlzv will be removed in 15 cycles 
-D[2023-04-12|17:23:52.258] filename: jklf1je2p75yuwsdwrhavqj2wjr4dvnymzlq2ekys2m3cfgpdzxh69knsexe923 
-D[2023-04-12|17:23:52.258] CID: jklc1z840cpz83dd3xxwjzqh8qfhpqjv6hhu24l0wc668jvushlf8jdhqxm8ndw 
-E[2023-04-12|17:23:52.259] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
-I[2023-04-12|17:23:52.259] jklf1je2p75yuwsdwrhavqj2wjr4dvnymzlq2ekys2m3cfgpdzxh69knsexe923 will be removed in 15 cycles 
+I[2023-04-12|17:27:48.503] Starting merkle tree construction...         
+I[2023-04-12|17:27:48.511] Contract being pushed: creator:"jkl1y0g7aj9rqn73fe65hllqvx34szlp6xxlxweveg" merkle:"117b4220ee7fda8ab717a5ef1b7c8a9bf639d9abbba832f899a114af6c36405d8129a75937dfeac5a1bb1f5bfedce0ddd5fb708cc31f0bdd04e22e028cb91c76" signee:"jkl1hj5fveer5cjtn4wd6wstzugjfdxzl0xpljur4u" filesize:"26802058" fid:"jklf14aj9wpgljc3et3jn0n9s283d9ts8ggmjg4j7lylwurj3zjw337dsrgqm24"  
+gas estimate: 110257
+I[2023-04-12|17:27:56.867] jklf14aj9wpgljc3et3jn0n9s283d9ts8ggmjg4j7lylwurj3zjw337dsrgqm24 Added to database 
+I[2023-04-12|17:27:57.690] Starting merkle tree construction...         
+I[2023-04-12|17:27:57.700] Contract being pushed: creator:"jkl1y0g7aj9rqn73fe65hllqvx34szlp6xxlxweveg" merkle:"d1f8670806474eaef71949c41fa0848534d55035f25d33ff7902151c97814cfca39eb0741c60748bb6eec4c1f1b61ac614e30a5a751a9643302f464867a7b9b4" signee:"jkl1hj5fveer5cjtn4wd6wstzugjfdxzl0xpljur4u" filesize:"40772168" fid:"jklf1dfe09fchvac8eazdw8n965y45alethx6axacjwplldg6xn36qfyq2dsz7g"  
+gas estimate: 110257
+I[2023-04-12|17:28:01.881] jklf1dfe09fchvac8eazdw8n965y45alethx6axacjwplldg6xn36qfyq2dsz7g Added to database 
+E[2023-04-12|17:48:27.227] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+I[2023-04-12|17:48:27.227] jklf1dfe09fchvac8eazdw8n965y45alethx6axacjwplldg6xn36qfyq2dsz7g will be removed in 15 cycles 
+E[2023-04-12|17:48:27.229] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+I[2023-04-12|17:48:27.229] jklf14aj9wpgljc3et3jn0n9s283d9ts8ggmjg4j7lylwurj3zjw337dsrgqm24 will be removed in 15 cycles 
+E[2023-04-12|17:48:27.230] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+I[2023-04-12|17:48:27.230] jklf1xlc58t02fw9y6d7923gxw5w2zm79xcn0zq03wsshprz95thtwz6sydknr5 will be removed in 13 cycles 
+E[2023-04-12|17:48:27.231] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+I[2023-04-12|17:48:27.231] jklf1qmws4e060dxl9dhukynypj8xnlrk4aestaspe4uv3zhs5zac9j0qyezlzv will be removed in 13 cycles 
+E[2023-04-12|17:48:27.232] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+I[2023-04-12|17:48:27.232] jklf1je2p75yuwsdwrhavqj2wjr4dvnymzlq2ekys2m3cfgpdzxh69knsexe923 will be removed in 13 cycles 
