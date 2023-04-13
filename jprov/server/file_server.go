@@ -27,6 +27,8 @@ import (
 	"github.com/spf13/cobra"
 
 	_ "net/http/pprof"
+
+	tmlog "github.com/tendermint/tendermint/libs/log"
 )
 
 func saveFile(file multipart.File, handler *multipart.FileHeader, sender string, cmd *cobra.Command, db *leveldb.DB, w *http.ResponseWriter, q *queue.UploadQueue) error {
@@ -190,6 +192,7 @@ func StartFileServer(cmd *cobra.Command) {
 
 	ctx := utils.GetServerContextFromCmd(cmd)
 	ctx.Config.BaseConfig.LogLevel = logLevel
+	ctx.Logger = tmlog.NewTMLogger(tmlog.NewSyncWriter(os.Stdout)) // make new logger to consume the updated base config
 
 	threads, err := cmd.Flags().GetUint(types.FlagThreads)
 	if err != nil {
