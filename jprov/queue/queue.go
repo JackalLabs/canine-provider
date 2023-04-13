@@ -104,6 +104,7 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command, providerName string) {
 			v.Callback.Done()
 		}
 	}
+	ctx.Logger.Info(fmt.Sprintf("TOTAL no. of msgs in proof transaction is: %d", len(msgs)))
 
 	q.Queue = q.Queue[l:] // pop every upload that fit off the queue
 }
