@@ -87,7 +87,6 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 
 		firstx := make([]byte, blockSize)
 		read, err := file.ReadAt(firstx, i)
-		logger.Debug(fmt.Sprintf("Bytes read: %d", read))
 
 		if err != nil && err != io.EOF {
 			return fid, "", data, err
