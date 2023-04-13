@@ -83,6 +83,7 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command, providerName string) {
 	}
 
 	clientCtx := client.GetClientContextFromCmd(cmd)
+	ctx.Logger.Info(fmt.Sprintf("TOTAL no. of msgs in proof transaction is: %d", len(msgs)))
 
 	res, err := utils.SendTx(clientCtx, cmd.Flags(), fmt.Sprintf("Storage Provided by %s", providerName), msgs...)
 	for _, v := range uploads {
@@ -104,7 +105,6 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command, providerName string) {
 			v.Callback.Done()
 		}
 	}
-	ctx.Logger.Info(fmt.Sprintf("TOTAL no. of msgs in proof transaction is: %d", len(msgs)))
 
 	q.Queue = q.Queue[l:] // pop every upload that fit off the queue
 }
