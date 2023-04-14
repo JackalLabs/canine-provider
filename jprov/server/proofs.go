@@ -309,7 +309,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 				ctx.Logger.Error(fmt.Sprintf("Posting Proof Error: %v", err))
 				continue
 			}
-			time.Sleep(333 * time.Millisecond)
+			time.Sleep(250 * time.Millisecond)
 
 		}
 
