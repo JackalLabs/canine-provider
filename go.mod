@@ -8,7 +8,7 @@ require (
 	github.com/huin/goupnp v1.0.3
 	github.com/jackalLabs/canine-chain v0.0.0-00010101000000-000000000000
 	github.com/julienschmidt/httprouter v1.3.0
-	github.com/rs/cors v1.8.2
+	github.com/rs/cors v1.9.0
 	github.com/rs/zerolog v1.27.0
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
