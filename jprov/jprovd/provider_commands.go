@@ -44,6 +44,7 @@ func StartServerCommand() *cobra.Command {
 	cmd.Flags().Int(types.FlagMaxFileSize, 32000, "The maximum size allowed to be sent to this provider in mbs. (only for monitoring services)")
 	cmd.Flags().Int64(types.FlagQueueInterval, 4, "The time, in seconds, between running a queue loop.")
 	cmd.Flags().String(types.FlagProviderName, "A Storage Provider", "The name to identify this provider in block explorers.")
+	cmd.Flags().Int64(types.FlagSleep, 250, "The time, in milliseconds, before adding another proof msg to the queue.")
 	return cmd
 }
 
