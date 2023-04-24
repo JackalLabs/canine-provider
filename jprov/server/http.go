@@ -53,23 +53,23 @@ func checkVersion(cmd *cobra.Command, w http.ResponseWriter, ctx *utils.Context)
 		ctx.Logger.Error(err.Error())
 	}
 
-	// clientCtx, error := client.GetClientTxContext(cmd)
-	// if error != nil {
-	// 	ctx.Logger.Error(err.Error())
-	// 	return
-	// }
-	// chainID := clientCtx.ChainID
+	clientCtx, error := client.GetClientTxContext(cmd)
+	if error != nil {
+		ctx.Logger.Error(err.Error())
+		return
+	}
+	chainID := clientCtx.ChainID
 
 	var v types.VersionResponse
 	if len(res) > 0 {
 		v = types.VersionResponse{
 			Version: res,
-			ChainID: "test-chain",
+			ChainID: chainID,
 		}
 	} else {
 		v = types.VersionResponse{
 			Version: version.Version,
-			ChainID: "test-chain",
+			ChainID: chainID,
 		}
 	}
 
