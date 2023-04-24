@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
+	"github.com/JackalLabs/jackal-provider/jprov/proof"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
 	"github.com/JackalLabs/jackal-provider/jprov/strays"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
@@ -32,7 +33,7 @@ import (
 func saveFile(file multipart.File, handler *multipart.FileHeader, sender string, cmd *cobra.Command, db *leveldb.DB, w *http.ResponseWriter, q *queue.UploadQueue) error {
 	size := handler.Size
 	ctx := utils.GetServerContextFromCmd(cmd)
-	fid, merkle, _, err := utils.WriteFileToDisk(cmd, file, file, file, size, db, ctx.Logger)
+	fid, merkle, err := utils.WriteFileToDisk(cmd, file, file, file, size, db, ctx.Logger)
 	if err != nil {
 		ctx.Logger.Error("Write To Disk Error: %v", err)
 		return err
@@ -206,7 +207,7 @@ func StartFileServer(cmd *cobra.Command) {
 		manager.Init(cmd, threads, db)
 	}
 
-	go postProofs(cmd, db, &q, ctx)
+	go proof.PostProofs(cmd, db, &q, ctx)
 	go NatCycle(cmd.Context())
 	go q.StartListener(cmd, providerName)
 

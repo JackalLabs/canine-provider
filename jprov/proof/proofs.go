@@ -1,4 +1,4 @@
-package server
+package proof
 
 import (
 	"crypto/sha256"
@@ -143,7 +143,7 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 	return nil
 }
 
-func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) {
+func PostProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) {
 	interval, err := cmd.Flags().GetUint16(types.FlagInterval)
 	if err != nil {
 		ctx.Logger.Error(err.Error())
@@ -187,11 +187,11 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 
 			ctx.Logger.Debug(fmt.Sprintf("CID: %s", cid))
 
-			ver, verr := checkVerified(&clientCtx, cid, address)
+			ver, verr := utils.CheckVerified(&clientCtx, cid, address)
 			if verr != nil {
 				ctx.Logger.Error(verr.Error())
 				rr := strings.Contains(verr.Error(), "key not found")
-				ny := strings.Contains(verr.Error(), ErrNotYours)
+				ny := strings.Contains(verr.Error(), utils.ErrNotYours)
 				if !rr && !ny {
 					continue
 				}
@@ -289,7 +289,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 				continue
 			}
 
-			block, berr := queryBlock(&clientCtx, cid)
+			block, berr := utils.QueryBlock(&clientCtx, cid)
 			if berr != nil {
 				ctx.Logger.Error(fmt.Sprintf("Query Error: %v", berr))
 				continue
