@@ -69,6 +69,7 @@ func checkVersion(cmd *cobra.Command, w http.ResponseWriter, ctx *utils.Context)
 	} else {
 		v = types.VersionResponse{
 			Version: version.Version,
+			ChainID: "test-chain",
 		}
 	}
 
