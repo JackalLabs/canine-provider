@@ -30,7 +30,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func CreateMerkleForProof(clientCtx client.Context, filename string, index int, ctx *utils.Context) (string, string, error) {
+func CreateMerkleForProof(cmd *cobra.Command, filename string, index int, ctx *utils.Context) (string, string, error) {
+	clientCtx, qerr := client.GetClientTxContext(cmd)
+	if qerr != nil {
+		return "", "", qerr
+	}
+
 	files := utils.GetStoragePathForPiece(clientCtx, filename, index)
 
 	item, err := os.ReadFile(files) // read only the chunk we need
@@ -39,13 +44,33 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 		return "", "", err
 	}
 
+	var tree *merkletree.MerkleTree
+
 	rawTree, err := os.ReadFile(utils.GetStoragePathForTree(clientCtx, filename))
-	if err != nil {
-		ctx.Logger.Error("Error can't find tree!")
-		return "", "", err
+	if err != nil { // import the tree if there is no problem finding the tree on disk
+		blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
+		if err != nil {
+			return "", "", err
+		}
+
+		listPath := utils.GetStoragePath(clientCtx, filename)
+		entries, err := os.ReadDir(listPath)
+		if err != nil {
+			return "", "", err
+		}
+
+		_, err = utils.BuildAndSaveTree(cmd, filename, int64(len(entries))*blockSize, blockSize)
+		if err != nil {
+			return "", "", err
+		}
+
+		rawTree, err = os.ReadFile(utils.GetStoragePathForTree(clientCtx, filename))
+		if err != nil { // import the tree if there is no problem finding the tree on disk
+			return "", "", err
+		}
 	}
 
-	tree, err := merkletree.ImportMerkleTree(rawTree, sha3.New512()) // import the tree instead of creating the tree on the fly
+	tree, err = merkletree.ImportMerkleTree(rawTree, sha3.New512()) // import the tree instead of creating the tree on the fly
 	if err != nil {
 		ctx.Logger.Error("Error can't import tree!")
 		return "", "", err
@@ -81,7 +106,12 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 	return fmt.Sprintf("%x", item), string(jproof), nil
 }
 
-func postProof(clientCtx client.Context, cid string, block string, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) error {
+func postProof(cmd *cobra.Command, cid string, block string, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) error {
+	clientCtx, qerr := client.GetClientTxContext(cmd)
+	if qerr != nil {
+		return qerr
+	}
+
 	dex, ok := sdk.NewIntFromString(block)
 	ctx.Logger.Debug(fmt.Sprintf("BlockToProve: %s", block))
 	if !ok {
@@ -93,7 +123,7 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 		return err
 	}
 
-	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), int(dex.Int64()), ctx)
+	item, hashlist, err := CreateMerkleForProof(cmd, string(data), int(dex.Int64()), ctx)
 	if err != nil {
 		return err
 	}
@@ -295,7 +325,7 @@ func PostProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 				continue
 			}
 
-			err = postProof(clientCtx, cid, block, db, q, ctx)
+			err = postProof(cmd, cid, block, db, q, ctx)
 			if err != nil {
 				ctx.Logger.Error(fmt.Sprintf("Posting Proof Error: %v", err))
 				continue
