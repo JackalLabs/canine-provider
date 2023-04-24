@@ -12,4 +12,5 @@ const (
 	FlagMaxFileSize   = "max-file-size"
 	FlagQueueInterval = "queue-interval"
 	FlagProviderName  = "moniker"
+	FlagSleep         = "sleep"
 )

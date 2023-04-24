@@ -68,9 +68,11 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 			return // If we don't have it and nobody else does, there is nothing we can do.
 		}
 	} else { // If there are providers with this file, we will download it from them instead to keep things consistent
-		if _, err := os.Stat(utils.GetStoragePath(h.ClientContext, h.Stray.Fid)); !os.IsNotExist(err) {
-			ctx.Logger.Info("Already have this file")
-			return
+
+		for _, prov := range arr {
+			if prov == m.Ip { // Ignore ourselves
+				return
+			}
 		}
 
 		found := false
@@ -78,9 +80,7 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 			if found {
 				continue
 			}
-			if prov == m.Ip { // Ignore ourselves
-				return
-			}
+
 			_, err = utils.DownloadFileFromURL(h.Cmd, prov, h.Stray.Fid, h.Stray.Cid, h.Database, ctx.Logger)
 			if err != nil {
 				ctx.Logger.Error(err.Error())
@@ -327,8 +327,8 @@ func (m *StrayManager) CollectStrays(cmd *cobra.Command) {
 		return
 	}
 
-	rand.Seed(time.Now().UnixNano())
-	rand.Shuffle(len(s), func(i, j int) { s[i], s[j] = s[j], s[i] })
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r.Shuffle(len(s), func(i, j int) { s[i], s[j] = s[j], s[i] })
 
 	for _, newStray := range s { // Only add new strays to the queue
 

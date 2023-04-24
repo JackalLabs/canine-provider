@@ -7,11 +7,11 @@ require (
 	github.com/cosmos/cosmos-sdk v0.45.11
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/huin/goupnp v1.0.3
-	github.com/jackalLabs/canine-chain v1.2.0-beta.7
+	github.com/jackalLabs/canine-chain v0.0.0-00010101000000-000000000000
 	github.com/julienschmidt/httprouter v1.3.0
-	github.com/rs/cors v1.8.2
-	github.com/rs/zerolog v1.27.0
-	github.com/spf13/cobra v1.6.1
+	github.com/rs/cors v1.9.0
+	github.com/rs/zerolog v1.29.1
+	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.14.0
 	github.com/stretchr/testify v1.8.2
@@ -90,7 +90,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hdevalence/ed25519consensus v0.0.0-20220222234857-c00d1f31bab3 // indirect
 	github.com/improbable-eng/grpc-web v0.15.0 // indirect
-	github.com/inconshreveable/mousetrap v1.0.1 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jmhodges/levigo v1.0.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/klauspost/compress v1.15.15 // indirect

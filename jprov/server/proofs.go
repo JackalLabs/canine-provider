@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
@@ -144,7 +145,7 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 }
 
 func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) {
-	interval, err := cmd.Flags().GetUint16(types.FlagInterval)
+	intervalFromCMD, err := cmd.Flags().GetUint16(types.FlagInterval)
 	if err != nil {
 		ctx.Logger.Error(err.Error())
 		return
@@ -168,28 +169,19 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 		return
 	}
 
-	//type IterWrap struct {
-	//	Key   []byte
-	//	Value []byte
-	//}
-
 	for {
+		interval := intervalFromCMD
+
+		if interval < 1800 { // If the provider picked an interval that's less than 30 minutes, we generate a random interval for them anyways
+
+			r := rand.New(rand.NewSource(time.Now().UnixNano()))
+			interval = uint16(r.Intn(901) + 900) // Generate interval between 15-30 minutes
+
+		}
+		ctx.Logger.Debug(fmt.Sprintf("The interval between proofs is now %d", interval))
 		start := time.Now()
-		// ctx.Logger.Info(fmt.Sprintf("Starting proof commitment at %s", start.Format("2006-01-02 15:04:05.000000")))
-		// m := []IterWrap{}
+
 		iter := db.NewIterator(nil, nil)
-		//for iter.Next() {
-		//	mm := IterWrap{
-		//		Key:   iter.Key(),
-		//		Value: iter.Value(),
-		//	}
-		//	m = append(m, mm)
-		//}
-		//iter.Release()
-		//err = iter.Error()
-		//if err != nil {
-		//	ctx.Logger.Error("Iterator Error: %s", err.Error())
-		//}
 
 		for iter.Next() {
 			cid := string(iter.Key())
@@ -198,7 +190,6 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 			if cid[:len(utils.FileKey)] != utils.FileKey {
 				continue
 			}
-			fid := value
 
 			cid = cid[len(utils.FileKey):]
 
@@ -245,7 +236,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 							break
 						}
 					}
-					ctx.Logger.Info(fmt.Sprintf("%s is being removed", value))
+					ctx.Logger.Info(fmt.Sprintf("%s is being removed", cid))
 
 					if !duplicate {
 						ctx.Logger.Info("And we are removing the file on disk.")
@@ -254,17 +245,19 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 						if err != nil {
 							ctx.Logger.Error(err.Error())
 						}
+
+						err = os.Remove(utils.GetStoragePathForTree(clientCtx, value))
+						if err != nil {
+							ctx.Logger.Error(err.Error())
+							continue
+						}
 					}
 					err = db.Delete(utils.MakeFileKey(cid), nil)
 					if err != nil {
 						ctx.Logger.Error(err.Error())
 						continue
 					}
-					err = os.Remove(utils.GetStoragePathForTree(clientCtx, fid))
-					if err != nil {
-						ctx.Logger.Error(err.Error())
-						continue
-					}
+
 					err = db.Delete(utils.MakeDowntimeKey(cid), nil)
 					if err != nil {
 						ctx.Logger.Error(err.Error())
@@ -317,6 +310,12 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 				ctx.Logger.Error(fmt.Sprintf("Posting Proof Error: %v", err))
 				continue
 			}
+			sleep, err := cmd.Flags().GetInt64(types.FlagSleep)
+			if err != nil {
+				ctx.Logger.Error(err.Error())
+				return
+			}
+			time.Sleep(time.Duration(sleep) * time.Millisecond)
 
 		}
 
