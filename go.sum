@@ -76,8 +76,8 @@ github.com/DataDog/zstd v1.4.5/go.mod h1:1jcaCB/ufaK+sKp1NBhlGmpz41jOoPQ35bpF36t
 github.com/DataDog/zstd v1.5.0/go.mod h1:g4AWEaM3yOg3HYfnJ3YIawPnVdXJh9QME85blwSAmyw=
 github.com/DataDog/zstd v1.5.2/go.mod h1:g4AWEaM3yOg3HYfnJ3YIawPnVdXJh9QME85blwSAmyw=
 github.com/HdrHistogram/hdrhistogram-go v1.1.2/go.mod h1:yDgFjdqOqDEKOvasDdhWNXYg9BVp4O+o5f6V/ehm6Oo=
-github.com/JackalLabs/blanket v0.0.0-alpha.1 h1:f5keTdDFSN3D76TL93L2vfbgaFJ+OdFOuUFDEMLoDGc=
-github.com/JackalLabs/blanket v0.0.0-alpha.1/go.mod h1:jl68zTyytfS6oyTbqwcMKyq9Jvvv0IE0eHFMFMcgsD4=
+github.com/JackalLabs/blanket v0.0.0 h1:bMuUe12mRO8rekDIo7T37xPLOvLsEOMkzgK5Uqul+FU=
+github.com/JackalLabs/blanket v0.0.0/go.mod h1:jl68zTyytfS6oyTbqwcMKyq9Jvvv0IE0eHFMFMcgsD4=
 github.com/JackalLabs/canine-chain v1.2.0-beta.6.0.20230306225213-9edcf4e32284 h1:K6xK8Fny3hC9IlsJOFKw/0yNUZQm/6Z36HydL+l/OgA=
 github.com/JackalLabs/canine-chain v1.2.0-beta.6.0.20230306225213-9edcf4e32284/go.mod h1:8pAlL99jRw5PK8t4Rs3uYeCLFEa7cEh/9JO5NKBg+6o=
 github.com/Joker/hpp v1.0.0/go.mod h1:8x5n+M1Hp5hC0g8okX3sR3vFQwynaX/UgSOM9MeBKzY=

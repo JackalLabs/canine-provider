@@ -3,7 +3,7 @@ module github.com/JackalLabs/jackal-provider
 go 1.19
 
 require (
-	github.com/JackalLabs/blanket v0.0.0-alpha.1
+	github.com/JackalLabs/blanket v0.0.0
 	github.com/cosmos/cosmos-sdk v0.45.11
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/huin/goupnp v1.0.3
