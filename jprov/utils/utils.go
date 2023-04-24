@@ -117,6 +117,7 @@ func BuildAndSaveTree(cmd *cobra.Command, fid string, size int64, blockSize int6
 
 	// nolint
 	tree = nil
+	// nolint
 	exportedTree = nil
 
 	runtime.GC()
