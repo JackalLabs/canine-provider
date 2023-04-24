@@ -1,10 +1,11 @@
-package proof
+package server
 
 import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
@@ -173,8 +174,8 @@ func postProof(cmd *cobra.Command, cid string, block string, db *leveldb.DB, q *
 	return nil
 }
 
-func PostProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) {
-	interval, err := cmd.Flags().GetUint16(types.FlagInterval)
+func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) {
+	intervalFromCMD, err := cmd.Flags().GetUint16(types.FlagInterval)
 	if err != nil {
 		ctx.Logger.Error(err.Error())
 		return
@@ -199,6 +200,15 @@ func PostProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 	}
 
 	for {
+		interval := intervalFromCMD
+
+		if interval < 1800 { // If the provider picked an interval that's less than 30 minutes, we generate a random interval for them anyways
+
+			r := rand.New(rand.NewSource(time.Now().UnixNano()))
+			interval = uint16(r.Intn(901) + 900) // Generate interval between 15-30 minutes
+
+		}
+		ctx.Logger.Debug(fmt.Sprintf("The interval between proofs is now %d", interval))
 		start := time.Now()
 
 		iter := db.NewIterator(nil, nil)
@@ -330,6 +340,12 @@ func PostProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 				ctx.Logger.Error(fmt.Sprintf("Posting Proof Error: %v", err))
 				continue
 			}
+			sleep, err := cmd.Flags().GetInt64(types.FlagSleep)
+			if err != nil {
+				ctx.Logger.Error(err.Error())
+				return
+			}
+			time.Sleep(time.Duration(sleep) * time.Millisecond)
 
 		}
 
