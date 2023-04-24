@@ -54,12 +54,13 @@ func checkVersion(cmd *cobra.Command, w http.ResponseWriter, ctx *utils.Context)
 	}
 
 	clientContext := client.GetClientContextFromCmd(cmd)
+	chainID := clientContext.ChainID
 
 	var v types.VersionResponse
 	if len(res) > 0 {
 		v = types.VersionResponse{
 			Version: res,
-			ChainID: clientContext.ChainID,
+			ChainID: chainID,
 		}
 	} else {
 		v = types.VersionResponse{
