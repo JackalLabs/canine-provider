@@ -31,6 +31,7 @@ type ErrorResponse struct {
 
 type VersionResponse struct {
 	Version string `json:"version"`
+	ChainID string `json:"chain-id"`
 }
 
 type Message interface{}
