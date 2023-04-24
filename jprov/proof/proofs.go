@@ -1,4 +1,4 @@
-package server
+package proof
 
 import (
 	"crypto/sha256"
@@ -174,7 +174,7 @@ func postProof(cmd *cobra.Command, cid string, block string, db *leveldb.DB, q *
 	return nil
 }
 
-func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) {
+func PostProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) {
 	intervalFromCMD, err := cmd.Flags().GetUint16(types.FlagInterval)
 	if err != nil {
 		ctx.Logger.Error(err.Error())
