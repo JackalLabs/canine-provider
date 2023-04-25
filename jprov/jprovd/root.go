@@ -78,6 +78,7 @@ func NewRootCmd() *cobra.Command {
 		ClientCmd(),
 		VersionCmd(),
 		NetworkCmd(),
+		BlanketCmd(),
 	)
 
 	return rootCmd

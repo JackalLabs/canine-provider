@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/JackalLabs/blanket/blanket"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/cosmos/cosmos-sdk/version"
 
@@ -65,6 +66,20 @@ func DataCmd() *cobra.Command {
 	for _, c := range cmds {
 		AddTxFlagsToCmd(c)
 		cmd.AddCommand(c)
+	}
+
+	return cmd
+}
+
+func BlanketCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "blanket",
+		Short: "Monitor Jackal Provider Daemon with a terminal GUI",
+		Long:  "Monitor Jackal Provider Daemon with Blanket, the terminal GUI for inspecting critical functions of Jackal Providers & the Jackal Protocol Network",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			blanket.CmdRunBlanket("http://127.0.0.1:3333")
+			return nil
+		},
 	}
 
 	return cmd
