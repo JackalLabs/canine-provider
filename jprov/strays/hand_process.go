@@ -187,7 +187,7 @@ func (h *LittleHand) SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, ms
 		}
 
 		txf = txf.WithGas(adjusted)
-		_, _ = fmt.Fprintf(os.Stderr, "%s\n", txns.GasEstimateResponse{GasEstimate: txf.Gas()})
+		//_, _ = fmt.Fprintf(os.Stderr, "%s\n", txns.GasEstimateResponse{GasEstimate: txf.Gas()})
 	}
 	if clientCtx.Simulate {
 		return nil, nil
@@ -323,7 +323,7 @@ func (m *StrayManager) CollectStrays(cmd *cobra.Command) {
 	s := res.Strays
 
 	if len(s) == 0 { // If there are no strays, the network has claimed them all. We will try again later.
-		m.Context.Logger.Info("No strays found.")
+		m.Context.Logger.Debug("No strays found.")
 		return
 	}
 
