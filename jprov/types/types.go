@@ -34,6 +34,10 @@ type VersionResponse struct {
 	ChainID string `json:"chain-id"`
 }
 
+type ProxyResponse struct {
+	Ok bool `json:"ok"`
+}
+
 type Message interface{}
 
 type Upload struct {

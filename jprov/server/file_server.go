@@ -159,9 +159,15 @@ func StartFileServer(cmd *cobra.Command) {
 		Address: address,
 	}
 
-	_, err = queryClient.Providers(context.Background(), params)
+	me, err := queryClient.Providers(context.Background(), params)
 	if err != nil {
 		fmt.Println("Provider not initialized on the blockchain, or connection to the RPC node has been lost. Please make sure your RPC node is available then run `jprovd init` to fix this.")
+		return
+	}
+
+	providers, err := queryClient.ProvidersAll(context.Background(), &storageTypes.QueryAllProvidersRequest{})
+	if err != nil {
+		fmt.Println("Cannot connect to jackal blockchain.")
 		return
 	}
 
@@ -199,6 +205,12 @@ func StartFileServer(cmd *cobra.Command) {
 	providerName, err := cmd.Flags().GetString(types.FlagProviderName)
 	if err != nil {
 		providerName = "A Storage Provider"
+	}
+
+	connected := testConnection(providers.Providers, me.Providers.Ip)
+	if !connected {
+		fmt.Println("Domain not configured correctly, make sure your domain points to your provider.")
+		return
 	}
 
 	manager := strays.NewStrayManager(cmd) // creating and starting the stray management system
