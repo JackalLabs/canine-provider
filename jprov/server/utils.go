@@ -21,6 +21,9 @@ func testConnection(providers []storageTypes.Providers, ip string) bool {
 	outdatedProvider := 0
 
 	for _, provider := range providers {
+		if onlineProviders > 20 {
+			continue
+		}
 		u, err := url.Parse(provider.Ip)
 		if err != nil {
 			continue
