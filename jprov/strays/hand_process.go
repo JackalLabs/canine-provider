@@ -4,9 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"os"
-	"time"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
@@ -17,7 +15,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
-	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
 
@@ -308,32 +305,4 @@ func (h *LittleHand) Sign(txf txns.Factory, clientCtx client.Context, index byte
 	}
 	prevSignatures = append(prevSignatures, sig)
 	return txBuilder.SetSignatures(prevSignatures...)
-}
-
-func (m *StrayManager) CollectStrays(cmd *cobra.Command) {
-	m.Context.Logger.Info("Collecting strays from chain...")
-	qClient := storageTypes.NewQueryClient(m.ClientContext)
-
-	res, err := qClient.StraysAll(cmd.Context(), &storageTypes.QueryAllStraysRequest{})
-	if err != nil {
-		m.Context.Logger.Error(err.Error())
-		return
-	}
-
-	s := res.Strays
-
-	if len(s) == 0 { // If there are no strays, the network has claimed them all. We will try again later.
-		m.Context.Logger.Info("No strays found.")
-		return
-	}
-
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	r.Shuffle(len(s), func(i, j int) { s[i], s[j] = s[j], s[i] })
-
-	for _, newStray := range s { // Only add new strays to the queue
-
-		k := newStray
-		m.Strays = append(m.Strays, &k)
-
-	}
 }

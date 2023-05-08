@@ -2,6 +2,7 @@ package strays
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
@@ -162,6 +163,36 @@ func (m *StrayManager) Init(cmd *cobra.Command, count uint, db *leveldb.DB) { //
 	}
 
 	fmt.Println("Finished Initialization...")
+}
+
+func (m *StrayManager) CollectStrays(cmd *cobra.Command) {
+	m.Context.Logger.Info("Collecting strays from chain...")
+	qClient := storageTypes.NewQueryClient(m.ClientContext)
+
+	res, err := qClient.StraysAll(cmd.Context(), &storageTypes.QueryAllStraysRequest{})
+	if err != nil {
+		m.Context.Logger.Error(err.Error())
+		return
+	}
+
+	s := res.Strays
+
+	if len(s) == 0 { // If there are no strays, the network has claimed them all. We will try again later.
+		m.Context.Logger.Info("No strays found.")
+		return
+	}
+
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r.Shuffle(len(s), func(i, j int) { s[i], s[j] = s[j], s[i] })
+
+	m.Strays = make([]*storageTypes.Strays, 0)
+
+	for _, newStray := range s { // Only add new strays to the queue
+
+		k := newStray
+		m.Strays = append(m.Strays, &k)
+
+	}
 }
 
 func (m *StrayManager) Start(cmd *cobra.Command) { // loop through stray system
