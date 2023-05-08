@@ -60,6 +60,7 @@ func testConnection(providers []storageTypes.Providers, ip string) bool {
 
 		respondingProvider++
 	}
+	fmt.Printf("Total: %d | Online: %d | Outdated: %d| Responsive: %d\n", checked, onlineProviders, outdatedProvider, respondingProvider)
 
 	if respondingProvider < 2 && (onlineProviders-outdatedProvider) < 3 {
 		return true
