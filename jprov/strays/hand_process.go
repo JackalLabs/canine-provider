@@ -64,7 +64,7 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 		the cached file from our filesystem which keeps the file alive)
 		*/
 		if _, err := os.Stat(utils.GetStoragePath(h.ClientContext, h.Stray.Fid)); os.IsNotExist(err) {
-			ctx.Logger.Info("Nobody, not even I have the file.")
+			ctx.Logger.Info(fmt.Sprintf("Nobody, not even I have %s.", h.Stray.Fid))
 			return // If we don't have it and nobody else does, there is nothing we can do.
 		}
 	} else { // If there are providers with this file, we will download it from them instead to keep things consistent
