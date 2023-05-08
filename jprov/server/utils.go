@@ -19,11 +19,14 @@ func testConnection(providers []storageTypes.Providers, ip string) bool {
 	onlineProviders := 0
 	respondingProvider := 0
 	outdatedProvider := 0
+	checked := 0
 
 	for _, provider := range providers {
 		if onlineProviders > 20 {
 			continue
 		}
+		checked++
+		fmt.Printf("Checked with %d other providers...\n", checked)
 		u, err := url.Parse(provider.Ip)
 		if err != nil {
 			continue
