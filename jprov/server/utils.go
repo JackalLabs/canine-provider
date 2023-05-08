@@ -55,6 +55,7 @@ func testConnection(providers []storageTypes.Providers, ip string) bool {
 		var proxyRes types.ProxyResponse
 		err = json.NewDecoder(r.Body).Decode(&proxyRes)
 		if err != nil {
+			outdatedProvider++
 			continue
 		}
 
