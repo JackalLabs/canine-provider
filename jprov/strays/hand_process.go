@@ -184,7 +184,7 @@ func (h *LittleHand) SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, ms
 		}
 
 		txf = txf.WithGas(adjusted)
-		_, _ = fmt.Fprintf(os.Stderr, "%s\n", txns.GasEstimateResponse{GasEstimate: txf.Gas()})
+		//_, _ = fmt.Fprintf(os.Stderr, "%s\n", txns.GasEstimateResponse{GasEstimate: txf.Gas()})
 	}
 	if clientCtx.Simulate {
 		return nil, nil

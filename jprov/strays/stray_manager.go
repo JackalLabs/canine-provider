@@ -50,19 +50,19 @@ func (m *StrayManager) AddHand(db *leveldb.DB, cmd *cobra.Command, index uint) *
 }
 
 func (m *StrayManager) Distribute() { // Hand out every available stray to an idle hand
-	m.Context.Logger.Info("Distributing strays to hands...")
+	m.Context.Logger.Debug("Distributing strays to hands...")
 
 	for i := 0; i < len(m.hands); i++ {
 		h := m.hands[i]
-		m.Context.Logger.Info(fmt.Sprintf("Distributing strays to hand #%d", h.Id))
+		m.Context.Logger.Debug(fmt.Sprintf("Distributing strays to hand #%d", h.Id))
 
 		if h.Stray != nil { // skip all currently busy hands
-			m.Context.Logger.Info(fmt.Sprintf("Hand #%d is busy, can't give stray.", h.Id))
+			m.Context.Logger.Debug(fmt.Sprintf("Hand #%d is busy, can't give stray.", h.Id))
 			continue
 		}
 
 		if len(m.Strays) == 0 { // make sure there are strays to distribute
-			m.Context.Logger.Info("There are no more strays in the pile.")
+			m.Context.Logger.Debug("There are no more strays in the pile.")
 			continue
 		}
 
