@@ -27,6 +27,9 @@ func testConnection(providers []storageTypes.Providers, ip string) bool {
 		}
 		versionUrl := u.JoinPath("version")
 		r, err := http.Get(versionUrl.String())
+		if err != nil {
+			continue
+		}
 		var versionRes types.VersionResponse
 		err = json.NewDecoder(r.Body).Decode(&versionRes)
 		if err != nil {
