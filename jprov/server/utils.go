@@ -15,6 +15,7 @@ import (
 
 const ErrNotYours = "not your deal"
 
+//nolint:all
 func testConnection(providers []storageTypes.Providers, ip string) bool {
 	onlineProviders := 0
 	respondingProvider := 0
