@@ -207,12 +207,14 @@ func StartFileServer(cmd *cobra.Command) {
 		providerName = "A Storage Provider"
 	}
 
-	fmt.Println("Testing connection...")
-	connected := testConnection(providers.Providers, me.Providers.Ip)
-	if !connected {
-		fmt.Println("Domain not configured correctly, make sure your domain points to your provider.")
-		return
-	}
+	//fmt.Println("Testing connection...")
+	//connected := testConnection(providers.Providers, me.Providers.Ip)
+	//if !connected {
+	//	fmt.Println("Domain not configured correctly, make sure your domain points to your provider.")
+	//	return
+	//}
+	_ = providers
+	_ = me
 
 	manager := strays.NewStrayManager(cmd) // creating and starting the stray management system
 	if !strs {

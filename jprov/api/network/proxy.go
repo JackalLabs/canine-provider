@@ -12,7 +12,6 @@ import (
 )
 
 func GetProxy(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-
 	ok := true
 	var versionRes types.VersionResponse
 	var versionUrl *url.URL
