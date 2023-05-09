@@ -1,6 +1,7 @@
 package strays
 
 import (
+	"math/rand"
 	"sync"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
@@ -20,6 +21,7 @@ type StrayManager struct {
 	Address       string
 	Cmd           *cobra.Command
 	Ip            string
+	Rand          *rand.Rand
 }
 
 func NewStrayManager(cmd *cobra.Command) *StrayManager {
