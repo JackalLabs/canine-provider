@@ -83,7 +83,16 @@ func downfil(cmd *cobra.Command, w http.ResponseWriter, ps httprouter.Params, ct
 		return
 	}
 
-	var data []byte
+	chunkSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	dataSize := int64(len(files)) * chunkSize
+
+	data := make([]byte, dataSize)
+	dataCount := 0
 
 	for i := 0; i < len(files); i += 1 {
 		f, err := os.ReadFile(filepath.Join(utils.GetStoragePath(clientCtx, ps.ByName("file")), fmt.Sprintf("%d.jkl", i)))
@@ -95,13 +104,16 @@ func downfil(cmd *cobra.Command, w http.ResponseWriter, ps httprouter.Params, ct
 			}
 			return
 		}
+		dataCount += len(f)
 
-		data = append(data, f...)
+		for k, b := range f {
+			data[i*int(chunkSize)+k] = b
+		}
 	}
 
-	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(data)))
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", dataCount))
 
-	_, err = w.Write(data)
+	_, err = w.Write(data[0:dataCount])
 	if err != nil {
 		return
 	}
