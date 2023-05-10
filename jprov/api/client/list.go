@@ -17,10 +17,10 @@ import (
 )
 
 func ListQueue(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps httprouter.Params, q *queue.UploadQueue) {
-	messages := make([]sdk.Msg, 0)
+	messages := make([]sdk.Msg, len(q.Queue))
 
-	for _, v := range q.Queue {
-		messages = append(messages, v.Message)
+	for k, v := range q.Queue {
+		messages[k] = v.Message
 	}
 
 	v := types.QueueResponse{
