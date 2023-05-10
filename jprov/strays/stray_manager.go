@@ -11,6 +11,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/bech32"
+	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/cosmos/cosmos-sdk/x/feegrant"
 	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
 	"github.com/spf13/cobra"
@@ -169,7 +170,17 @@ func (m *StrayManager) CollectStrays(cmd *cobra.Command) {
 	m.Context.Logger.Info("Collecting strays from chain...")
 	qClient := storageTypes.NewQueryClient(m.ClientContext)
 
-	res, err := qClient.StraysAll(cmd.Context(), &storageTypes.QueryAllStraysRequest{})
+	val := m.Rand.Int63n(300)
+
+	page := &query.PageRequest{
+		Offset:  uint64(val),
+		Limit:   300,
+		Reverse: m.Rand.Intn(2) == 0,
+	}
+
+	res, err := qClient.StraysAll(cmd.Context(), &storageTypes.QueryAllStraysRequest{
+		Pagination: page,
+	})
 	if err != nil {
 		m.Context.Logger.Error(err.Error())
 		return
@@ -182,8 +193,7 @@ func (m *StrayManager) CollectStrays(cmd *cobra.Command) {
 		return
 	}
 
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	r.Shuffle(len(s), func(i, j int) { s[i], s[j] = s[j], s[i] })
+	m.Rand.Shuffle(len(s), func(i, j int) { s[i], s[j] = s[j], s[i] })
 
 	m.Strays = make([]*storageTypes.Strays, 0)
 
@@ -197,6 +207,8 @@ func (m *StrayManager) CollectStrays(cmd *cobra.Command) {
 
 func (m *StrayManager) Start(cmd *cobra.Command) { // loop through stray system
 	tm, err := cmd.Flags().GetInt64(types.FlagStrayInterval)
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	m.Rand = r
 	if err != nil {
 		panic(err)
 	}
