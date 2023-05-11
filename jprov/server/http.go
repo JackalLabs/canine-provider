@@ -86,7 +86,6 @@ func downfil(cmd *cobra.Command, w http.ResponseWriter, ps httprouter.Params, ct
 
 	var dataLength int
 
-
 	var i int
 	for { // loop through every file in the directory and fail once it hits a file that it can't find
 		path := filepath.Join(utils.GetStoragePath(clientCtx, ps.ByName("file")), fmt.Sprintf("%d.jkl", i))
@@ -103,14 +102,13 @@ func downfil(cmd *cobra.Command, w http.ResponseWriter, ps httprouter.Params, ct
 
 	for i, file := range fileList {
 		for k, b := range *file {
-
 			data[i*int(chunkSize)+k] = b
 		}
 	}
 
-	w.Header().Set("Content-Length", fmt.Sprintf("%d", dataCount))
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", dataLength))
 
-	_, err = w.Write(data[0:dataCount])
+	_, err = w.Write(data)
 	if err != nil {
 		return
 	}
