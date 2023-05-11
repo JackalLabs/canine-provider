@@ -167,7 +167,7 @@ func (m *StrayManager) Init(cmd *cobra.Command, count uint, db *leveldb.DB) { //
 }
 
 func (m *StrayManager) CollectStrays(cmd *cobra.Command, lastCount uint64) uint64 {
-	m.Context.Logger.Info("Collecting strays from chain...")
+	m.Context.Logger.Info(fmt.Sprintf("Collecting strays from chain... ~ %d", lastCount))
 	qClient := storageTypes.NewQueryClient(m.ClientContext)
 
 	var val uint64
