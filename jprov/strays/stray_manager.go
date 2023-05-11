@@ -166,14 +166,17 @@ func (m *StrayManager) Init(cmd *cobra.Command, count uint, db *leveldb.DB) { //
 	fmt.Println("Finished Initialization...")
 }
 
-func (m *StrayManager) CollectStrays(cmd *cobra.Command) {
+func (m *StrayManager) CollectStrays(cmd *cobra.Command, lastCount uint64) uint64 {
 	m.Context.Logger.Info("Collecting strays from chain...")
 	qClient := storageTypes.NewQueryClient(m.ClientContext)
 
-	val := m.Rand.Int63n(300)
+	var val uint64
+	if lastCount > 300 {
+		val = uint64(m.Rand.Int63n(int64(lastCount)))
+	}
 
 	page := &query.PageRequest{
-		Offset:  uint64(val),
+		Offset:  val,
 		Limit:   300,
 		Reverse: m.Rand.Intn(2) == 0,
 	}
@@ -183,14 +186,14 @@ func (m *StrayManager) CollectStrays(cmd *cobra.Command) {
 	})
 	if err != nil {
 		m.Context.Logger.Error(err.Error())
-		return
+		return 0
 	}
 
 	s := res.Strays
 
 	if len(s) == 0 { // If there are no strays, the network has claimed them all. We will try again later.
 		m.Context.Logger.Info("No strays found.")
-		return
+		return 0
 	}
 
 	m.Rand.Shuffle(len(s), func(i, j int) { s[i], s[j] = s[j], s[i] })
@@ -203,6 +206,8 @@ func (m *StrayManager) CollectStrays(cmd *cobra.Command) {
 		m.Strays = append(m.Strays, &k)
 
 	}
+
+	return res.Pagination.Total
 }
 
 func (m *StrayManager) Start(cmd *cobra.Command) { // loop through stray system
@@ -212,8 +217,10 @@ func (m *StrayManager) Start(cmd *cobra.Command) { // loop through stray system
 	if err != nil {
 		panic(err)
 	}
+
+	var s uint64
 	for {
-		m.CollectStrays(cmd)           // query strays from the chain
+		s = m.CollectStrays(cmd, s)    // query strays from the chain
 		m.Distribute()                 // hands strays out to hands
 		for _, hand := range m.hands { // process every stray in parallel
 			go hand.Process(m.Context, m)
