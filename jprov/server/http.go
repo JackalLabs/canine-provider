@@ -1,8 +1,10 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -74,41 +76,33 @@ func checkVersion(cmd *cobra.Command, w http.ResponseWriter, ctx *utils.Context)
 	}
 }
 
+type FileData []byte
+
 func downfil(cmd *cobra.Command, w http.ResponseWriter, ps httprouter.Params, ctx *utils.Context) {
 	clientCtx := client.GetClientContextFromCmd(cmd)
-	chunkSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
 
-	var fileList []*[]byte
-
-	var dataLength int
+	var dataBuf bytes.Buffer
 
 	var i int
 	for { // loop through every file in the directory and fail once it hits a file that it can't find
 		path := filepath.Join(utils.GetStoragePath(clientCtx, ps.ByName("file")), fmt.Sprintf("%d.jkl", i))
-		f, err := os.ReadFile(path)
+		f, err := os.Open(path)
 		if err != nil {
 			break
 		}
-		fileList = append(fileList, &f)
-		dataLength += len(f)
-		i++
-	}
-
-	data := make([]byte, dataLength)
-
-	for i, file := range fileList {
-		for k, b := range *file {
-			data[i*int(chunkSize)+k] = b
+		_, err = io.Copy(&dataBuf, f)
+		if err != nil {
+			break
+		}
+		err = f.Close()
+		if err != nil {
+			break
 		}
 	}
 
-	w.Header().Set("Content-Length", fmt.Sprintf("%d", dataLength))
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", dataBuf.Len()))
 
-	_, err = w.Write(data)
+	_, err := w.Write(dataBuf.Bytes())
 	if err != nil {
 		return
 	}
