@@ -1,6 +1,6 @@
 module github.com/JackalLabs/jackal-provider
 
-go 1.19
+go 1.20
 
 require (
 	github.com/JackalLabs/blanket v0.0.0
