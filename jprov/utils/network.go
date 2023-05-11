@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
+	"strings"
 
 	"github.com/tendermint/tendermint/libs/log"
 	"github.com/wealdtech/go-merkletree"
@@ -80,7 +82,10 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 	}
 
 	for i := int64(0); i < size; i += blockSize {
-		f, err := os.OpenFile(filepath.Join(path, fmt.Sprintf("%d.jkl", i/blockSize)), os.O_WRONLY|os.O_CREATE, 0o666)
+		var str strings.Builder
+		str.WriteString(strconv.FormatInt(i/blockSize, 10))
+		str.WriteString(".jkl")
+		f, err := os.OpenFile(filepath.Join(path, str.String()), os.O_WRONLY|os.O_CREATE, 0o666)
 		if err != nil {
 			return fid, "", data, err
 		}
