@@ -77,43 +77,22 @@ func checkVersion(cmd *cobra.Command, w http.ResponseWriter, ctx *utils.Context)
 func downfil(cmd *cobra.Command, w http.ResponseWriter, ps httprouter.Params, ctx *utils.Context) {
 	clientCtx := client.GetClientContextFromCmd(cmd)
 
-	files, err := os.ReadDir(utils.GetStoragePath(clientCtx, ps.ByName("file")))
-	if err != nil {
-		ctx.Logger.Error(err.Error())
-		return
-	}
+	var data []byte
 
-	chunkSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	dataSize := int64(len(files)) * chunkSize
-
-	data := make([]byte, dataSize)
-	dataCount := 0
-
-	for i := 0; i < len(files); i += 1 {
-		f, err := os.ReadFile(filepath.Join(utils.GetStoragePath(clientCtx, ps.ByName("file")), fmt.Sprintf("%d.jkl", i)))
+	var i int
+	for { // loop through every file in the directory and fail once it hits a file that it can't find
+		path := filepath.Join(utils.GetStoragePath(clientCtx, ps.ByName("file")), fmt.Sprintf("%d.jkl", i))
+		f, err := os.ReadFile(path)
 		if err != nil {
-			ctx.Logger.Info("Error can't open file!")
-			_, err = w.Write([]byte("cannot find file"))
-			if err != nil {
-				ctx.Logger.Error(err.Error())
-			}
-			return
+			break
 		}
-		dataCount += len(f)
-
-		for k, b := range f {
-			data[i*int(chunkSize)+k] = b
-		}
+		data = append(data, f...)
+		i++
 	}
 
-	w.Header().Set("Content-Length", fmt.Sprintf("%d", dataCount))
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(data)))
 
-	_, err = w.Write(data[0:dataCount])
+	_, err := w.Write(data)
 	if err != nil {
 		return
 	}
