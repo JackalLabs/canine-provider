@@ -172,10 +172,10 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 	for {
 		interval := intervalFromCMD
 
-		if interval < 300 { // If the provider picked an interval that's less than 5 minutes, we generate a random interval for them anyways
+		if interval < 1800 { // If the provider picked an interval that's less than 30 minutes, we generate a random interval for them anyways
 
 			r := rand.New(rand.NewSource(time.Now().UnixNano()))
-			interval = uint16(r.Intn(241) + 60) // Generate interval between 1-5 minutes
+			interval = uint16(r.Intn(1801) + 60) // Generate interval between 1-30 minutes
 
 		}
 		ctx.Logger.Debug(fmt.Sprintf("The interval between proofs is now %d", interval))

@@ -35,7 +35,7 @@ func StartServerCommand() *cobra.Command {
 	cmd.Flags().Int(types.FlagPort, 3333, "Port to host the server on.")
 	cmd.Flags().String(types.VersionFlag, "", "The value exposed by the version api to allow for custom deployments.")
 	cmd.Flags().Bool(types.HaltStraysFlag, false, "Debug flag to stop picking up strays.")
-	cmd.Flags().Uint16(types.FlagInterval, 32, "The interval in seconds for which to check proofs. Must be >=300 if you need a custom interval")
+	cmd.Flags().Uint16(types.FlagInterval, 32, "The interval in seconds for which to check proofs. Must be >=1800 if you need a custom interval")
 	cmd.Flags().Uint(types.FlagThreads, 10, "The amount of stray threads.")
 	cmd.Flags().Int(types.FlagMaxMisses, 16, "The amount of intervals a provider can miss their proofs before removing a file.")
 	cmd.Flags().Int64(types.FlagChunkSize, 10240, "The size of a single file chunk.")
