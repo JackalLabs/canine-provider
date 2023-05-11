@@ -129,12 +129,16 @@ func GetRoutes(cmd *cobra.Command, router *httprouter.Router, db *leveldb.DB, q 
 }
 
 func PostRoutes(cmd *cobra.Command, router *httprouter.Router, db *leveldb.DB, q *queue.UploadQueue) {
-	upfil := func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	upFil := func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		fileUpload(&w, r, cmd, db, q)
 	}
 
-	router.POST("/upload", upfil)
-	router.POST("/u", upfil)
+	router.POST("/upload", upFil)
+	router.POST("/u", upFil)
+
+	router.POST("/stray", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		strayUpload(&w, r, cmd, db, q)
+	})
 }
 
 func PProfRoutes(router *httprouter.Router) {
@@ -185,6 +189,54 @@ func fileUpload(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, db 
 	}
 
 	err = saveFile(file, handler, sender, cmd, db, w, q)
+	if err != nil {
+		v := types.ErrorResponse{
+			Error: err.Error(),
+		}
+		(*w).WriteHeader(http.StatusInternalServerError)
+		err = json.NewEncoder(*w).Encode(v)
+		if err != nil {
+			ctx.Logger.Error(err.Error())
+		}
+	}
+}
+
+// This function returns the filename(to save in database) of the saved file
+// or an error if it occurs
+func strayUpload(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue) {
+	ctx := utils.GetServerContextFromCmd(cmd)
+
+	// ParseMultipartForm parses a request body as multipart/form-data
+	err := r.ParseMultipartForm(types.MaxFileSize) // MAX file size lives here
+	if err != nil {
+		ctx.Logger.Error("Error with parsing form!")
+		v := types.ErrorResponse{
+			Error: err.Error(),
+		}
+		(*w).WriteHeader(http.StatusInternalServerError)
+		err = json.NewEncoder(*w).Encode(v)
+		if err != nil {
+			ctx.Logger.Error(err.Error())
+		}
+		return
+	}
+	cid := r.Form.Get("cid")
+
+	file, handler, err := r.FormFile("file") // Retrieve the file from form data
+	if err != nil {
+		ctx.Logger.Error("Error with form file!")
+		v := types.ErrorResponse{
+			Error: err.Error(),
+		}
+		(*w).WriteHeader(http.StatusInternalServerError)
+		err = json.NewEncoder(*w).Encode(v)
+		if err != nil {
+			ctx.Logger.Error(err.Error())
+		}
+		return
+	}
+
+	err = saveStray(cid, file, handler, cmd, db, w, q)
 	if err != nil {
 		v := types.ErrorResponse{
 			Error: err.Error(),

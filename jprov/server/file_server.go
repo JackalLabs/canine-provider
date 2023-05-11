@@ -100,6 +100,73 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	return nil
 }
 
+func saveStray(cid string, file multipart.File, handler *multipart.FileHeader, cmd *cobra.Command, db *leveldb.DB, w *http.ResponseWriter, q *queue.UploadQueue) error {
+	size := handler.Size
+	ctx := utils.GetServerContextFromCmd(cmd)
+	fid, _, _, err := utils.WriteFileToDisk(cmd, file, file, file, size, db, ctx.Logger)
+	if err != nil {
+		ctx.Logger.Error("Write To Disk Error: %v", err)
+		return err
+	}
+
+	clientCtx, qerr := client.GetClientTxContext(cmd)
+	if qerr != nil {
+		return qerr
+	}
+
+	address, err := crypto.GetAddress(clientCtx)
+	if err != nil {
+		ctx.Logger.Error(err.Error())
+		return err
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	msg := storageTypes.NewMsgClaimStray( // Attempt to claim the stray, this may fail if someone else has already tried to claim our stray.
+		address,
+		cid,
+		address,
+	)
+	u := &types.Upload{
+		Message:  msg,
+		Callback: &wg,
+		Err:      nil,
+		Response: nil,
+	}
+	q.Queue = append(q.Queue, u)
+
+	wg.Wait()
+
+	v := types.UploadResponse{
+		CID: cid,
+		FID: fid,
+	}
+
+	if u.Err != nil {
+		ctx.Logger.Error(u.Err.Error())
+		v := types.ErrorResponse{
+			Error: u.Err.Error(),
+		}
+		(*w).WriteHeader(http.StatusInternalServerError)
+		err = json.NewEncoder(*w).Encode(v)
+	} else {
+		err = json.NewEncoder(*w).Encode(v)
+	}
+
+	if err != nil {
+		ctx.Logger.Error("Json Encode Error: %v", err)
+		return err
+	}
+
+	err = utils.SaveToDatabase(fid, cid, db, ctx.Logger)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func MakeContract(cmd *cobra.Command, fid string, sender string, wg *sync.WaitGroup, q *queue.UploadQueue, merkleroot string, filesize string) (*types.Upload, error) {
 	ctx := utils.GetServerContextFromCmd(cmd)
 	clientCtx, err := client.GetClientTxContext(cmd)
