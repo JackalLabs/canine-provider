@@ -176,9 +176,10 @@ func (m *StrayManager) CollectStrays(cmd *cobra.Command, lastCount uint64) uint6
 	}
 
 	page := &query.PageRequest{
-		Offset:  val,
-		Limit:   300,
-		Reverse: m.Rand.Intn(2) == 0,
+		Offset:     val,
+		Limit:      300,
+		Reverse:    m.Rand.Intn(2) == 0,
+		CountTotal: true,
 	}
 
 	res, err := qClient.StraysAll(cmd.Context(), &storageTypes.QueryAllStraysRequest{
