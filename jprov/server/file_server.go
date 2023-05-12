@@ -10,6 +10,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
@@ -49,14 +50,19 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 		return err
 	}
 
-	cidhash := sha256.New()
+	cidHash := sha256.New()
 
-	_, err = io.WriteString(cidhash, fmt.Sprintf("%s%s%s", sender, address, fid))
+	var str strings.Builder // building the FID
+	str.WriteString(sender)
+	str.WriteString(address)
+	str.WriteString(fid)
+
+	_, err = io.WriteString(cidHash, str.String())
 	if err != nil {
 		return err
 	}
-	cid := cidhash.Sum(nil)
-	strcid, err := utils.MakeCid(cid)
+	cid := cidHash.Sum(nil)
+	strCid, err := utils.MakeCid(cid)
 	if err != nil {
 		return err
 	}
@@ -64,15 +70,15 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	msg, ctrerr := MakeContract(cmd, fid, sender, &wg, q, merkle, fmt.Sprintf("%d", size))
-	if ctrerr != nil {
-		ctx.Logger.Error("CONTRACT ERROR: %v", ctrerr)
-		return ctrerr
+	msg, ctrErr := MakeContract(cmd, fid, sender, &wg, q, merkle, fmt.Sprintf("%d", size))
+	if ctrErr != nil {
+		ctx.Logger.Error("CONTRACT ERROR: %v", ctrErr)
+		return ctrErr
 	}
 	wg.Wait()
 
 	v := types.UploadResponse{
-		CID: strcid,
+		CID: strCid,
 		FID: fid,
 	}
 
@@ -92,7 +98,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 		return err
 	}
 
-	err = utils.SaveToDatabase(fid, strcid, db, ctx.Logger)
+	err = utils.SaveToDatabase(fid, strCid, db, ctx.Logger)
 	if err != nil {
 		return err
 	}
@@ -159,9 +165,15 @@ func StartFileServer(cmd *cobra.Command) {
 		Address: address,
 	}
 
-	_, err = queryClient.Providers(context.Background(), params)
+	me, err := queryClient.Providers(context.Background(), params)
 	if err != nil {
 		fmt.Println("Provider not initialized on the blockchain, or connection to the RPC node has been lost. Please make sure your RPC node is available then run `jprovd init` to fix this.")
+		return
+	}
+
+	providers, err := queryClient.ProvidersAll(context.Background(), &storageTypes.QueryAllProvidersRequest{})
+	if err != nil {
+		fmt.Println("Cannot connect to jackal blockchain.")
 		return
 	}
 
@@ -200,6 +212,15 @@ func StartFileServer(cmd *cobra.Command) {
 	if err != nil {
 		providerName = "A Storage Provider"
 	}
+
+	//fmt.Println("Testing connection...")
+	//connected := testConnection(providers.Providers, me.Providers.Ip)
+	//if !connected {
+	//	fmt.Println("Domain not configured correctly, make sure your domain points to your provider.")
+	//	return
+	//}
+	_ = providers
+	_ = me
 
 	manager := strays.NewStrayManager(cmd) // creating and starting the stray management system
 	if !strs {

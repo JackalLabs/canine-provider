@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
+	"strings"
 
 	"github.com/tendermint/tendermint/libs/log"
 	"github.com/wealdtech/go-merkletree"
@@ -74,26 +76,34 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 	path := GetStoragePath(clientCtx, fid)
 
 	// This is path which we want to store the file
-	direrr := os.MkdirAll(path, os.ModePerm)
-	if direrr != nil {
-		return fid, "", data, direrr
+	dirErr := os.MkdirAll(path, os.ModePerm)
+	if dirErr != nil {
+		return fid, "", data, dirErr
 	}
 
 	for i := int64(0); i < size; i += blockSize {
-		f, err := os.OpenFile(filepath.Join(path, fmt.Sprintf("%d.jkl", i/blockSize)), os.O_WRONLY|os.O_CREATE, 0o666)
+		var str strings.Builder
+		str.WriteString(strconv.FormatInt(i/blockSize, 10))
+		str.WriteString(".jkl")
+		f, err := os.OpenFile(filepath.Join(path, str.String()), os.O_WRONLY|os.O_CREATE, 0o666)
 		if err != nil {
 			return fid, "", data, err
 		}
 
-		firstx := make([]byte, blockSize)
-		read, err := file.ReadAt(firstx, i)
-		logger.Debug(fmt.Sprintf("Bytes read: %d", read))
+		firstX := make([]byte, blockSize)
+		read, err := file.ReadAt(firstX, i)
+
+		var loggerBuilder strings.Builder
+		loggerBuilder.WriteString("Bytes read:")
+		loggerBuilder.WriteString(strconv.Itoa(read))
+
+		logger.Debug(loggerBuilder.String())
 
 		if err != nil && err != io.EOF {
 			return fid, "", data, err
 		}
-		firstx = firstx[:read]
-		_, writeErr := f.Write(firstx)
+		firstX = firstX[:read]
+		_, writeErr := f.Write(firstX)
 		if writeErr != nil {
 			return fid, "", data, err
 		}
@@ -102,8 +112,12 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 			return fid, "", data, err
 		}
 
+		var hashBuilder strings.Builder
+		hashBuilder.WriteString(strconv.FormatInt(i/blockSize, 10))
+		hashBuilder.WriteString(hex.EncodeToString(firstX))
+
 		hash := sha256.New()
-		_, err = io.WriteString(hash, fmt.Sprintf("%d%x", i/blockSize, firstx))
+		_, err = io.WriteString(hash, hashBuilder.String())
 		if err != nil {
 			return fid, "", data, err
 		}
