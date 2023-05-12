@@ -94,6 +94,12 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 
 	ctx.Logger.Info(fmt.Sprintf("Attempting to claim %s on chain", h.Stray.Cid))
 
+	err = utils.SaveToDatabase(h.Stray.Fid, h.Stray.Cid, h.Database, ctx.Logger)
+	if err != nil {
+		ctx.Logger.Error(err.Error())
+		return
+	}
+
 	msg := storageTypes.NewMsgClaimStray( // Attempt to claim the stray, this may fail if someone else has already tried to claim our stray.
 		h.Address,
 		h.Stray.Cid,
@@ -117,12 +123,6 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 
 	if res.Code != 0 {
 		ctx.Logger.Error(res.RawLog)
-		return
-	}
-
-	err = utils.SaveToDatabase(h.Stray.Fid, h.Stray.Cid, h.Database, ctx.Logger)
-	if err != nil {
-		ctx.Logger.Error(err.Error())
 		return
 	}
 }
