@@ -173,7 +173,7 @@ replace (
 	// use cosmos-flavored protobufs
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
-	github.com/jackalLabs/canine-chain => github.com/JackalLabs/canine-chain v1.2.3-0.20230514042554-b13eec4ed46e
+	github.com/jackalLabs/canine-chain => github.com/JackalLabs/canine-chain v1.2.3-0.20230514053023-03fd2d2f71e5
 
 	//github.com/jackalLabs/canine-chain => github.com/jackallabs/canine-chain v1.2.0-alpha.12.0.20230124032231-f9a91fb5a692
 

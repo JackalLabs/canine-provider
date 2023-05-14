@@ -19,7 +19,6 @@ import (
 
 	"github.com/wealdtech/go-merkletree/sha3"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/syndtr/goleveldb/leveldb"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -82,19 +81,14 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 	return fmt.Sprintf("%x", item), string(jproof), nil
 }
 
-func postProof(clientCtx client.Context, cid string, block string, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) error {
-	dex, ok := sdk.NewIntFromString(block)
-	ctx.Logger.Debug(fmt.Sprintf("BlockToProve: %s", block))
-	if !ok {
-		return fmt.Errorf("cannot parse block number")
-	}
+func postProof(clientCtx client.Context, cid string, block int64, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) error {
 
 	data, err := db.Get(utils.MakeFileKey(cid), nil)
 	if err != nil {
 		return err
 	}
 
-	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), int(dex.Int64()), ctx)
+	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), int(block), ctx)
 	if err != nil {
 		return err
 	}
@@ -197,7 +191,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 
 			ctx.Logger.Debug(fmt.Sprintf("CID: %s", cid))
 
-			ver, verr := checkVerified(&clientCtx, cid, address)
+			ver, dealVersion, verr := checkVerified(&clientCtx, cid, address)
 			if verr != nil {
 				ctx.Logger.Error(verr.Error())
 				rr := strings.Contains(verr.Error(), "key not found")
@@ -305,11 +299,20 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 				continue
 			}
 
-			err = postProof(clientCtx, cid, block, db, q, ctx)
-			if err != nil {
-				ctx.Logger.Error(fmt.Sprintf("Posting Proof Error: %v", err))
-				continue
+			if dealVersion == 0 {
+				err = postProof(clientCtx, cid, block, db, q, ctx)
+				if err != nil {
+					ctx.Logger.Error(fmt.Sprintf("Posting Proof Error: %v", err))
+					continue
+				}
+			} else {
+				err = postZKProof(clientCtx, cid, block, db, q, ctx)
+				if err != nil {
+					ctx.Logger.Error(fmt.Sprintf("Posting Proof Error: %v", err))
+					continue
+				}
 			}
+
 			sleep, err := cmd.Flags().GetInt64(types.FlagSleep)
 			if err != nil {
 				ctx.Logger.Error(err.Error())

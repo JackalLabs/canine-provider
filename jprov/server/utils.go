@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -75,7 +74,7 @@ func testConnection(providers []storageTypes.Providers, ip string) bool {
 	return true
 }
 
-func queryBlock(clientCtx *client.Context, cid string) (string, error) {
+func queryBlock(clientCtx *client.Context, cid string) (int64, error) {
 	queryClient := storageTypes.NewQueryClient(clientCtx)
 
 	argCid := cid
@@ -86,13 +85,13 @@ func queryBlock(clientCtx *client.Context, cid string) (string, error) {
 
 	res, err := queryClient.ActiveDeals(context.Background(), params)
 	if err != nil {
-		return "", err
+		return 0, err
 	}
 
-	return res.ActiveDeals.Blocktoprove, nil
+	return res.ActiveDeals.BlockToProve, nil
 }
 
-func checkVerified(clientCtx *client.Context, cid string, self string) (bool, error) {
+func checkVerified(clientCtx *client.Context, cid string, self string) (bool, int64, error) {
 	queryClient := storageTypes.NewQueryClient(clientCtx)
 
 	argCid := cid
@@ -103,17 +102,12 @@ func checkVerified(clientCtx *client.Context, cid string, self string) (bool, er
 
 	res, err := queryClient.ActiveDeals(context.Background(), params)
 	if err != nil {
-		return false, err
-	}
-
-	ver, err := strconv.ParseBool(res.ActiveDeals.Proofverified)
-	if err != nil {
-		return false, err
+		return false, 0, err
 	}
 
 	if res.ActiveDeals.Provider != self {
-		return false, fmt.Errorf(ErrNotYours)
+		return false, res.ActiveDeals.DealVersion, fmt.Errorf(ErrNotYours)
 	}
 
-	return ver, nil
+	return res.ActiveDeals.ProofVerified, res.ActiveDeals.DealVersion, nil
 }
