@@ -130,7 +130,7 @@ require (
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/sasha-s/go-deadlock v0.3.1 // indirect
 	github.com/spf13/afero v1.9.2 // indirect
-	github.com/spf13/cast v1.5.0 // indirect
+	github.com/spf13/cast v1.5.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
 	github.com/tendermint/btcd v0.1.1 // indirect
@@ -173,7 +173,7 @@ replace (
 	// use cosmos-flavored protobufs
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
-	github.com/jackalLabs/canine-chain => github.com/JackalLabs/canine-chain v1.2.3-0.20230514053023-03fd2d2f71e5
+	github.com/jackalLabs/canine-chain => github.com/JackalLabs/canine-chain v1.2.3-0.20230515225257-f6a6688da4ee
 
 	//github.com/jackalLabs/canine-chain => github.com/jackallabs/canine-chain v1.2.0-alpha.12.0.20230124032231-f9a91fb5a692
 

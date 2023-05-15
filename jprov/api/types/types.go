@@ -45,7 +45,7 @@ type DealsResponse struct {
 }
 
 type StraysResponse struct {
-	Strays []storagetypes.Strays `json:"strays"`
+	Strays []storagetypes.StrayV2 `json:"strays"`
 }
 
 type BalanceResponse struct {

@@ -15,7 +15,7 @@ import (
 type StrayManager struct {
 	hands         []*LittleHand
 	Waiter        sync.WaitGroup
-	Strays        []*types.Strays
+	Strays        []*types.StrayV2
 	Context       *utils.Context
 	ClientContext client.Context
 	Address       string
@@ -48,7 +48,7 @@ func NewStrayManager(cmd *cobra.Command) *StrayManager {
 
 	return &StrayManager{
 		hands:         []*LittleHand{},
-		Strays:        []*types.Strays{},
+		Strays:        []*types.StrayV2{},
 		Context:       ctx,
 		Address:       addr,
 		ClientContext: clientCtx,
@@ -58,7 +58,7 @@ func NewStrayManager(cmd *cobra.Command) *StrayManager {
 }
 
 type LittleHand struct {
-	Stray         *types.Strays
+	Stray         *types.StrayV2
 	Waiter        *sync.WaitGroup
 	Database      *leveldb.DB
 	Busy          bool

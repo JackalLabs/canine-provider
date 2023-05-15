@@ -199,7 +199,7 @@ func (m *StrayManager) CollectStrays(cmd *cobra.Command, lastCount uint64) uint6
 
 	m.Rand.Shuffle(len(s), func(i, j int) { s[i], s[j] = s[j], s[i] })
 
-	m.Strays = make([]*storageTypes.Strays, 0)
+	m.Strays = make([]*storageTypes.StrayV2, 0)
 
 	for _, newStray := range s { // Only add new strays to the queue
 

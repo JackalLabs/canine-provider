@@ -94,7 +94,7 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 
 	ctx.Logger.Info(fmt.Sprintf("Attempting to claim %s on chain", h.Stray.Cid))
 
-	msg := storageTypes.NewMsgClaimStray( // Attempt to claim the stray, this may fail if someone else has already tried to claim our stray.
+	msg := storageTypes.NewMsgClaimStrayV2( // Attempt to claim the stray, this may fail if someone else has already tried to claim our stray.
 		h.Address,
 		h.Stray.Cid,
 		m.Address,

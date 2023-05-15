@@ -82,7 +82,6 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 }
 
 func postProof(clientCtx client.Context, cid string, block int64, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) error {
-
 	data, err := db.Get(utils.MakeFileKey(cid), nil)
 	if err != nil {
 		return err
