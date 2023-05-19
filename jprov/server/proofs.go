@@ -1,11 +1,15 @@
 package server
 
 import (
+	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
 	"math/rand"
+	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -24,7 +28,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 
-	storagetypes "github.com/jackalLabs/canine-chain/x/storage/types"
+	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
 
 	merkletree "github.com/wealdtech/go-merkletree"
 
@@ -82,6 +86,115 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 	return fmt.Sprintf("%x", item), string(jproof), nil
 }
 
+func requestAttestation(clientCtx client.Context, cid string, hashList string, item string, q *queue.UploadQueue) error {
+	address, err := crypto.GetAddress(clientCtx)
+	if err != nil {
+		return err
+	}
+
+	msg := storageTypes.NewMsgRequestAttestationForm(
+		address,
+		cid,
+	)
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	u := types.Upload{
+		Message:  msg,
+		Err:      nil,
+		Callback: &wg,
+		Response: nil,
+	}
+
+	q.Append(&u)
+	wg.Wait()
+
+	if u.Err != nil {
+		return u.Err
+	}
+
+	if u.Response.Code != 0 {
+		return fmt.Errorf(u.Response.RawLog)
+	}
+
+	txVal := u.Response.Tx.Value
+
+	var res storageTypes.MsgRequestAttestationFormResponse
+
+	err = res.Unmarshal(txVal)
+	if err != nil {
+		return err
+	}
+
+	providerList := res.Providers
+	var pwg sync.WaitGroup
+
+	count := 0 // keep track of how many successful requests we've made
+
+	for _, provider := range providerList { // request attestation from all providers, and wait until they all respond
+		pwg.Add(1)
+
+		prov := provider
+		go func() {
+			defer pwg.Done() // notify group that I have completed at the end of this function lifetime
+
+			queryClient := storageTypes.NewQueryClient(clientCtx)
+
+			provReq := &storageTypes.QueryProviderRequest{
+				Address: prov,
+			}
+
+			providerDetails, err := queryClient.Providers(context.Background(), provReq)
+			if err != nil {
+				return
+			}
+
+			p := providerDetails.Providers
+			providerAddress := p.Ip // get the providers IP address from chain at runtime
+
+			path, err := url.JoinPath(providerAddress, "attest")
+			if err != nil {
+				return
+			}
+
+			attestRequest := types.AttestRequest{
+				Cid:      cid,
+				HashList: hashList,
+				Item:     item,
+			}
+
+			data, err := json.Marshal(attestRequest)
+			if err != nil {
+				return
+			}
+
+			buf := bytes.NewBuffer(data)
+
+			res, err := http.Post(path, "application/json", buf)
+			if err != nil {
+				return
+			}
+
+			if res.StatusCode == 200 {
+				count += 1
+			}
+		}()
+
+	}
+
+	pwg.Wait()
+
+	if count < 3 {
+		return fmt.Errorf("failed to get attestations")
+	}
+
+	return nil
+}
+
 func postProof(clientCtx client.Context, cid string, block string, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) error {
 	dex, ok := sdk.NewIntFromString(block)
 	ctx.Logger.Debug(fmt.Sprintf("BlockToProve: %s", block))
@@ -105,7 +218,12 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 		return err
 	}
 
-	msg := storagetypes.NewMsgPostproof(
+	err = requestAttestation(clientCtx, cid, hashlist, item, q) // request attestation, if we get it, skip all the posting
+	if err == nil {
+		return nil
+	}
+
+	msg := storageTypes.NewMsgPostproof(
 		address,
 		item,
 		hashlist,

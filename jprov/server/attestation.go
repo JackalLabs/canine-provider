@@ -97,4 +97,13 @@ func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, q *queu
 		http.Error(*w, fmt.Errorf(u.Response.RawLog).Error(), http.StatusBadRequest)
 		return
 	}
+
+	v := types.ProxyResponse{
+		Ok: true,
+	}
+
+	err = json.NewEncoder(*w).Encode(v)
+	if err != nil {
+		fmt.Println(err)
+	}
 }
