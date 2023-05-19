@@ -16,10 +16,9 @@ import (
 	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
 
 	"github.com/spf13/cobra"
-	"github.com/syndtr/goleveldb/leveldb"
 )
 
-func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue) {
+func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, q *queue.UploadQueue) {
 	clientCtx, qerr := client.GetClientTxContext(cmd)
 	if qerr != nil {
 		fmt.Println(qerr)
