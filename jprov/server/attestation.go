@@ -98,5 +98,4 @@ func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, db *lev
 		http.Error(*w, fmt.Errorf(u.Response.RawLog).Error(), http.StatusBadRequest)
 		return
 	}
-
 }
