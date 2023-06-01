@@ -56,3 +56,35 @@ func TestAppend(t *testing.T) {
 
 	require.Equal(stringQueue, string(data))
 }
+
+func TestPrepareMessage(t *testing.T) {
+
+	cases := map[string]struct{
+		uq queue.UploadQueue
+		maxMsgSize int
+		resultSize int
+	} {
+		"empty_queue": {
+			uq: queue.UploadQueue{
+				Locked: false,
+			},
+			maxMsgSize: 10,
+			resultSize: 0,
+		},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T){
+			msgs := c.uq.PrepareMessage(c.maxMsgSize)
+			var msgSize int
+			for _, m := range msgs {
+				msgSize += len(m.String())
+			}
+
+			if c.resultSize != msgSize {
+				t.Log("Expected size: ", c.resultSize, " Result size: ", msgSize)
+				t.Fail()
+			}
+		})
+	}
+}
