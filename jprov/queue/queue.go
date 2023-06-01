@@ -42,7 +42,7 @@ func (q *UploadQueue) Append(upload *types.Upload) {
 //  2. the UploadQueue is locked
 //  3. the upload queue is empty
 func (q *UploadQueue) prepareMessage(maxMessageSize int) (messages []cosmosTypes.Msg) {
-	if maxMessageSize < 1 || q.Locked || len(q.Queue) == 0 {
+	if maxMessageSize < 1 || !q.Locked || len(q.Queue) == 0 {
 		return nil
 	}
 
@@ -63,7 +63,7 @@ func (q *UploadQueue) prepareMessage(maxMessageSize int) (messages []cosmosTypes
 
 // Update the upload queue with the parameter fields of count
 func (q *UploadQueue) updateQueue(count int, err error, res *cosmosTypes.TxResponse) {
-	if q.Locked || len(q.Queue) == 0 || len(q.Queue) < count {
+	if !q.Locked || len(q.Queue) == 0 || len(q.Queue) < count {
 		return
 	}
 
