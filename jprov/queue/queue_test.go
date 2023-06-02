@@ -93,6 +93,14 @@ func TestPrepareMessage(t *testing.T) {
 			maxMsgSize: 1,
 			resultSize: 0,
 		},
+		"queue_msg_length": {
+			uq: queue.UploadQueue{
+				Locked: true,
+				Queue: setupUpload(1),
+			},
+			maxMsgSize: 500,
+			resultSize: len(setupUpload(1)[0].Message.String()),
+		},
 	}
 
 	for name, c := range cases {
