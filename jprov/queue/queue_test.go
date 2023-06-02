@@ -24,6 +24,20 @@ func setupQueue(t *testing.T) (queue.UploadQueue, *require.Assertions) {
 	return q, require
 }
 
+func setupUpload(count int) (upload []*types.Upload) {
+	for i := 0; i < count; i++ {
+		msg := storagetypes.NewMsgInitProvider(
+			"test-address",
+			"localhost:3333",
+			"1000",
+			"test-key",
+		)
+		upload = append(upload, &types.Upload{Message: msg})
+	}	
+
+	return
+}
+
 func TestAppend(t *testing.T) {
 	q, require := setupQueue(t)
 
@@ -66,9 +80,17 @@ func TestPrepareMessage(t *testing.T) {
 	} {
 		"empty_queue": {
 			uq: queue.UploadQueue{
-				Locked: false,
+				Locked: true,
 			},
 			maxMsgSize: 10,
+			resultSize: 0,
+		},
+		"queue_exceed_max": {
+			uq: queue.UploadQueue{
+				Locked: true,
+				Queue: setupUpload(10),
+			},
+			maxMsgSize: 1,
 			resultSize: 0,
 		},
 	}
