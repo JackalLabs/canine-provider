@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -17,6 +18,30 @@ import (
 
 	"github.com/spf13/cobra"
 )
+
+func verifyAttest (ctx client.Context, attest types.AttestRequest) (verified bool, err error) {
+	queryClient := storageTypes.NewQueryClient(ctx)
+
+	dealReq := &storageTypes.QueryActiveDealRequest{
+		Cid: attest.Cid,
+	}
+
+	deal, err := queryClient.ActiveDeals(context.Background(), dealReq)
+	if err != nil {
+		return false, err
+	}
+
+	merkle := deal.ActiveDeals.Merkle
+    block := deal.ActiveDeals.Blocktoprove
+    blockNum, err := strconv.ParseInt(block, 10, 64)
+	if err != nil {
+		return false, err
+	}
+
+	verified = storageKeeper.VerifyDeal(merkle, attest.HashList, blockNum, attest.Item)
+
+	return
+}
 
 func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, q *queue.UploadQueue) {
 	clientCtx, qerr := client.GetClientTxContext(cmd)
@@ -33,31 +58,15 @@ func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, q *queu
 		return
 	}
 
-	queryClient := storageTypes.NewQueryClient(clientCtx)
+	verified, err := verifyAttest(clientCtx, attest)
 
-	dealReq := &storageTypes.QueryActiveDealRequest{
-		Cid: attest.Cid,
-	}
-
-	deal, err := queryClient.ActiveDeals(context.Background(), dealReq)
 	if err != nil {
 		http.Error(*w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	merkle := deal.ActiveDeals.Merkle
-	block := deal.ActiveDeals.Blocktoprove
-	blockNum, err := strconv.ParseInt(block, 10, 64)
-	if err != nil {
-		http.Error(*w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	verified := storageKeeper.VerifyDeal(merkle, attest.HashList, blockNum, attest.Item)
 
 	if !verified {
-		http.Error(*w, err.Error(), http.StatusBadRequest)
-		return
+		http.Error(*w, errors.New("failed to verify attest").Error(), http.StatusBadRequest)
 	}
 
 	address, err := crypto.GetAddress(clientCtx)
