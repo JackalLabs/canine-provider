@@ -43,6 +43,34 @@ func verifyAttest (ctx client.Context, attest types.AttestRequest) (verified boo
 	return
 }
 
+func sendAttestMsg(ctx client.Context, cid string, q *queue.UploadQueue) (upload types.Upload, err error) {
+	address, err := crypto.GetAddress(ctx)
+	if err != nil {
+		return upload, err
+	}
+
+	msg := storageTypes.NewMsgAttest(address, cid)
+
+	if err := msg.ValidateBasic(); err != nil {
+		return upload, err
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	u := types.Upload{
+		Message:  msg,
+		Err:      nil,
+		Callback: &wg,
+		Response: nil,
+	}
+
+	q.Append(&u)
+	wg.Wait()
+
+	return
+}
+
 func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, q *queue.UploadQueue) {
 	clientCtx, qerr := client.GetClientTxContext(cmd)
 	if qerr != nil {
