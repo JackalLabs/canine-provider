@@ -19,20 +19,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func verifyAttest (ctx client.Context, attest types.AttestRequest) (verified bool, err error) {
-	queryClient := storageTypes.NewQueryClient(ctx)
-
-	dealReq := &storageTypes.QueryActiveDealRequest{
-		Cid: attest.Cid,
-	}
-
-	deal, err := queryClient.ActiveDeals(context.Background(), dealReq)
-	if err != nil {
-		return false, err
-	}
-
-	merkle := deal.ActiveDeals.Merkle
-    block := deal.ActiveDeals.Blocktoprove
+func verifyAttest (deal storageTypes.ActiveDeals, attest types.AttestRequest) (verified bool, err error) {
+	merkle := deal.Merkle
+    block := deal.Blocktoprove
     blockNum, err := strconv.ParseInt(block, 10, 64)
 	if err != nil {
 		return false, err
@@ -43,12 +32,7 @@ func verifyAttest (ctx client.Context, attest types.AttestRequest) (verified boo
 	return
 }
 
-func sendAttestMsg(ctx client.Context, cid string, q *queue.UploadQueue) (upload types.Upload, err error) {
-	address, err := crypto.GetAddress(ctx)
-	if err != nil {
-		return upload, err
-	}
-
+func addMsgAttest(address string, cid string, q *queue.UploadQueue) (upload types.Upload, err error) {
 	msg := storageTypes.NewMsgAttest(address, cid)
 
 	if err := msg.ValidateBasic(); err != nil {
@@ -58,16 +42,14 @@ func sendAttestMsg(ctx client.Context, cid string, q *queue.UploadQueue) (upload
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	u := types.Upload{
+	upload = types.Upload{
 		Message:  msg,
 		Err:      nil,
 		Callback: &wg,
 		Response: nil,
 	}
 
-	q.Append(&u)
-	wg.Wait()
-
+	q.Append(&upload)
 	return
 }
 
@@ -86,7 +68,18 @@ func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, q *queu
 		return
 	}
 
-	verified, err := verifyAttest(clientCtx, attest)
+	queryClient := storageTypes.NewQueryClient(clientCtx)
+
+	dealReq := &storageTypes.QueryActiveDealRequest{
+		Cid: attest.Cid,
+	}
+
+	deal, err := queryClient.ActiveDeals(context.Background(), dealReq)
+	if err != nil {
+		http.Error(*w, err.Error(), http.StatusBadRequest)
+	}
+
+	verified, err := verifyAttest(deal.ActiveDeals, attest)
 
 	if err != nil {
 		http.Error(*w, err.Error(), http.StatusBadRequest)
@@ -103,35 +96,17 @@ func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, q *queu
 		return
 	}
 
-	msg := storageTypes.NewMsgAttest( // create new attest
-		address,
-		attest.Cid,
-	)
-	if err := msg.ValidateBasic(); err != nil {
+	upload, err := addMsgAttest(address, attest.Cid, q)
+
+	upload.Callback.Wait()
+
+	if upload.Err != nil {
 		http.Error(*w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	u := types.Upload{
-		Message:  msg,
-		Err:      nil,
-		Callback: &wg,
-		Response: nil,
-	}
-
-	q.Append(&u)
-	wg.Wait()
-
-	if u.Err != nil {
-		http.Error(*w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if u.Response.Code != 0 {
-		http.Error(*w, fmt.Errorf(u.Response.RawLog).Error(), http.StatusBadRequest)
+	if upload.Response.Code != 0 {
+		http.Error(*w, fmt.Errorf(upload.Response.RawLog).Error(), http.StatusBadRequest)
 		return
 	}
 
