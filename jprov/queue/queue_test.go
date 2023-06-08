@@ -33,7 +33,7 @@ func setupUpload(count int) (upload []*types.Upload) {
 			"test-key",
 		)
 		upload = append(upload, &types.Upload{Message: msg})
-	}	
+	}
 
 	return
 }
@@ -72,12 +72,11 @@ func TestAppend(t *testing.T) {
 }
 
 func TestPrepareMessage(t *testing.T) {
-
-	cases := map[string]struct{
-		uq queue.UploadQueue
+	cases := map[string]struct {
+		uq         queue.UploadQueue
 		maxMsgSize int
 		resultSize int
-	} {
+	}{
 		"empty_queue": {
 			uq: queue.UploadQueue{
 				Locked: true,
@@ -88,7 +87,7 @@ func TestPrepareMessage(t *testing.T) {
 		"queue_exceed_max": {
 			uq: queue.UploadQueue{
 				Locked: true,
-				Queue: setupUpload(10),
+				Queue:  setupUpload(10),
 			},
 			maxMsgSize: 1,
 			resultSize: 0,
@@ -96,7 +95,7 @@ func TestPrepareMessage(t *testing.T) {
 		"queue_msg_length": {
 			uq: queue.UploadQueue{
 				Locked: true,
-				Queue: setupUpload(1),
+				Queue:  setupUpload(1),
 			},
 			maxMsgSize: 500,
 			resultSize: len(setupUpload(1)[0].Message.String()),
@@ -104,7 +103,7 @@ func TestPrepareMessage(t *testing.T) {
 	}
 
 	for name, c := range cases {
-		t.Run(name, func(t *testing.T){
+		t.Run(name, func(t *testing.T) {
 			msgs := c.uq.PrepareMessage(c.maxMsgSize)
 			var msgSize int
 			for _, m := range msgs {
