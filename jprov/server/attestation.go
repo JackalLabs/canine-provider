@@ -19,10 +19,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func verifyAttest (deal storageTypes.ActiveDeals, attest types.AttestRequest) (verified bool, err error) {
+func verifyAttest(deal storageTypes.ActiveDeals, attest types.AttestRequest) (verified bool, err error) {
 	merkle := deal.Merkle
-    block := deal.Blocktoprove
-    blockNum, err := strconv.ParseInt(block, 10, 64)
+	block := deal.Blocktoprove
+	blockNum, err := strconv.ParseInt(block, 10, 64)
 	if err != nil {
 		return false, err
 	}
@@ -80,7 +80,6 @@ func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, q *queu
 	}
 
 	verified, err := verifyAttest(deal.ActiveDeals, attest)
-
 	if err != nil {
 		http.Error(*w, err.Error(), http.StatusBadRequest)
 		return

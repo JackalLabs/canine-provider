@@ -18,23 +18,23 @@ import (
 )
 
 func TestVerifyAttest(t *testing.T) {
-	cases := map[string]struct{
-		attest types.AttestRequest
+	cases := map[string]struct {
+		attest   types.AttestRequest
 		verified bool
-		expErr bool
+		expErr   bool
 	}{
 		"wrong proof": {
 			attest: types.AttestRequest{
-				Cid: "-",
+				Cid:  "-",
 				Item: "0",
 			},
 			verified: false,
-			expErr: false,
+			expErr:   false,
 		},
 	}
 
 	for name, c := range cases {
-		t.Run(name, func(t *testing.T){
+		t.Run(name, func(t *testing.T) {
 			var data [][]byte
 			h := sha256.New()
 			_, err := io.WriteString(h, fmt.Sprintf("%d%x", 0, "hello world"))
@@ -55,14 +55,14 @@ func TestVerifyAttest(t *testing.T) {
 			}
 
 			jproof, err := json.Marshal(*proof)
-			if err != nil{
+			if err != nil {
 				t.Error(err)
 			}
 			c.attest.HashList = string(jproof)
 
 			activeDeal := storagetypes.ActiveDeals{
 				Blocktoprove: "0",
-				Merkle: hex.EncodeToString(tree.Root()),
+				Merkle:       hex.EncodeToString(tree.Root()),
 			}
 
 			v, e := server.VerifyAttest(activeDeal, c.attest)
@@ -80,20 +80,20 @@ func TestVerifyAttest(t *testing.T) {
 }
 
 func TestAddMsgAttest(t *testing.T) {
-	cases := map[string]struct{
+	cases := map[string]struct {
 		address string
-		cid string
-		expErr bool
+		cid     string
+		expErr  bool
 	}{
 		"invalid_address": {
 			address: "invalid_address",
-			cid: "jklc1dmcul9svpv0z2uzfv30lz0kcjrpdfmmfccskt06wpy8vfqrhp4nsgvgz32",
-			expErr: true,
+			cid:     "jklc1dmcul9svpv0z2uzfv30lz0kcjrpdfmmfccskt06wpy8vfqrhp4nsgvgz32",
+			expErr:  true,
 		},
 	}
 
 	for name, c := range cases {
-		t.Run(name, func(t *testing.T){
+		t.Run(name, func(t *testing.T) {
 			q := queue.UploadQueue{}
 			_, err := server.AddAttestMsg(c.address, c.cid, &q)
 

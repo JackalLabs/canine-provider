@@ -1,4 +1,6 @@
 package server
 
-var VerifyAttest = verifyAttest
-var AddAttestMsg = addMsgAttest
+var (
+	VerifyAttest = verifyAttest
+	AddAttestMsg = addMsgAttest
+)
