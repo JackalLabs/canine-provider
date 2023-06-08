@@ -1,4 +1,4 @@
 package server
 
 var VerifyAttest = verifyAttest
-var SendAttestMsg = addMsgAttest
+var AddAttestMsg = addMsgAttest

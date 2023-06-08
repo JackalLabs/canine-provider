@@ -8,9 +8,11 @@ import (
 	"io"
 	"testing"
 
+	"github.com/JackalLabs/jackal-provider/jprov/queue"
 	"github.com/JackalLabs/jackal-provider/jprov/server"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	storagetypes "github.com/jackalLabs/canine-chain/x/storage/types"
+	"github.com/stretchr/testify/require"
 	"github.com/wealdtech/go-merkletree"
 	"github.com/wealdtech/go-merkletree/sha3"
 )
@@ -72,6 +74,33 @@ func TestVerifyAttest(t *testing.T) {
 			if !c.expErr && e != nil {
 				t.Log("expect no error, got: ", e)
 				t.Fail()
+			}
+		})
+	}
+}
+
+func TestAddMsgAttest(t *testing.T) {
+	cases := map[string]struct{
+		address string
+		cid string
+		expErr bool
+	}{
+		"invalid_address": {
+			address: "invalid_address",
+			cid: "jklc1dmcul9svpv0z2uzfv30lz0kcjrpdfmmfccskt06wpy8vfqrhp4nsgvgz32",
+			expErr: true,
+		},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T){
+			q := queue.UploadQueue{}
+			_, err := server.AddAttestMsg(c.address, c.cid, &q)
+
+			if c.expErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}
