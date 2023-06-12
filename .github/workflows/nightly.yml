@@ -10,7 +10,7 @@ jobs:
       matrix:
         os: [ubuntu-20.04, macos-latest]
     steps:
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v3.5.3
       - uses: actions/setup-go@v4
         with:
           go-version: 1.18.1 # The Go version to download (if necessary) and use.
@@ -29,7 +29,7 @@ jobs:
       [native-build-cli]
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v3.5.3
       - uses: actions/download-artifact@v3
         with:
           name: jprovd-Linux
