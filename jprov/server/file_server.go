@@ -106,6 +106,22 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	return nil
 }
 
+func buildCid(address, sender, fid string) (string, error) {
+	h := sha256.New()
+
+	var footprint strings.Builder // building FID
+	footprint.WriteString(sender)
+	footprint.WriteString(address)
+	footprint.WriteString(fid)
+
+	_, err := io.WriteString(h, footprint.String())
+	if err != nil {
+		return "", err
+	}
+
+	return utils.MakeCid(h.Sum(nil))
+}
+
 func MakeContract(cmd *cobra.Command, fid string, sender string, wg *sync.WaitGroup, q *queue.UploadQueue, merkleroot string, filesize string) (*types.Upload, error) {
 	ctx := utils.GetServerContextFromCmd(cmd)
 	clientCtx, err := client.GetClientTxContext(cmd)
