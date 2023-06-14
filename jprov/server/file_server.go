@@ -65,23 +65,11 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	}
 	wg.Wait()
 
-	v := types.UploadResponse{
-		CID: cid,
-		FID: fid,
-	}
-
 	if msg.Err != nil {
 		ctx.Logger.Error(msg.Err.Error())
-		v := types.ErrorResponse{
-			Error: msg.Err.Error(),
-		}
-		(*w).WriteHeader(http.StatusInternalServerError)
-		err = json.NewEncoder(*w).Encode(v)
-	} else {
-		err = json.NewEncoder(*w).Encode(v)
 	}
 
-	if err != nil {
+	if err = writeResponse(w, *msg, fid, cid); err != nil {
 		ctx.Logger.Error("Json Encode Error: %v", err)
 		return err
 	}
