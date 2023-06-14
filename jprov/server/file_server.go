@@ -50,19 +50,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 		return err
 	}
 
-	cidHash := sha256.New()
-
-	var str strings.Builder // building the FID
-	str.WriteString(sender)
-	str.WriteString(address)
-	str.WriteString(fid)
-
-	_, err = io.WriteString(cidHash, str.String())
-	if err != nil {
-		return err
-	}
-	cid := cidHash.Sum(nil)
-	strCid, err := utils.MakeCid(cid)
+	cid, err := buildCid(address, sender, fid)
 	if err != nil {
 		return err
 	}
@@ -78,7 +66,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	wg.Wait()
 
 	v := types.UploadResponse{
-		CID: strCid,
+		CID: cid,
 		FID: fid,
 	}
 
@@ -98,12 +86,28 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 		return err
 	}
 
-	err = utils.SaveToDatabase(fid, strCid, db, ctx.Logger)
+	err = utils.SaveToDatabase(fid, cid, db, ctx.Logger)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func writeResponse(w *http.ResponseWriter, upload types.Upload, fid, cid string) error {
+	if upload.Err != nil {
+		resp := types.ErrorResponse{
+			Error: upload.Err.Error(),
+		}
+		return json.NewEncoder(*w).Encode(resp)
+	}
+
+	resp := types.UploadResponse{
+		CID: cid,
+		FID: fid,
+	}
+
+	return json.NewEncoder(*w).Encode(resp)
 }
 
 func buildCid(address, sender, fid string) (string, error) {
