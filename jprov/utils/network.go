@@ -85,6 +85,7 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 		var str strings.Builder
 		str.WriteString(strconv.FormatInt(i/blockSize, 10))
 		str.WriteString(".jkl")
+
 		f, err := os.OpenFile(filepath.Join(path, str.String()), os.O_WRONLY|os.O_CREATE, 0o666)
 		if err != nil {
 			return fid, "", data, err
@@ -100,15 +101,13 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 		logger.Debug(loggerBuilder.String())
 
 		if err != nil && err != io.EOF {
+			_ = f.Close()
 			return fid, "", data, err
 		}
 		firstX = firstX[:read]
 		_, writeErr := f.Write(firstX)
 		if writeErr != nil {
-			return fid, "", data, err
-		}
-		err = f.Close()
-		if err != nil {
+			_ = f.Close()
 			return fid, "", data, err
 		}
 
@@ -119,11 +118,12 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 		hash := sha256.New()
 		_, err = io.WriteString(hash, hashBuilder.String())
 		if err != nil {
+			_ = f.Close()
 			return fid, "", data, err
 		}
 		hashName := hash.Sum(nil)
 		data[i/blockSize] = hashName
-
+		_ = f.Close()
 	}
 	if closer != nil {
 		err := closer.Close()
