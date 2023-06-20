@@ -14,66 +14,66 @@ import (
 )
 
 func TestWriteResponse(t *testing.T) {
-	cases := map[string]struct{
-		fid	string
-		cid string
+	cases := map[string]struct {
+		fid       string
+		cid       string
 		hasMsgErr bool
-		expErr bool
-	} {
+		expErr    bool
+	}{
 		"no_error_response": {
-			fid: "1",
-			cid: "1",
+			fid:       "1",
+			cid:       "1",
 			hasMsgErr: false,
-			expErr: false,
+			expErr:    false,
 		},
 	}
 
 	for name, c := range cases {
-		t.Run(name, func (t *testing.T){
+		t.Run(name, func(t *testing.T) {
 			rec := httptest.NewRecorder()
 
 			upload := types.Upload{}
-			
-			if c.hasMsgErr{
+
+			if c.hasMsgErr {
 				upload.Err = errors.New("example error")
 			}
 
 			err := server.WriteResponse(rec, upload, c.fid, c.cid)
 
-			resp := types.UploadResponse {
+			resp := types.UploadResponse{
 				CID: c.cid,
 				FID: c.fid,
 			}
-			
+
 			expResult, err := json.Marshal(resp)
 			if err != nil {
 				t.Error(err)
 			}
-			
+
 			assert.NotNil(t, rec.Body)
 			// converted to string for easier reading
-			assert.Equal(t, string(expResult)+"\n", rec.Body.String())	
+			assert.Equal(t, string(expResult)+"\n", rec.Body.String())
 		})
 	}
 }
 
 func TestBuildCid(t *testing.T) {
-	cases := map[string]struct{
+	cases := map[string]struct {
 		address string
-		sender string
-		fid string
-		expErr bool
+		sender  string
+		fid     string
+		expErr  bool
 	}{
 		"valid_cid": {
 			address: "example_address",
-			sender: "example_sender",
-			fid: "example_fid",
-			expErr: false,
+			sender:  "example_sender",
+			fid:     "example_fid",
+			expErr:  false,
 		},
 	}
 
 	for name, c := range cases {
-		t.Run(name, func(t *testing.T){
+		t.Run(name, func(t *testing.T) {
 			cid, err := server.BuildCid(c.address, c.sender, c.fid)
 
 			if c.expErr {
@@ -81,7 +81,7 @@ func TestBuildCid(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-			
+
 			footprint := c.sender + c.address + c.fid
 
 			h := sha256.New()

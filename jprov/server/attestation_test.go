@@ -5,8 +5,8 @@ import (
 
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
 	"github.com/JackalLabs/jackal-provider/jprov/server"
-	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/testutils"
+	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/stretchr/testify/require"
 )
 
