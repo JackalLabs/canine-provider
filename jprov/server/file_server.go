@@ -69,7 +69,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 		ctx.Logger.Error(msg.Err.Error())
 	}
 
-	if err = writeResponse(w, *msg, fid, cid); err != nil {
+	if err = writeResponse(*w, *msg, fid, cid); err != nil {
 		ctx.Logger.Error("Json Encode Error: %v", err)
 		return err
 	}
@@ -82,12 +82,12 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	return nil
 }
 
-func writeResponse(w *http.ResponseWriter, upload types.Upload, fid, cid string) error {
+func writeResponse(w http.ResponseWriter, upload types.Upload, fid, cid string) error {
 	if upload.Err != nil {
 		resp := types.ErrorResponse{
 			Error: upload.Err.Error(),
 		}
-		return json.NewEncoder(*w).Encode(resp)
+		return json.NewEncoder(w).Encode(resp)
 	}
 
 	resp := types.UploadResponse{
@@ -95,7 +95,7 @@ func writeResponse(w *http.ResponseWriter, upload types.Upload, fid, cid string)
 		FID: fid,
 	}
 
-	return json.NewEncoder(*w).Encode(resp)
+	return json.NewEncoder(w).Encode(resp)
 }
 
 func buildCid(address, sender, fid string) (string, error) {
