@@ -35,6 +35,32 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func GetMerkleTree(ctx client.Context, filename string) (*merkletree.MerkleTree, error) {
+	rawTree, err := os.ReadFile(utils.GetStoragePathForTree(ctx, filename))
+	if err != nil {
+		return &merkletree.MerkleTree{}, fmt.Errorf("unable to find merkle tree for: %s", filename)
+	}
+
+	return merkletree.ImportMerkleTree(rawTree, sha3.New512())	
+}
+
+func GenerateMerkleProof(tree merkletree.MerkleTree, index int, item []byte) (valid bool, proof *merkletree.Proof, err error) {
+	h := sha256.New()
+	_, err := io.WriteString(h, fmt.Sprintf("%d%x", index, item))
+	if err != nil {
+		return fmt.Errorf("GenerateMerkleProof: %s", err.Error())
+	}
+
+	proof, err := tree.GenerateProof(h.Sum(nil), 0)
+	if err != nil {
+		return fmt.Errorf("GenerateMerkleProof: %s", err.Error())
+	}
+
+	_, err = merkletree.VerifyMultiProofUsing(h.Sum(nil), false, proof)
+
+	if 
+}
+
 func CreateMerkleForProof(clientCtx client.Context, filename string, index int, ctx *utils.Context) (string, string, error) {
 	files := utils.GetStoragePathForPiece(clientCtx, filename, index)
 
@@ -44,26 +70,12 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 		return "", "", err
 	}
 
-	rawTree, err := os.ReadFile(utils.GetStoragePathForTree(clientCtx, filename))
-	if err != nil {
-		ctx.Logger.Error("Error can't find tree!")
-		return "", "", err
-	}
-
-	tree, err := merkletree.ImportMerkleTree(rawTree, sha3.New512()) // import the tree instead of creating the tree on the fly
-	if err != nil {
-		ctx.Logger.Error("Error can't import tree!")
-		return "", "", err
-	}
-
-	h := sha256.New()
-	_, err = io.WriteString(h, fmt.Sprintf("%d%x", index, item))
+	mTree, err := GetMerkleTree(clientCtx, filename)
 	if err != nil {
 		return "", "", err
 	}
-	ditem := h.Sum(nil)
 
-	proof, err := tree.GenerateProof(ditem, 0)
+	proof, err := GenerateMerkleProof(*mTree, index, item)
 	if err != nil {
 		return "", "", err
 	}
