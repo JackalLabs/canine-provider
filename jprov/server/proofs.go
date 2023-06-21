@@ -133,6 +133,10 @@ func requestAttestation(clientCtx client.Context, cid string, hashList string, i
 	var txMsgData sdk.TxMsgData
 
 	err = clientCtx.Codec.Unmarshal(data, &txMsgData)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
 
 	for _, data := range txMsgData.Data {
 		if data.GetMsgType() == "/canine_chain.storage.MsgRequestAttestationForm" {
@@ -145,7 +149,6 @@ func requestAttestation(clientCtx client.Context, cid string, hashList string, i
 				break
 			}
 		}
-
 	}
 
 	_ = clientCtx.PrintProto(&res)

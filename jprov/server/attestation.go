@@ -19,7 +19,6 @@ import (
 )
 
 func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, q *queue.UploadQueue) {
-
 	clientCtx, qerr := client.GetClientTxContext(cmd)
 	if qerr != nil {
 		fmt.Println(qerr)
