@@ -19,6 +19,7 @@ import (
 )
 
 func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, q *queue.UploadQueue) {
+
 	clientCtx, qerr := client.GetClientTxContext(cmd)
 	if qerr != nil {
 		fmt.Println(qerr)
@@ -29,6 +30,7 @@ func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, q *queu
 
 	err := json.NewDecoder(r.Body).Decode(&attest)
 	if err != nil {
+		fmt.Println("Attest request was malformed.")
 		http.Error(*w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -38,6 +40,8 @@ func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, q *queu
 	dealReq := &storageTypes.QueryActiveDealRequest{
 		Cid: attest.Cid,
 	}
+
+	fmt.Printf("Attesting for: %s\n", attest.Cid)
 
 	deal, err := queryClient.ActiveDeals(context.Background(), dealReq)
 	if err != nil {
@@ -89,7 +93,7 @@ func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, q *queu
 	wg.Wait()
 
 	if u.Err != nil {
-		http.Error(*w, err.Error(), http.StatusBadRequest)
+		http.Error(*w, u.Err.Error(), http.StatusBadRequest)
 		return
 	}
 
