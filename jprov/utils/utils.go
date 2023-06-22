@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client"
 )
@@ -23,6 +24,17 @@ func MakeDowntimeKey(cid string) []byte {
 func GetStoragePath(ctx client.Context, fid string) string {
 	configPath := filepath.Join(ctx.HomeDir, "storage")
 	configFilePath := filepath.Join(configPath, fid)
+
+	return configFilePath
+}
+
+func GetStoragePathV2(ctx client.Context, fid string) string {
+	builder := strings.Builder{}
+	builder.WriteString(fid)
+	builder.WriteString(".jkl")
+
+	configPath := filepath.Join(ctx.HomeDir, "storage")
+	configFilePath := filepath.Join(configPath, builder.String())
 
 	return configFilePath
 }

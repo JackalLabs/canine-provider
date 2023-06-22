@@ -46,3 +46,9 @@ type Upload struct {
 	Err      error           `json:"error"`
 	Response *sdk.TxResponse `json:"response"`
 }
+
+type AttestRequest struct {
+	Cid      string `json:"cid"`
+	HashList string `json:"hashlist"`
+	Item     string `json:"item"`
+}

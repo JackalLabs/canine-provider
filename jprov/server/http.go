@@ -142,6 +142,10 @@ func PostRoutes(cmd *cobra.Command, router *httprouter.Router, db *leveldb.DB, q
 
 	router.POST("/upload", upfil)
 	router.POST("/u", upfil)
+
+	router.POST("/attest", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		attest(&w, r, cmd, q)
+	})
 }
 
 func PProfRoutes(router *httprouter.Router) {
