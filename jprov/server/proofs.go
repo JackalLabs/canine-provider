@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -46,19 +47,21 @@ func GetMerkleTree(ctx client.Context, filename string) (*merkletree.MerkleTree,
 
 func GenerateMerkleProof(tree merkletree.MerkleTree, index int, item []byte) (valid bool, proof *merkletree.Proof, err error) {
 	h := sha256.New()
-	_, err := io.WriteString(h, fmt.Sprintf("%d%x", index, item))
+	_, err = io.WriteString(h, fmt.Sprintf("%d%x", index, item))
 	if err != nil {
-		return fmt.Errorf("GenerateMerkleProof: %s", err.Error())
+		err = fmt.Errorf("GenerateMerkleProof: %s", err.Error())
+		return
 	}
 
-	proof, err := tree.GenerateProof(h.Sum(nil), 0)
+	proof, err = tree.GenerateProof(h.Sum(nil), 0)
 	if err != nil {
-		return fmt.Errorf("GenerateMerkleProof: %s", err.Error())
+		err = fmt.Errorf("GenerateMerkleProof: %s", err.Error())
+		return
 	}
 
-	_, err = merkletree.VerifyMultiProofUsing(h.Sum(nil), false, proof)
+	valid, err = merkletree.VerifyProofUsing(h.Sum(nil), false, proof, [][]byte{tree.Root()}, sha3.New512())
 
-	if 
+	return
 }
 
 func CreateMerkleForProof(clientCtx client.Context, filename string, index int, ctx *utils.Context) (string, string, error) {
@@ -75,8 +78,9 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 		return "", "", err
 	}
 
-	proof, err := GenerateMerkleProof(*mTree, index, item)
+	verified, proof, err := GenerateMerkleProof(*mTree, index, item)
 	if err != nil {
+		ctx.Logger.Error(err.Error())
 		return "", "", err
 	}
 
@@ -85,14 +89,8 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 		return "", "", err
 	}
 
-	verified, err := merkletree.VerifyProofUsing(ditem, false, proof, [][]byte{tree.Root()}, sha3.New512())
-	if err != nil {
-		ctx.Logger.Error(err.Error())
-		return "", "", err
-	}
-
 	if !verified {
-		ctx.Logger.Info("Cannot verify")
+		ctx.Logger.Info("unable to generate valid proof")
 	}
 
 	return fmt.Sprintf("%x", item), string(jproof), nil
