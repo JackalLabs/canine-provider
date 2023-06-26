@@ -10,7 +10,7 @@ import (
 
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/cosmos/cosmos-sdk/client"
-	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
+	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 )
 
 const ErrNotYours = "not your deal"

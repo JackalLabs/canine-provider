@@ -9,7 +9,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
-	storagetypes "github.com/jackalLabs/canine-chain/x/storage/types"
+	storagetypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 
 	"github.com/JackalLabs/jackal-provider/jprov/api/types"
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"

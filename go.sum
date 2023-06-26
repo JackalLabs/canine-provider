@@ -85,8 +85,6 @@ github.com/DataDog/zstd v1.5.2/go.mod h1:g4AWEaM3yOg3HYfnJ3YIawPnVdXJh9QME85blwS
 github.com/HdrHistogram/hdrhistogram-go v1.1.2/go.mod h1:yDgFjdqOqDEKOvasDdhWNXYg9BVp4O+o5f6V/ehm6Oo=
 github.com/JackalLabs/blanket v0.0.0 h1:bMuUe12mRO8rekDIo7T37xPLOvLsEOMkzgK5Uqul+FU=
 github.com/JackalLabs/blanket v0.0.0/go.mod h1:jl68zTyytfS6oyTbqwcMKyq9Jvvv0IE0eHFMFMcgsD4=
-github.com/JackalLabs/canine-chain v1.2.3-0.20230621063218-8fde7f21c65b h1:tWBt15Gnd1WkHgr+k4Skoc06j/O9AYii7qKWHszjoeI=
-github.com/JackalLabs/canine-chain v1.2.3-0.20230621063218-8fde7f21c65b/go.mod h1:OVSoZkHP0Z4IoJZmOx06Biqy+45FFLkDkuK4tyuWH1w=
 github.com/JackalLabs/cosmos-sdk-new v0.45.17-0.20230525190516-b9142076b70c h1:Ju0uBSyOi03+kCC7gMth8s9m4/QSfd+1IaBe2o6l5ZM=
 github.com/JackalLabs/cosmos-sdk-new v0.45.17-0.20230525190516-b9142076b70c/go.mod h1:bScuNwWAP0TZJpUf+SHXRU3xGoUPp+X9nAzfeIXts40=
 github.com/Joker/hpp v1.0.0/go.mod h1:8x5n+M1Hp5hC0g8okX3sR3vFQwynaX/UgSOM9MeBKzY=
@@ -686,6 +684,8 @@ github.com/iris-contrib/jade v1.1.4/go.mod h1:EDqR+ur9piDl6DUgs6qRrlfzmlx/D5Uybo
 github.com/iris-contrib/pongo2 v0.0.1/go.mod h1:Ssh+00+3GAZqSQb30AvBRNxBx7rf0GqwkjqxNd0u65g=
 github.com/iris-contrib/schema v0.0.1/go.mod h1:urYA3uvUNG1TIIjOSCzHr9/LmbQo8LrOcOqfqxa4hXw=
 github.com/iris-contrib/schema v0.0.6/go.mod h1:iYszG0IOsuIsfzjymw1kMzTL8YQcCWlm65f3wX8J5iA=
+github.com/jackalLabs/canine-chain/v3 v3.0.0-alpha.1 h1:JglWXONdQxQ8kVVWzqj8iioU0Z5pbIeu5BHNDzcfRPs=
+github.com/jackalLabs/canine-chain/v3 v3.0.0-alpha.1/go.mod h1:JXs2+971ONESI5L02wB8+wqm0NXEURy23XnvulD1Eh4=
 github.com/jackpal/go-nat-pmp v1.0.2/go.mod h1:QPH045xvCAeXUZOxsnwmrtiCoxIr9eob+4orBN1SBKc=
 github.com/jedisct1/go-minisign v0.0.0-20190909160543-45766022959e/go.mod h1:G1CVv03EnqU1wYL2dFwXxW2An0az9JTl/ZsqXQeBlkU=
 github.com/jessevdk/go-flags v0.0.0-20141203071132-1679536dcc89/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=

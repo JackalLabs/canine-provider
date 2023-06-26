@@ -15,7 +15,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/bech32"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/go-bip39"
-	stortypes "github.com/jackalLabs/canine-chain/x/storage/types"
+	stortypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/spf13/cobra"
 )
 

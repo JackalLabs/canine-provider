@@ -28,7 +28,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 
-	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
+	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 
 	merkletree "github.com/wealdtech/go-merkletree"
 
