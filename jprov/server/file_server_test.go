@@ -39,6 +39,7 @@ func TestWriteResponse(t *testing.T) {
 			}
 
 			err := server.WriteResponse(rec, upload, c.fid, c.cid)
+			assert.NoError(t, err)
 
 			resp := types.UploadResponse{
 				CID: c.cid,

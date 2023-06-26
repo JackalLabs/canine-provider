@@ -41,7 +41,7 @@ func GetMerkleTree(ctx client.Context, filename string) (*merkletree.MerkleTree,
 		return &merkletree.MerkleTree{}, fmt.Errorf("unable to find merkle tree for: %s", filename)
 	}
 
-	return merkletree.ImportMerkleTree(rawTree, sha3.New512())	
+	return merkletree.ImportMerkleTree(rawTree, sha3.New512())
 }
 
 func GenerateMerkleProof(tree merkletree.MerkleTree, index int, item []byte) (valid bool, proof *merkletree.Proof, err error) {
@@ -57,7 +57,7 @@ func GenerateMerkleProof(tree merkletree.MerkleTree, index int, item []byte) (va
 	}
 
 	valid, err = merkletree.VerifyProofUsing(h.Sum(nil), false, proof, [][]byte{tree.Root()}, sha3.New512())
-	return 
+	return
 }
 
 func CreateMerkleForProof(clientCtx client.Context, filename string, index int, ctx *utils.Context) (string, string, error) {
@@ -223,7 +223,7 @@ func requestAttestation(clientCtx client.Context, cid string, hashList string, i
 
 	pwg.Wait()
 
-	if count < 3 {//NOTE: this value can change in chain params
+	if count < 3 { // NOTE: this value can change in chain params
 		fmt.Println("failed to get enough attestations...")
 		return fmt.Errorf("failed to get attestations")
 	}

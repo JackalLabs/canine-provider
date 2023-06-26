@@ -99,6 +99,10 @@ func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, q *queu
 	}
 
 	upload, err := addMsgAttest(address, attest.Cid, q)
+	if err != nil {
+		http.Error(*w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	upload.Callback.Wait()
 
