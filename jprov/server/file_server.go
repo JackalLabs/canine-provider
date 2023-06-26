@@ -228,6 +228,8 @@ func StartFileServer(cmd *cobra.Command) {
 	if !strs {
 		manager.Init(cmd, threads, db)
 	}
+	// Start the reporting system
+	reporter := InitReporter(cmd)
 
 	go postProofs(cmd, db, &q, ctx)
 	go NatCycle(cmd.Context())
@@ -237,8 +239,6 @@ func StartFileServer(cmd *cobra.Command) {
 		go manager.Start(cmd)
 	}
 
-	// Start the reporting system
-	reporter := InitReporter(cmd)
 	go func() {
 		for {
 			if rand.Int63n(2) == 0 {

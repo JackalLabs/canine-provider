@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"math/rand"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
@@ -15,6 +16,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
+	"github.com/cosmos/cosmos-sdk/x/feegrant"
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -52,6 +54,52 @@ func InitReporter(cmd *cobra.Command) *Reporter {
 		ClientCtx: clientCtx,
 		LastCount: 0,
 		Context:   cmd.Context(),
+	}
+
+	allowance := feegrant.BasicAllowance{
+		SpendLimit: nil,
+		Expiration: nil,
+	}
+
+	pkeyStruct, err := crypto.ReadKey(r.ClientCtx)
+	if err != nil {
+		return nil
+	}
+
+	key, err := createPrivKey(pkeyStruct.Key)
+	if err != nil {
+		return nil
+	}
+
+	address, err := bech32.ConvertAndEncode(storageTypes.AddressPrefix, key.PubKey().Address().Bytes())
+	if err != nil {
+		return nil
+	}
+
+	myAddress, err := sdk.AccAddressFromBech32(pkeyStruct.Address)
+	if err != nil {
+		return nil
+	}
+	reportAddress, err := sdk.AccAddressFromBech32(address)
+	if err != nil {
+		return nil
+	}
+
+	grantMsg, nerr := feegrant.NewMsgGrantAllowance(&allowance, myAddress, reportAddress)
+	if nerr != nil {
+		fmt.Println(nerr)
+		return nil
+	}
+
+	grantRes, nerr := utils.SendTx(clientCtx, cmd.Flags(), "", grantMsg)
+	if nerr != nil {
+		fmt.Println(nerr)
+		return nil
+	}
+
+	if grantRes.Code != 0 {
+		fmt.Println(grantRes.RawLog)
+		return nil
 	}
 
 	return &r
