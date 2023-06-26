@@ -35,6 +35,31 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func GetMerkleTree(ctx client.Context, filename string) (*merkletree.MerkleTree, error) {
+	rawTree, err := os.ReadFile(utils.GetStoragePathForTree(ctx, filename))
+	if err != nil {
+		return &merkletree.MerkleTree{}, fmt.Errorf("unable to find merkle tree for: %s", filename)
+	}
+
+	return merkletree.ImportMerkleTree(rawTree, sha3.New512())
+}
+
+func GenerateMerkleProof(tree merkletree.MerkleTree, index int, item []byte) (valid bool, proof *merkletree.Proof, err error) {
+	h := sha256.New()
+	_, err = io.WriteString(h, fmt.Sprintf("%d%x", index, item))
+	if err != nil {
+		return
+	}
+
+	proof, err = tree.GenerateProof(h.Sum(nil), 0)
+	if err != nil {
+		return
+	}
+
+	valid, err = merkletree.VerifyProofUsing(h.Sum(nil), false, proof, [][]byte{tree.Root()}, sha3.New512())
+	return
+}
+
 func CreateMerkleForProof(clientCtx client.Context, filename string, index int, ctx *utils.Context) (string, string, error) {
 	files := utils.GetStoragePathForPiece(clientCtx, filename, index)
 
@@ -44,27 +69,14 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 		return "", "", err
 	}
 
-	rawTree, err := os.ReadFile(utils.GetStoragePathForTree(clientCtx, filename))
-	if err != nil {
-		ctx.Logger.Error("Error can't find tree!")
-		return "", "", err
-	}
-
-	tree, err := merkletree.ImportMerkleTree(rawTree, sha3.New512()) // import the tree instead of creating the tree on the fly
-	if err != nil {
-		ctx.Logger.Error("Error can't import tree!")
-		return "", "", err
-	}
-
-	h := sha256.New()
-	_, err = io.WriteString(h, fmt.Sprintf("%d%x", index, item))
+	mTree, err := GetMerkleTree(clientCtx, filename)
 	if err != nil {
 		return "", "", err
 	}
-	ditem := h.Sum(nil)
 
-	proof, err := tree.GenerateProof(ditem, 0)
+	verified, proof, err := GenerateMerkleProof(*mTree, index, item)
 	if err != nil {
+		ctx.Logger.Error(err.Error())
 		return "", "", err
 	}
 
@@ -73,14 +85,8 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 		return "", "", err
 	}
 
-	verified, err := merkletree.VerifyProofUsing(ditem, false, proof, [][]byte{tree.Root()}, sha3.New512())
-	if err != nil {
-		ctx.Logger.Error(err.Error())
-		return "", "", err
-	}
-
 	if !verified {
-		ctx.Logger.Info("Cannot verify")
+		ctx.Logger.Info("unable to generate valid proof")
 	}
 
 	return fmt.Sprintf("%x", item), string(jproof), nil
@@ -217,7 +223,7 @@ func requestAttestation(clientCtx client.Context, cid string, hashList string, i
 
 	pwg.Wait()
 
-	if count < 3 {
+	if count < 3 { // NOTE: this value can change in chain params
 		fmt.Println("failed to get enough attestations...")
 		return fmt.Errorf("failed to get attestations")
 	}
