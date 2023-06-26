@@ -46,19 +46,18 @@ func GetMerkleTree(ctx client.Context, filename string) (*merkletree.MerkleTree,
 
 func GenerateMerkleProof(tree merkletree.MerkleTree, index int, item []byte) (valid bool, proof *merkletree.Proof, err error) {
 	h := sha256.New()
-	_, err := io.WriteString(h, fmt.Sprintf("%d%x", index, item))
+	_, err = io.WriteString(h, fmt.Sprintf("%d%x", index, item))
 	if err != nil {
-		return fmt.Errorf("GenerateMerkleProof: %s", err.Error())
+		return
 	}
 
-	proof, err := tree.GenerateProof(h.Sum(nil), 0)
+	proof, err = tree.GenerateProof(h.Sum(nil), 0)
 	if err != nil {
-		return fmt.Errorf("GenerateMerkleProof: %s", err.Error())
+		return
 	}
 
-	_, err = merkletree.VerifyMultiProofUsing(h.Sum(nil), false, proof)
-
-	if 
+	valid, err = merkletree.VerifyProofUsing(h.Sum(nil), false, proof, [][]byte{tree.Root()}, sha3.New512())
+	return 
 }
 
 func CreateMerkleForProof(clientCtx client.Context, filename string, index int, ctx *utils.Context) (string, string, error) {
@@ -75,19 +74,13 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 		return "", "", err
 	}
 
-	proof, err := GenerateMerkleProof(*mTree, index, item)
+	verified, proof, err := GenerateMerkleProof(*mTree, index, item)
 	if err != nil {
 		return "", "", err
 	}
 
 	jproof, err := json.Marshal(*proof)
 	if err != nil {
-		return "", "", err
-	}
-
-	verified, err := merkletree.VerifyProofUsing(ditem, false, proof, [][]byte{tree.Root()}, sha3.New512())
-	if err != nil {
-		ctx.Logger.Error(err.Error())
 		return "", "", err
 	}
 
@@ -229,7 +222,7 @@ func requestAttestation(clientCtx client.Context, cid string, hashList string, i
 
 	pwg.Wait()
 
-	if count < 3 {
+	if count < 3 {//NOTE: this value can change in chain params
 		fmt.Println("failed to get enough attestations...")
 		return fmt.Errorf("failed to get attestations")
 	}
