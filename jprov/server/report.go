@@ -111,19 +111,24 @@ func InitReporter(cmd *cobra.Command) *Reporter {
 }
 
 func (r Reporter) Report(cmd *cobra.Command) error {
+	fmt.Println("Attempting to report bad actors...")
+	defer fmt.Println("Done report!")
 
 	pkeyStruct, err := crypto.ReadKey(r.ClientCtx)
 	if err != nil {
+		fmt.Println(err)
 		return nil
 	}
 
 	key, err := createPrivKey(pkeyStruct.Key)
 	if err != nil {
+		fmt.Println(err)
 		return nil
 	}
 
 	address, err := bech32.ConvertAndEncode(storageTypes.AddressPrefix, key.PubKey().Address().Bytes())
 	if err != nil {
+		fmt.Println(err)
 		return nil
 	}
 
@@ -147,6 +152,7 @@ func (r Reporter) Report(cmd *cobra.Command) error {
 
 	res, err := qClient.ActiveDealsAll(r.Context, &qADR)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
@@ -160,6 +166,7 @@ func (r Reporter) Report(cmd *cobra.Command) error {
 
 		res, err := qClient.Providers(r.Context, &req)
 		if err != nil {
+			fmt.Println(err)
 			continue
 		}
 
@@ -172,11 +179,13 @@ func (r Reporter) Report(cmd *cobra.Command) error {
 				deal.Cid,
 			)
 			if err := msg.ValidateBasic(); err != nil {
+				fmt.Println(err)
 				continue
 			}
 
 			res, err := SendTx(r.ClientCtx, cmd.Flags(), msg)
 			if err != nil {
+				fmt.Println(err)
 				continue
 			}
 
@@ -195,7 +204,8 @@ func (r Reporter) Report(cmd *cobra.Command) error {
 }
 
 func (r Reporter) AttestReport(cmd *cobra.Command) error {
-
+	fmt.Println("Attempting to attest to reports...")
+	defer fmt.Println("Done attesting to reports!")
 	pkeyStruct, err := crypto.ReadKey(r.ClientCtx)
 	if err != nil {
 		return nil
@@ -324,7 +334,17 @@ func prepareFactory(clientCtx client.Context, address string, txf txns.Factory) 
 func SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, msgs ...sdk.Msg) (*sdk.TxResponse, error) {
 	txf := txns.NewFactoryCLI(clientCtx, flagSet)
 
-	address, err := crypto.GetAddress(clientCtx)
+	pkeyStruct, err := crypto.ReadKey(clientCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	key, err := createPrivKey(pkeyStruct.Key)
+	if err != nil {
+		return nil, err
+	}
+
+	address, err := bech32.ConvertAndEncode(storageTypes.AddressPrefix, key.PubKey().Address().Bytes())
 	if err != nil {
 		return nil, err
 	}
