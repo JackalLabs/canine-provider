@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"crypto/sha512"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,7 +21,6 @@ import (
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
-
 	"github.com/wealdtech/go-merkletree/sha3"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -49,19 +48,16 @@ func GenerateMerkleProof(tree merkletree.MerkleTree, index int, item []byte) (va
 	h := sha256.New()
 	_, err = io.WriteString(h, fmt.Sprintf("%d%x", index, item))
 	if err != nil {
-		err = fmt.Errorf("GenerateMerkleProof: %s", err.Error())
 		return
 	}
 
 	proof, err = tree.GenerateProof(h.Sum(nil), 0)
 	if err != nil {
-		err = fmt.Errorf("GenerateMerkleProof: %s", err.Error())
 		return
 	}
 
 	valid, err = merkletree.VerifyProofUsing(h.Sum(nil), false, proof, [][]byte{tree.Root()}, sha3.New512())
-
-	return
+	return 
 }
 
 func CreateMerkleForProof(clientCtx client.Context, filename string, index int, ctx *utils.Context) (string, string, error) {
@@ -124,6 +120,7 @@ func requestAttestation(clientCtx client.Context, cid string, hashList string, i
 	wg.Wait()
 
 	if u.Err != nil {
+		fmt.Println(u.Err)
 		return u.Err
 	}
 
@@ -131,13 +128,41 @@ func requestAttestation(clientCtx client.Context, cid string, hashList string, i
 		return fmt.Errorf(u.Response.RawLog)
 	}
 
-	txVal := u.Response.Tx.Value
-
 	var res storageTypes.MsgRequestAttestationFormResponse
 
-	err = res.Unmarshal(txVal)
+	data, err := hex.DecodeString(u.Response.Data)
 	if err != nil {
+		fmt.Println(err)
 		return err
+	}
+
+	var txMsgData sdk.TxMsgData
+
+	err = clientCtx.Codec.Unmarshal(data, &txMsgData)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	for _, data := range txMsgData.Data {
+		if data.GetMsgType() == "/canine_chain.storage.MsgRequestAttestationForm" {
+			err := res.Unmarshal(data.Data)
+			if err != nil {
+				fmt.Println(err)
+				return err
+			}
+			if res.Cid == cid {
+				break
+			}
+		}
+	}
+
+	_ = clientCtx.PrintProto(&res)
+
+	if !res.Success {
+		fmt.Println("request form failed")
+		fmt.Println(res.Error)
+		return fmt.Errorf("failed to get attestations")
 	}
 
 	providerList := res.Providers
@@ -198,7 +223,8 @@ func requestAttestation(clientCtx client.Context, cid string, hashList string, i
 
 	pwg.Wait()
 
-	if count < 3 {
+	if count < 3 {//NOTE: this value can change in chain params
+		fmt.Println("failed to get enough attestations...")
 		return fmt.Errorf("failed to get attestations")
 	}
 
@@ -228,8 +254,11 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 		return err
 	}
 
+	fmt.Printf("Requesting attestion for: %s\n", cid)
+
 	err = requestAttestation(clientCtx, cid, hashlist, item, q) // request attestation, if we get it, skip all the posting
 	if err == nil {
+		fmt.Println("successfully got attestation.")
 		return nil
 	}
 
@@ -300,10 +329,10 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 	for {
 		interval := intervalFromCMD
 
-		if interval < 1800 { // If the provider picked an interval that's less than 30 minutes, we generate a random interval for them anyways
+		if interval == 0 { // If the provider picked an interval that's less than 30 minutes, we generate a random interval for them anyways
 
 			r := rand.New(rand.NewSource(time.Now().UnixNano()))
-			interval = uint16(r.Intn(1801) + 60) // Generate interval between 1-30 minutes
+			interval = uint16(r.Intn(3601) + 60) // Generate interval between 1-60 minutes
 
 		}
 		ctx.Logger.Debug(fmt.Sprintf("The interval between proofs is now %d", interval))
@@ -441,7 +470,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 			sleep, err := cmd.Flags().GetInt64(types.FlagSleep)
 			if err != nil {
 				ctx.Logger.Error(err.Error())
-				return
+				continue
 			}
 			time.Sleep(time.Duration(sleep) * time.Millisecond)
 
