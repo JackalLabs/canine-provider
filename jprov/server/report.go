@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/rand"
+	"time"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
@@ -50,10 +51,14 @@ type Reporter struct {
 
 func InitReporter(cmd *cobra.Command) *Reporter {
 	clientCtx := client.GetClientContextFromCmd(cmd)
+
+	randy := rand.New(rand.NewSource(time.Now().UnixNano()))
+
 	r := Reporter{
 		ClientCtx: clientCtx,
 		LastCount: 0,
 		Context:   cmd.Context(),
+		Rand:      randy,
 	}
 
 	allowance := feegrant.BasicAllowance{
