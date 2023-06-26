@@ -26,10 +26,26 @@ import (
 func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string, db *leveldb.DB, logger log.Logger) (string, error) {
 	logger.Info(fmt.Sprintf("Getting %s from %s", fid, url))
 
-	resp, err := http.Get(fmt.Sprintf("%s/download/%s", url, fid))
+	cli := http.Client{}
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/download/%s", url, fid), nil)
 	if err != nil {
 		return "", err
 	}
+
+	req.Header = http.Header{
+		"User-Agent":                {"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.62 Safari/537.36"},
+		"Upgrade-Insecure-Requests": {"1"},
+		"Accept":                    {"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8"},
+		"Accept-Encoding":           {"gzip, deflate, br"},
+		"Accept-Language":           {"en-US,en;q=0.9"},
+		"Connection":                {"keep-alive"},
+	}
+
+	resp, err := cli.Do(req)
+	if err != nil {
+		return "", err
+	}
+
 	if resp.StatusCode != 200 {
 		return "", fmt.Errorf("failed to find file on network")
 	}
