@@ -5,9 +5,12 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
+	"github.com/JackalLabs/jackal-provider/jprov/queue"
+	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/cosmos/cosmos-sdk/client"
 	txns "github.com/cosmos/cosmos-sdk/client/tx"
@@ -50,6 +53,7 @@ type Reporter struct {
 }
 
 func InitReporter(cmd *cobra.Command) *Reporter {
+	fmt.Println("Initializing report system...")
 	clientCtx := client.GetClientContextFromCmd(cmd)
 
 	randy := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -68,44 +72,46 @@ func InitReporter(cmd *cobra.Command) *Reporter {
 
 	pkeyStruct, err := crypto.ReadKey(r.ClientCtx)
 	if err != nil {
-		return nil
+		return &r
 	}
 
 	key, err := createPrivKey(pkeyStruct.Key)
 	if err != nil {
-		return nil
+		return &r
 	}
 
 	address, err := bech32.ConvertAndEncode(storageTypes.AddressPrefix, key.PubKey().Address().Bytes())
 	if err != nil {
-		return nil
+		return &r
 	}
+	fmt.Printf("Creating a fee allowance for %s from %s", address, pkeyStruct.Address)
 
 	myAddress, err := sdk.AccAddressFromBech32(pkeyStruct.Address)
 	if err != nil {
-		return nil
+		return &r
 	}
 	reportAddress, err := sdk.AccAddressFromBech32(address)
 	if err != nil {
-		return nil
+		return &r
 	}
 
-	grantMsg, nerr := feegrant.NewMsgGrantAllowance(&allowance, myAddress, reportAddress)
-	if nerr != nil {
-		fmt.Println(nerr)
-		return nil
+	grantMsg, err := feegrant.NewMsgGrantAllowance(&allowance, myAddress, reportAddress)
+	if err != nil {
+		fmt.Println(err)
+		return &r
 	}
 
-	grantRes, nerr := utils.SendTx(clientCtx, cmd.Flags(), "", grantMsg)
-	if nerr != nil {
-		fmt.Println(nerr)
-		return nil
+	grantRes, err := utils.SendTx(clientCtx, cmd.Flags(), "", grantMsg)
+	if err != nil {
+		return &r
 	}
 
 	if grantRes.Code != 0 {
 		fmt.Println(grantRes.RawLog)
-		return nil
+		return &r
 	}
+
+	fmt.Println("Done!")
 
 	return &r
 }
@@ -134,13 +140,8 @@ func (r Reporter) Report(cmd *cobra.Command) error {
 
 	qClient := storageTypes.NewQueryClient(r.ClientCtx)
 
-	var val uint64
-	if r.LastCount > 300 {
-		val = uint64(r.Rand.Int63n(r.LastCount))
-	}
-
 	page := &query.PageRequest{
-		Offset:     val,
+		Offset:     0,
 		Limit:      300,
 		Reverse:    r.Rand.Intn(2) == 0,
 		CountTotal: true,
@@ -161,6 +162,10 @@ func (r Reporter) Report(cmd *cobra.Command) error {
 	for _, deal := range deals {
 
 		prov := deal.Provider
+
+		if prov == pkeyStruct.Address {
+			continue
+		}
 
 		req := storageTypes.QueryProviderRequest{Address: prov}
 
@@ -190,34 +195,32 @@ func (r Reporter) Report(cmd *cobra.Command) error {
 			}
 
 			if res == nil {
+				fmt.Println("failed to sentTx")
 				continue
 			}
+
+			fmt.Println(res.RawLog)
 
 			if res.Code != 0 {
+				fmt.Println("failed tx")
 				continue
 			}
-		}
 
+			fmt.Printf("Successfully reported %s\n", deal.Cid)
+
+			return nil
+		}
 	}
 
 	return nil
 }
 
-func (r Reporter) AttestReport(cmd *cobra.Command) error {
+func (r Reporter) AttestReport(queue *queue.UploadQueue) error {
 	fmt.Println("Attempting to attest to reports...")
-	defer fmt.Println("Done attesting to reports!")
+
 	pkeyStruct, err := crypto.ReadKey(r.ClientCtx)
 	if err != nil {
-		return nil
-	}
-
-	key, err := createPrivKey(pkeyStruct.Key)
-	if err != nil {
-		return nil
-	}
-
-	address, err := bech32.ConvertAndEncode(storageTypes.AddressPrefix, key.PubKey().Address().Bytes())
-	if err != nil {
+		fmt.Println(err)
 		return nil
 	}
 
@@ -236,68 +239,105 @@ func (r Reporter) AttestReport(cmd *cobra.Command) error {
 
 	res, err := qClient.ReportsAll(r.Context, &qARR)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
 	reports := res.Reports
 
-	pKey, err := crypto.ReadKey(r.ClientCtx)
-	if err != nil {
-		return err
+	if len(reports) == 0 {
+		fmt.Println("no reports to attest to.")
 	}
 
 	for _, report := range reports {
-
 		attestations := report.Attestations
 		for _, attest := range attestations {
-			if attest.Provider == pKey.Address {
+			if attest.Provider == pkeyStruct.Address {
+				fmt.Printf("attempting to attest to %s...\n", report.Cid)
+
+				if attest.Complete {
+					fmt.Println("Already completed")
+					continue
+				}
+
 				qADR := storageTypes.QueryActiveDealRequest{
 					Cid: report.Cid,
 				}
 				adRes, err := qClient.ActiveDeals(r.Context, &qADR)
 				if err != nil {
+					fmt.Println(err)
 					return err
 				}
 
 				ad := adRes.ActiveDeals
 
-				req := storageTypes.QueryProviderRequest{Address: attest.Provider}
+				if ad.Provider == pkeyStruct.Address {
+					fmt.Println("skipping reporting myself 😅")
+					continue
+				}
+
+				req := storageTypes.QueryProviderRequest{Address: ad.Provider}
 
 				providerRes, err := qClient.Providers(r.Context, &req)
 				if err != nil {
+					fmt.Println(err)
 					continue
 				}
 
 				ipAddress := providerRes.GetProviders().Ip
 
+				fmt.Printf("trying to downloading file from %s...\n", ipAddress)
 				_, err = utils.TestDownloadFileFromURL(ipAddress, ad.Fid)
-				if err != nil {
-					msg := storageTypes.NewMsgReport( // Creating Report
-						address,
-						report.Cid,
-					)
-					if err := msg.ValidateBasic(); err != nil {
-						continue
-					}
-
-					res, err := SendTx(r.ClientCtx, cmd.Flags(), msg)
-					if err != nil {
-						continue
-					}
-
-					if res == nil {
-						continue
-					}
-
-					if res.Code != 0 {
-						continue
-					}
+				if err == nil {
+					fmt.Println("successfully downloaded file.")
+					break
 				}
+				fmt.Println("failed to download file.")
+
+				msg := storageTypes.NewMsgReport( // Creating Report
+					pkeyStruct.Address,
+					report.Cid,
+				)
+				if err := msg.ValidateBasic(); err != nil {
+					fmt.Println(err)
+					continue
+				}
+
+				var wg sync.WaitGroup
+				wg.Add(1)
+
+				upload := types.Upload{
+					Message:  msg,
+					Callback: &wg,
+					Err:      nil,
+					Response: nil,
+				}
+				queue.Append(&upload)
+				wg.Wait()
+
+				if upload.Err != nil {
+					fmt.Println(upload.Err)
+					continue
+				}
+
+				if upload.Response == nil {
+					fmt.Println("empty response from report attestation, something is wrong")
+					continue
+				}
+
+				fmt.Println(upload.Response.RawLog)
+
+				if upload.Response.Code != 0 {
+					fmt.Println(err)
+					continue
+				}
+
+				break
 
 			}
 		}
-
 	}
+	fmt.Println("Done attesting to reports!")
 
 	return nil
 }
@@ -372,13 +412,13 @@ func SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, msgs ...sdk.Msg) (
 		return nil, err
 	}
 
-	adr, err := sdk.AccAddressFromBech32(address)
+	adr, err := sdk.AccAddressFromBech32(pkeyStruct.Address)
 	if err != nil {
 		return nil, err
 	}
 
 	tx.SetFeeGranter(adr)
-	err = Sign(txf, clientCtx, tx, true)
+	err = sign(txf, clientCtx, tx, true)
 	if err != nil {
 		return nil, err
 	}
@@ -397,7 +437,7 @@ func SendTx(clientCtx client.Context, flagSet *pflag.FlagSet, msgs ...sdk.Msg) (
 	return res, err
 }
 
-func Sign(txf txns.Factory, clientCtx client.Context, txBuilder client.TxBuilder, overwriteSig bool) error {
+func sign(txf txns.Factory, clientCtx client.Context, txBuilder client.TxBuilder, overwriteSig bool) error {
 	signMode := txf.SignMode()
 	if signMode == signing.SignMode_SIGN_MODE_UNSPECIFIED {
 		// use the SignModeHandler's default mode if unspecified

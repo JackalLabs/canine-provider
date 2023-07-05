@@ -239,15 +239,21 @@ func StartFileServer(cmd *cobra.Command) {
 		go manager.Start(cmd)
 	}
 
+	report, err := cmd.Flags().GetBool(types.FlagDoReport)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
 	go func() {
 		for {
-			if rand.Int63n(2) == 0 {
+			if rand.Int63n(2) == 0 && report {
 				err := reporter.Report(cmd)
 				if err != nil {
 					fmt.Println(err)
 				}
 			} else {
-				err := reporter.AttestReport(cmd)
+				err := reporter.AttestReport(&q)
 				if err != nil {
 					fmt.Println(err)
 				}

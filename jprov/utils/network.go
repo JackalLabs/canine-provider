@@ -88,11 +88,11 @@ func TestDownloadFileFromURL(url string, fid string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		return 0, fmt.Errorf("failed to find file on network")
 	}
-	defer resp.Body.Close()
 
 	buff := bytes.NewBuffer([]byte{})
 	size, err := io.Copy(buff, resp.Body)
