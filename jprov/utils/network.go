@@ -165,14 +165,13 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 	tree = nil // for GC
 
 	f, err := os.OpenFile(GetStoragePathForTree(clientCtx, fid), os.O_WRONLY|os.O_CREATE, 0o666)
+	defer f.Close()
+
 	if err != nil {
 		return fid, r, data, err
 	}
+
 	_, err = f.Write(exportedTree)
-	if err != nil {
-		return fid, r, data, err
-	}
-	err = f.Close()
 	if err != nil {
 		return fid, r, data, err
 	}
