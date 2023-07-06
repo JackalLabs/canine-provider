@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"errors"
 
 	"github.com/tendermint/tendermint/libs/log"
 	"github.com/wealdtech/go-merkletree"
@@ -67,13 +68,13 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 	return hashName, nil
 }
 
-func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, closer io.Closer, size int64, db *leveldb.DB, logger log.Logger) (string, string, [][]byte, error) {
+func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, closer io.Closer, size int64, db *leveldb.DB, logger log.Logger) (fid string, r string, data [][]byte, err error) {
 	blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
 	if err != nil {
 		return "", "", nil, err
 	}
 
-	data := make([][]byte, size/blockSize+1)
+	data = make([][]byte, size/blockSize+1)
 	clientCtx := client.GetClientContextFromCmd(cmd)
 
 	h := sha256.New()
@@ -82,7 +83,7 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 		return "", "", data, err
 	}
 	hashName := h.Sum(nil)
-	fid, err := MakeFid(hashName)
+	fid, err = MakeFid(hashName)
 	if err != nil {
 		return "", "", data, err
 	}
@@ -155,7 +156,7 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 		return fid, "", data, err
 	}
 
-	r := hex.EncodeToString(tree.Root())
+	r = hex.EncodeToString(tree.Root())
 
 	exportedTree, err := tree.Export()
 	if err != nil {
@@ -166,9 +167,7 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 
 	f, err := os.OpenFile(GetStoragePathForTree(clientCtx, fid), os.O_WRONLY|os.O_CREATE, 0o666)
 	defer func() {
-		if tmpErr := f.Close(); tmpErr != nil && err == nil {
-			err = tmpErr
-		}
+		err = errors.Join(err, f.Close())
 	}()
 
 	if err != nil {
