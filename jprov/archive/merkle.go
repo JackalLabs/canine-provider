@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 
 	"github.com/cosmos/cosmos-sdk/client"
+
+	"github.com/JackalLabs/jackal-provider/jprov/proof"
 )
 
 var _ ProofArchive = &MerkleProofArchive{}// Compile time check
@@ -18,9 +20,19 @@ func NewMerkleProofArchive (ctx client.Context) MerkleProofArchive {
 	return MerkleProofArchive{baseDir: ctx.HomeDir}
 }
 
-func (m *MerkleProofArchive) Save(id []byte, p proof) error {
+func (m *MerkleProofArchive) Save(id []byte, p proof.Proof) error {
 	f, err := os.OpenFile(m.GetProofFilePath(id), os.O_WRONLY|os.O_CREATE, 0o666)
 	defer f.Close()
+	if err != nil {
+		return err
+	}
+
+	b, err := p.Marshal()
+	if err != nil {
+		return err
+	}
+	
+	_, err = f.Write(b)
 	if err != nil {
 		return err
 	}
@@ -31,7 +43,7 @@ func (m *MerkleProofArchive) Delete(id []byte) error {
 	return nil
 }
 
-func (m *MerkleProofArchive) Retrieve(id []byte) (proof, error) {
+func (m *MerkleProofArchive) Retrieve(id []byte) (proof.Proof, error) {
 	return nil, nil
 }
 
