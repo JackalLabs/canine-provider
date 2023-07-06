@@ -12,7 +12,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"errors"
 
 	"github.com/tendermint/tendermint/libs/log"
 	"github.com/wealdtech/go-merkletree"
@@ -167,7 +166,9 @@ func WriteFileToDisk(cmd *cobra.Command, reader io.Reader, file io.ReaderAt, clo
 
 	f, err := os.OpenFile(GetStoragePathForTree(clientCtx, fid), os.O_WRONLY|os.O_CREATE, 0o666)
 	defer func() {
-		err = errors.Join(err, f.Close())
+		if tmpErr := f.Close(); tmpErr != nil && err == nil {
+			err = tmpErr
+		}
 	}()
 
 	if err != nil {
