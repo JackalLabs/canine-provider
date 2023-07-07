@@ -68,7 +68,6 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 }
 
 func TestDownloadFileFromURL(url string, fid string) (int64, error) {
-
 	cli := http.Client{}
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/download/%s", url, fid), nil)
 	if err != nil {
