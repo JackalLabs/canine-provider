@@ -10,6 +10,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -26,9 +27,56 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/cobra"
+	"github.com/tendermint/tendermint/libs/log"
 
 	_ "net/http/pprof"
 )
+
+type FileServer struct {
+	blocksize int
+	Logger log.Logger
+}
+
+func NewFileServer(blockSize int, logger log.Logger) (FileServer, error) {
+	if blockSize < 0 {
+		return FileServer{}, errors.New("blockSize can't be negative")
+	}
+
+	return FileServer{blocksize: blockSize, Logger: logger}, nil
+}
+
+func (f *FileServer) BlockSize() int {
+	return f.blocksize
+}
+
+func (f *FileServer) WriteToDisk(reader io.Reader, closer io.Closer, size int64, path, name string) (err error) {
+	err = os.MkdirAll(path, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	file, err := os.OpenFile(filepath.Join(path, name), os.O_WRONLY|os.O_CREATE, 0o666)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = errors.Join(err, file.Close())
+
+		if closer != nil {
+			err = errors.Join(err, file.Close())
+		}
+	}()
+
+	n, err := io.Copy(file, reader)
+	if err != nil {
+		log := fmt.Sprintf("WriteToDisk: failed to write data to disk (%d/%d bytes)", n, size)
+		f.Logger.Error(log)
+		return err
+	}
+
+	err = file.Close()
+	return
+}
 
 func saveFile(file multipart.File, handler *multipart.FileHeader, sender string, cmd *cobra.Command, db *leveldb.DB, w *http.ResponseWriter, q *queue.UploadQueue) error {
 	size := handler.Size
