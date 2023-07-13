@@ -52,15 +52,15 @@ func (f *FileServer) BlockSize() int {
 }
 
 // Save data into physical disk to specified path and name
-func (f *FileServer) WriteToDisk(data io.Reader, closer io.Closer, path, name string) (err error) {
+func (f *FileServer) WriteToDisk(data io.Reader, closer io.Closer, path, name string) (written int64, err error) {
 	err = os.MkdirAll(path, os.ModePerm)
 	if err != nil {
-		return err
+		return
 	}
 
 	file, err := os.OpenFile(filepath.Join(path, name), os.O_WRONLY|os.O_CREATE, FilePerm)
 	if err != nil {
-		return err
+		return
 	}
 	defer func() {
 		err = errors.Join(err, file.Close())
@@ -70,11 +70,11 @@ func (f *FileServer) WriteToDisk(data io.Reader, closer io.Closer, path, name st
 		}
 	}()
 
-	n, err := io.Copy(file, data)
+	written, err = io.Copy(file, data)
 	if err != nil {
-		log := fmt.Sprintf("WriteToDisk: failed to write data to disk (wrote %d bytes)", n)
+		log := fmt.Sprintf("WriteToDisk: failed to write data to disk (wrote %d bytes)", written)
 		f.Logger.Error(log)
-		return err
+		return
 	}
 
 	return
