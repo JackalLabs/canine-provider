@@ -81,9 +81,24 @@ func (f *FileServer) WriteToDisk(data io.Reader, closer io.Closer, path, name st
 }
 
 func saveFile(file multipart.File, handler *multipart.FileHeader, sender string, cmd *cobra.Command, db *leveldb.DB, w *http.ResponseWriter, q *queue.UploadQueue) error {
-	size := handler.Size
 	ctx := utils.GetServerContextFromCmd(cmd)
-	fid, merkle, _, err := utils.WriteFileToDisk(cmd, file, file, file, size, db, ctx.Logger)
+	blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)	
+	if err != nil {
+		return err
+	}
+
+	fs, err := NewFileServer(int(blockSize), ctx.Logger)
+	if err != nil {
+		return err
+	}
+
+	fid, err := utils.MakeFID(file)
+	if err != nil {
+		return err
+	}
+
+	// Save file
+	_, err = fs.WriteToDisk(file, file, utils.GetStoragePath(ctx, fid), fid)
 	if err != nil {
 		ctx.Logger.Error("Write To Disk Error: %v", err)
 		return err
@@ -108,7 +123,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	msg, ctrErr := MakeContract(cmd, fid, sender, &wg, q, merkle, fmt.Sprintf("%d", size))
+	msg, ctrErr := MakeContract(cmd, fid, sender, &wg, q, merkle, fmt.Sprintf("%d", handler.Size))
 	if ctrErr != nil {
 		ctx.Logger.Error("CONTRACT ERROR: %v", ctrErr)
 		return ctrErr

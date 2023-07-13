@@ -21,8 +21,8 @@ func MakeDowntimeKey(cid string) []byte {
 	return []byte(fmt.Sprintf("%s%s", DowntimeKey, cid))
 }
 
-func GetStoragePath(ctx client.Context, fid string) string {
-	configPath := filepath.Join(ctx.HomeDir, "storage")
+func GetStoragePath(ctx *Context, fid string) string {
+	configPath := filepath.Join(ctx.Config.RootDir, "storage")
 	configFilePath := filepath.Join(configPath, fid)
 
 	return configFilePath
