@@ -32,6 +32,8 @@ import (
 	_ "net/http/pprof"
 )
 
+const FilePerm os.FileMode = 0o666
+
 type FileServer struct {
 	blocksize int
 	Logger log.Logger
@@ -49,13 +51,14 @@ func (f *FileServer) BlockSize() int {
 	return f.blocksize
 }
 
-func (f *FileServer) WriteToDisk(reader io.Reader, closer io.Closer, size int64, path, name string) (err error) {
+// Save data into physical disk to specified path and name
+func (f *FileServer) WriteToDisk(data io.Reader, closer io.Closer, path, name string) (err error) {
 	err = os.MkdirAll(path, os.ModePerm)
 	if err != nil {
 		return err
 	}
 
-	file, err := os.OpenFile(filepath.Join(path, name), os.O_WRONLY|os.O_CREATE, 0o666)
+	file, err := os.OpenFile(filepath.Join(path, name), os.O_WRONLY|os.O_CREATE, FilePerm)
 	if err != nil {
 		return err
 	}
@@ -67,14 +70,13 @@ func (f *FileServer) WriteToDisk(reader io.Reader, closer io.Closer, size int64,
 		}
 	}()
 
-	n, err := io.Copy(file, reader)
+	n, err := io.Copy(file, data)
 	if err != nil {
-		log := fmt.Sprintf("WriteToDisk: failed to write data to disk (%d/%d bytes)", n, size)
+		log := fmt.Sprintf("WriteToDisk: failed to write data to disk (wrote %d bytes)", n)
 		f.Logger.Error(log)
 		return err
 	}
 
-	err = file.Close()
 	return
 }
 
