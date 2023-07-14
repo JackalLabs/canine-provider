@@ -15,18 +15,33 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func MakeFID(reader io.Reader) (string, error) {
-	h := sha256.New()
-	_, err := io.Copy(h, reader)
+// MakeFID generates fid from the data it reads from reader
+func MakeFID(reader io.Reader, seeker io.Seeker) (fid string, err error) {
+	current, err := seeker.Seek(0, io.SeekCurrent)
 	if err != nil {
-		return "", err
+		return
 	}
-	hashName := h.Sum(nil)
-	fid, err := MakeFid(hashName)
+	_, err = seeker.Seek(0, io.SeekStart)
+	if err != nil {
+		return
+	}
+
+	h := sha256.New()
+	_, err = io.Copy(h, reader)
 	if err != nil {
 		return "", err
 	}
 
+	hashName := h.Sum(nil)
+	fid, err = MakeFid(hashName)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = seeker.Seek(current, io.SeekStart)
+	if err != nil {
+		return
+	}
 	return fid, nil
 }
 
@@ -77,7 +92,16 @@ func WriteTreeToDisk(cmd *cobra.Command, fid string, tree *merkletree.MerkleTree
 // The stream of bytes read from file is divided into blocks by blockSize.
 // Thus, smaller blockSize will increase the size of the tree but decrease the size of proof
 // and vice versa.
-func CreateMerkleTree(blockSize, fileSize int64, file io.Reader) (*merkletree.MerkleTree, error) {
+func CreateMerkleTree(blockSize, fileSize int64, file io.Reader, seeker io.Seeker) (t *merkletree.MerkleTree, err error) {
+	current, err := seeker.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return
+	}
+	_, err = seeker.Seek(0, io.SeekStart)
+	if err != nil {
+		return
+	}
+
 	data := make([][]byte, fileSize/blockSize+1)
 
 	// Divide files into blocks
@@ -107,10 +131,11 @@ func CreateMerkleTree(blockSize, fileSize int64, file io.Reader) (*merkletree.Me
 		data[i/blockSize] = hashName
 	}
 
-	tree, err := merkletree.NewUsing(data, sha3.New512(), false)
+	_, err = seeker.Seek(current, io.SeekStart)
 	if err != nil {
-		return tree, err
+		return
 	}
 
-	return tree, nil
+	t, err = merkletree.NewUsing(data, sha3.New512(), false)
+	return
 }

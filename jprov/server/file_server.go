@@ -92,12 +92,16 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 		return err
 	}
 
-	fid, err := utils.MakeFID(file)
+	fid, err := utils.MakeFID(file, file)
 	if err != nil {
 		return err
 	}
 
-	// Save file
+	merkle, err := utils.CreateMerkleTree(blockSize, handler.Size, file, file)
+	if err != nil {
+		return err
+	}
+
 	_, err = fs.WriteToDisk(file, file, utils.GetStoragePath(ctx, fid), fid)
 	if err != nil {
 		ctx.Logger.Error("Write To Disk Error: %v", err)
@@ -123,7 +127,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	msg, ctrErr := MakeContract(cmd, fid, sender, &wg, q, merkle, fmt.Sprintf("%d", handler.Size))
+	msg, ctrErr := MakeContract(cmd, fid, sender, &wg, q, string(merkle.Root()), fmt.Sprintf("%d", handler.Size))
 	if ctrErr != nil {
 		ctx.Logger.Error("CONTRACT ERROR: %v", ctrErr)
 		return ctrErr
