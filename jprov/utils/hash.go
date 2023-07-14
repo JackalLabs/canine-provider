@@ -3,6 +3,7 @@ package utils
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"io"
 	"os"
 	"strconv"
@@ -137,5 +138,35 @@ func CreateMerkleTree(blockSize, fileSize int64, file io.Reader, seeker io.Seeke
 	}
 
 	t, err = merkletree.NewUsing(data, sha3.New512(), false)
+	return
+}
+
+// GetBlock returns the block at index of file.
+// The blockSize must be the same as when the file's merkle tree was created.
+func GetBlock(index, blockSize int, file *os.File) (block []byte, err error) {
+	offset := blockSize * index
+	if offset < 0 {
+		err = errors.New("index and blockSize can't be negative int")
+		return
+	}
+
+	current, err := file.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return
+	}
+
+	_, err = file.Seek(0, io.SeekStart)
+	if err != nil {
+		return
+	}
+
+	buf := make([]byte, blockSize)
+
+	_, err = file.ReadAt(buf, int64(offset))
+	if err != nil {
+		return
+	}
+
+	_, err = file.Seek(current, io.SeekStart)
 	return
 }
