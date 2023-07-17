@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/json"
@@ -73,6 +74,11 @@ func (f *FileServer) WriteToDisk(data io.Reader, closer io.Closer, path, name st
 
 func saveFile(file multipart.File, handler *multipart.FileHeader, sender string, cmd *cobra.Command, db *leveldb.DB, w *http.ResponseWriter, q *queue.UploadQueue) error {
 	ctx := utils.GetServerContextFromCmd(cmd)
+	clientCtx, qerr := client.GetClientTxContext(cmd)
+	if qerr != nil {
+		return qerr
+	}
+
 	blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)	
 	if err != nil {
 		return err
@@ -93,16 +99,21 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 		return err
 	}
 
+	exportedTree, err := merkle.Export()
+	if err != nil {
+		return err
+	}
+
+	buffer := bytes.NewReader(exportedTree)
+	_, err = fs.WriteToDisk(buffer, nil, utils.GetStorageDirForTree(clientCtx), utils.GetFileNameForTree(fid))
+
 	_, err = fs.WriteToDisk(file, file, utils.GetStoragePath(ctx, fid), fid)
 	if err != nil {
 		ctx.Logger.Error("Write To Disk Error: %v", err)
 		return err
 	}
 
-	clientCtx, qerr := client.GetClientTxContext(cmd)
-	if qerr != nil {
-		return qerr
-	}
+
 
 	address, err := crypto.GetAddress(clientCtx)
 	if err != nil {
