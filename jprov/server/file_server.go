@@ -35,20 +35,11 @@ import (
 const FilePerm os.FileMode = 0o666
 
 type FileServer struct {
-	blocksize int
 	Logger log.Logger
 }
 
-func NewFileServer(blockSize int, logger log.Logger) (FileServer, error) {
-	if blockSize < 0 {
-		return FileServer{}, errors.New("blockSize can't be negative")
-	}
-
-	return FileServer{blocksize: blockSize, Logger: logger}, nil
-}
-
-func (f *FileServer) BlockSize() int {
-	return f.blocksize
+func NewFileServer(logger log.Logger) (FileServer, error) {
+	return FileServer{Logger: logger}, nil
 }
 
 // Save data into physical disk to specified path and name
@@ -87,7 +78,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 		return err
 	}
 
-	fs, err := NewFileServer(int(blockSize), ctx.Logger)
+	fs, err := NewFileServer(ctx.Logger)
 	if err != nil {
 		return err
 	}
