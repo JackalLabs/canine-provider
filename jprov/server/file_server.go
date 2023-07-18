@@ -44,6 +44,7 @@ func NewFileServer(logger log.Logger) (FileServer, error) {
 }
 
 // Save data into physical disk to specified path and name
+// * This will consume the reader and close the io
 func (f *FileServer) WriteToDisk(data io.Reader, closer io.Closer, path, name string) (written int64, err error) {
 	err = os.MkdirAll(path, os.ModePerm)
 	if err != nil {
@@ -94,6 +95,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 		return err
 	}
 
+	// Create merkle and save to disk
 	merkle, err := utils.CreateMerkleTree(blockSize, handler.Size, file, file)
 	if err != nil {
 		return err
@@ -106,14 +108,16 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 
 	buffer := bytes.NewReader(exportedTree)
 	_, err = fs.WriteToDisk(buffer, nil, utils.GetStorageDirForTree(clientCtx), utils.GetFileNameForTree(fid))
+	if err != nil {
+		return err
+	}
 
-	_, err = fs.WriteToDisk(file, file, utils.GetStoragePath(ctx, fid), fid)
+	// Save file to disk
+	_, err = fs.WriteToDisk(file, file, utils.GetStoragePath(clientCtx, fid), fid)
 	if err != nil {
 		ctx.Logger.Error("Write To Disk Error: %v", err)
 		return err
 	}
-
-
 
 	address, err := crypto.GetAddress(clientCtx)
 	if err != nil {
