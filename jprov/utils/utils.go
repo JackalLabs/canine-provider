@@ -22,10 +22,15 @@ func MakeDowntimeKey(cid string) []byte {
 }
 
 func GetStoragePath(ctx client.Context, fid string) string {
-	configPath := filepath.Join(ctx.HomeDir, "storage")
-	configFilePath := filepath.Join(configPath, fid)
+	return filepath.Join(GetStorageDir(ctx), GetStorageFileName(fid))
+}
 
-	return configFilePath
+func GetStorageDir(ctx client.Context) string {
+	return filepath.Join(ctx.HomeDir, "storage")
+}
+
+func GetStorageFileName(fid string) string {
+	return fid
 }
 
 func GetStoragePathV2(ctx client.Context, fid string) string {
