@@ -80,7 +80,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 		return qerr
 	}
 
-	blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)	
+	blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
 	if err != nil {
 		return err
 	}
