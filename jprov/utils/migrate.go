@@ -2,7 +2,6 @@ package utils
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -11,14 +10,26 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 )
 
-func Combine(dst io.Writer, src io.Reader) error {
-	_, err := io.Copy(dst, src)
+// Glue all blocks for single fid
+func GlueAllBlocks(ctx client.Context, fid string) error {
+	fileNames, err := GetFileNames(GetStoragePath(ctx, fid))
+	if err != nil {
+		return err
+	}
+
+	ok := checkAllFileNames(fileNames)
+	if !ok {
+		return errors.New("invalid file structure for file storage")
+	}
+
+	err = glueAllBlocks(len(fileNames), fid)
+
 	return err
 }
 
-// Get all block filename in directory
-// Error is returned if the directory contains more directory
-func GetFilenames(dir string) (filenames []string, err error) {
+// Get all files' name in directory
+// An error is returned if the directory contains more directory
+func GetFileNames(dir string) (fileNames []string, err error) {
 	dirs, err := os.ReadDir(dir)
 	if err != nil {
 		return
@@ -29,33 +40,77 @@ func GetFilenames(dir string) (filenames []string, err error) {
 			err = errors.New("this directory have another directory")
 			return
 		}
-		filenames = append(filenames, dir.Name())
+		fileNames = append(fileNames, dir.Name())
 	}
 
 	return
 }
 
-// Glue all blocks for single fid
-func GlueAllBlocks(ctx client.Context, fid string) error {
-
-	return nil
-}
-
-// Create a file at newName and put all contents of blockNames in order
-func glueAllFiles(blockNames []string, newName string) (f *os.File, err error) {
-	f, err = os.Create(newName)
-	return
-}
-
-// Get block index from fileName
-// The fileName format should be in: i.jkl where i is an index
-func getIndex(filename string) (index int, err error) {
-	strIndex, ok := strings.CutSuffix(filename, ".jkl")
-	if !ok {
-		err = fmt.Errorf("invalid block file name: %s", filename)
+// glue all blocks starting from 1.jkl to <blocksCount>.jkl
+func glueAllBlocks(blocksCount int, newFileName string) (err error) {
+	f, err := os.Create(newFileName)
+	if err != nil {
 		return
 	}
+	defer func() {
+		err = errors.Join(err, f.Close())
+	}()
 
-	index, err = strconv.Atoi(strIndex)
+	// glue files in order
+	for i := 1; i < blocksCount+1; i++ {
+		if err := combine(f, getBlockFileName(i)); err != nil {
+			return err
+		}
+	}
+
 	return
+}
+
+// combine opens source file and copy its contents into destination
+func combine(dst io.Writer, srcFileName string) error {
+	src, err := os.Open(srcFileName)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		errors.Join(err, src.Close())
+	}()
+
+	_, err = io.Copy(dst, src)
+	return err
+}
+
+func checkAllFileNames(fileNames []string) (ok bool) {
+	for _, name := range fileNames {
+		if ok = checkFileName(name); !ok {
+			return
+		}
+	}
+
+	return true
+}
+
+// create file name for a block
+func getBlockFileName(index int) string {
+	var name strings.Builder
+	_, _ = name.WriteString(strconv.Itoa(index))// returns length of s and a nil err
+	_, _ = name.WriteString(".jkl")// returns length of s and a nil err
+
+	return name.String()
+}
+
+// Check if the file name is a valid block file name
+// The fileName format should be in: i.jkl where i is an index
+func checkFileName(filename string) bool {
+	strIndex, ok := strings.CutSuffix(filename, ".jkl")
+	if !ok {
+		return ok
+	}
+
+	_, err := strconv.Atoi(strIndex)
+	if err != nil {
+		return false
+	}
+
+	return true
 }
