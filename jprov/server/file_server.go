@@ -36,22 +36,44 @@ import (
 const FilePerm os.FileMode = 0o666
 
 type FileServer struct {
+	blockSize int64
 	Logger log.Logger
 }
 
-func NewFileServer(logger log.Logger) (FileServer, error) {
-	return FileServer{Logger: logger}, nil
+func NewFileServer(blockSize int64, logger log.Logger) (FileServer, error) {
+	return FileServer{blockSize: blockSize, Logger: logger}, nil
 }
 
-// Save data into physical disk to specified path and name
+// GetPiece returns a piece of block at index of the fid file.
+func (f* FileServer) GetPiece (ctx client.Context, fid string, index int64) (block []byte, err error) {
+	file, err := os.Open(utils.GetContentsPath(ctx, fid))
+	if err != nil {
+		return
+	}
+	defer func() {
+		errors.Join(err, file.Close())
+	}()
+
+	block = make([]byte, f.blockSize)
+	n, err := file.ReadAt(block, index * f.blockSize)
+	// ignoring io.EOF with n > 0 because the file size is not always n * blockSize
+	if (err != nil && err != io.EOF) || (err == io.EOF && n == 0) {
+		return
+	}
+
+	return block, nil
+}
+
+// WriteToDisk creates named file with data as contents at the directory.
+// The directory is created if it doesn't exist.
 // * This will consume the reader and close the io
-func (f *FileServer) WriteToDisk(data io.Reader, closer io.Closer, path, name string) (written int64, err error) {
-	err = os.MkdirAll(path, os.ModePerm)
+func (f *FileServer) WriteToDisk(data io.Reader, closer io.Closer, dir, name string) (written int64, err error) {
+	err = os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
 		return
 	}
 
-	file, err := os.OpenFile(filepath.Join(path, name), os.O_WRONLY|os.O_CREATE, FilePerm)
+	file, err := os.OpenFile(filepath.Join(dir, name), os.O_WRONLY|os.O_CREATE, FilePerm)
 	if err != nil {
 		return
 	}
@@ -85,7 +107,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 		return err
 	}
 
-	fs, err := NewFileServer(ctx.Logger)
+	fs, err := NewFileServer(blockSize, ctx.Logger)
 	if err != nil {
 		return err
 	}
