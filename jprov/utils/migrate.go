@@ -10,6 +10,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 )
 
+// postGlueCheck verifies the result of glueing was successful by generating fid
+// of the glued file and check against passed fid
 func postGlueCheck(ctx client.Context, fid string) (pass bool, err error) {
 	file, err := os.Open(GetContentsPath(ctx, fid))
 	if err != nil {
@@ -26,6 +28,7 @@ func postGlueCheck(ctx client.Context, fid string) (pass bool, err error) {
 	return
 }
 
+// DiscoverFids reads all directory entry of the storage and returns fids
 func DiscoverFids(ctx client.Context) (fids []string, err error) {
 	dirs, err := os.ReadDir(GetStorageRootDir(ctx))
 	if err != nil {
