@@ -10,9 +10,40 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 )
 
+func postGlueCheck(ctx client.Context, fid string) (pass bool, err error) {
+	file, err := os.Open(GetContentsPath(ctx, fid))
+	if err != nil {
+		return
+	}
+	defer func() {
+		err = errors.Join(err, file.Close())
+	}()
+
+	resultFid, err := MakeFID(file, file)
+
+	pass = fid == resultFid
+
+	return
+}
+
+func DiscoverFids(ctx client.Context) (fids []string, err error) {
+	dirs, err := os.ReadDir(GetStorageRootDir(ctx))
+	if err != nil {
+		return
+	}
+
+	for _, dir := range dirs {
+		if dir.IsDir() {
+			fids = append(fids, dir.Name())
+		}
+	}
+
+	return
+}
+
 // Glue all blocks for single fid
 func GlueAllBlocks(ctx client.Context, fid string) error {
-	fileNames, err := GetFileNames(GetStoragePath(ctx, fid))
+	fileNames, err := GetBlockFileNames(GetStoragePath(ctx, fid))
 	if err != nil {
 		return err
 	}
@@ -29,18 +60,18 @@ func GlueAllBlocks(ctx client.Context, fid string) error {
 
 // Get all files' name in directory
 // An error is returned if the directory contains more directory
-func GetFileNames(dir string) (fileNames []string, err error) {
-	dirs, err := os.ReadDir(dir)
+func GetBlockFileNames(dir string) (fileNames []string, err error) {
+	dirEntry, err := os.ReadDir(dir)
 	if err != nil {
 		return
 	}
 
-	for _, dir := range dirs {
-		if !dir.IsDir() {
+	for _, d := range dirEntry {
+		if d.IsDir() {
 			err = errors.New("this directory have another directory")
 			return
 		}
-		fileNames = append(fileNames, dir.Name())
+		fileNames = append(fileNames, d.Name())
 	}
 
 	return
