@@ -2,13 +2,40 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
-	"strings"
 	"strconv"
+	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client"
 )
+
+func Migrate(ctx client.Context) {
+	fids, err := DiscoverFids(ctx)
+	if err != nil {
+		fmt.Fprint(os.Stderr, err)
+		return
+	}
+
+	for i, fid := range fids {
+		fmt.Printf("\033[2K\rGlueing %d/%d files...", i, 10)
+		err := GlueAllBlocks(ctx, fid)
+		if err != nil {
+			fmt.Fprint(os.Stderr, err)
+			return
+		}
+		ok, err := postGlueCheck(ctx, fid)
+		if err != nil {
+			fmt.Fprint(os.Stderr, err)
+			return
+		}
+		if !ok {
+			fmt.Printf("Check failure: %s is corrupted\n", fid)
+			return
+		}
+	}
+}
 
 // postGlueCheck verifies the result of glueing was successful by generating fid
 // of the glued file and check against passed fid
@@ -107,7 +134,7 @@ func combine(dst io.Writer, srcFileName string) error {
 		return err
 	}
 	defer func() {
-		errors.Join(err, src.Close())
+		err = errors.Join(err, src.Close())
 	}()
 
 	_, err = io.Copy(dst, src)
@@ -127,8 +154,8 @@ func checkAllFileNames(fileNames []string) (ok bool) {
 // create file name for a block
 func getBlockFileName(index int) string {
 	var name strings.Builder
-	_, _ = name.WriteString(strconv.Itoa(index))// returns length of s and a nil err
-	_, _ = name.WriteString(".jkl")// returns length of s and a nil err
+	_, _ = name.WriteString(strconv.Itoa(index)) // returns length of s and a nil err
+	_, _ = name.WriteString(".jkl")              // returns length of s and a nil err
 
 	return name.String()
 }
@@ -142,9 +169,5 @@ func checkFileName(filename string) bool {
 	}
 
 	_, err := strconv.Atoi(strIndex)
-	if err != nil {
-		return false
-	}
-
-	return true
+	return err == nil
 }

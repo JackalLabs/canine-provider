@@ -178,6 +178,38 @@ func ResetCommand() *cobra.Command {
 	return cmd
 }
 
+func MigrateCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "migrate",
+		Short: "Migrate from old file system to new file system",
+		Long:  `Migrate old file system. This will glue all blocks together into one file per fids stored in your machine`,
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			buf := bufio.NewReader(cmd.InOrStdin())
+
+			yes, err := input.GetConfirmation("Are you sure you want to migrate from old file system?", buf, cmd.ErrOrStderr())
+			if err != nil {
+				return err
+			}
+
+			if !yes {
+				return nil
+			}
+
+			utils.Migrate(clientCtx)
+
+			return nil
+		},
+	}
+
+	return cmd
+}
+
 // AddTxFlagsToCmd adds common flags to a module tx command.
 func AddTxFlagsToCmd(cmd *cobra.Command) {
 	cmd.Flags().StringP(tmcli.OutputFlag, "o", "json", "Output format (text|json)")

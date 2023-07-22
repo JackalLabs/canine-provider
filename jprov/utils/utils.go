@@ -67,7 +67,7 @@ func GetStoragePathForPiece(ctx client.Context, fid string, index int) string {
 // GetContentsPath returns file path for the file that stores the user uploaded contents
 // e.g. ~/.provider/storage/<fid>/<fid>.jkl
 func GetContentsPath(ctx client.Context, fid string) string {
-	return filepath.Join(GetStorageRootDir(ctx), fid, GetStorageFileName(fid))		
+	return filepath.Join(GetStorageRootDir(ctx), fid, GetStorageFileName(fid))
 }
 
 // GetStoragePathForTree returns full path for fid merkle tree file
@@ -83,8 +83,6 @@ func GetStorageDirForTree(ctx client.Context) string {
 func GetFileNameForTree(fid string) string {
 	return fmt.Sprintf("%s.tree", fid)
 }
-
-
 
 func GetStorageAllPath(ctx client.Context) string {
 	configPath := filepath.Join(ctx.HomeDir, "storage")

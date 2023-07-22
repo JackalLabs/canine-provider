@@ -37,7 +37,7 @@ const FilePerm os.FileMode = 0o666
 
 type FileServer struct {
 	blockSize int64
-	Logger log.Logger
+	Logger    log.Logger
 }
 
 func NewFileServer(blockSize int64, logger log.Logger) (FileServer, error) {
@@ -45,17 +45,17 @@ func NewFileServer(blockSize int64, logger log.Logger) (FileServer, error) {
 }
 
 // GetPiece returns a piece of block at index of the fid file.
-func (f* FileServer) GetPiece (ctx client.Context, fid string, index int64) (block []byte, err error) {
+func (f *FileServer) GetPiece(ctx client.Context, fid string, index int64) (block []byte, err error) {
 	file, err := os.Open(utils.GetContentsPath(ctx, fid))
 	if err != nil {
 		return
 	}
 	defer func() {
-		errors.Join(err, file.Close())
+		err = errors.Join(err, file.Close())
 	}()
 
 	block = make([]byte, f.blockSize)
-	n, err := file.ReadAt(block, index * f.blockSize)
+	n, err := file.ReadAt(block, index*f.blockSize)
 	// ignoring io.EOF with n > 0 because the file size is not always n * blockSize
 	if (err != nil && err != io.EOF) || (err == io.EOF && n == 0) {
 		return

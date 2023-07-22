@@ -25,7 +25,7 @@ func NewFile(data []byte) MerkleFile {
 	if err != nil {
 		panic(err)
 	}
-	
+
 	raw := [][]byte{h.Sum(nil)}
 
 	tree, err := merkletree.NewUsing(raw, sha3.New512(), false)
@@ -53,5 +53,5 @@ func (m *MerkleFile) GetJsonProof() []byte {
 }
 
 func (m *MerkleFile) GenerateActiveDeal() storagetypes.ActiveDeals {
-	return storagetypes.ActiveDeals{Blocktoprove: "0", Merkle: hex.EncodeToString(m.tree.Root())}	
-} 
+	return storagetypes.ActiveDeals{Blocktoprove: "0", Merkle: hex.EncodeToString(m.tree.Root())}
+}
