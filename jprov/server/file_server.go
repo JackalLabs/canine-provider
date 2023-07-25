@@ -40,8 +40,8 @@ type FileServer struct {
 	Logger    log.Logger
 }
 
-func NewFileServer(blockSize int64, logger log.Logger) (FileServer, error) {
-	return FileServer{blockSize: blockSize, Logger: logger}, nil
+func NewFileServer(blockSize int64, logger log.Logger) (*FileServer, error) {
+	return &FileServer{blockSize: blockSize, Logger: logger}, nil
 }
 
 // GetPiece returns a piece of block at index of the fid file.
@@ -95,21 +95,11 @@ func (f *FileServer) WriteToDisk(data io.Reader, closer io.Closer, dir, name str
 	return
 }
 
-func saveFile(file multipart.File, handler *multipart.FileHeader, sender string, cmd *cobra.Command, db *leveldb.DB, w *http.ResponseWriter, q *queue.UploadQueue) error {
+func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader, sender string, cmd *cobra.Command, db *leveldb.DB, w *http.ResponseWriter, q *queue.UploadQueue) error {
 	ctx := utils.GetServerContextFromCmd(cmd)
 	clientCtx, qerr := client.GetClientTxContext(cmd)
 	if qerr != nil {
 		return qerr
-	}
-
-	blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
-	if err != nil {
-		return err
-	}
-
-	fs, err := NewFileServer(blockSize, ctx.Logger)
-	if err != nil {
-		return err
 	}
 
 	fid, err := utils.MakeFID(file, file)
@@ -118,7 +108,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	}
 
 	// Create merkle and save to disk
-	merkle, err := utils.CreateMerkleTree(blockSize, handler.Size, file, file)
+	merkle, err := utils.CreateMerkleTree(f.blockSize, handler.Size, file, file)
 	if err != nil {
 		return err
 	}
@@ -129,13 +119,13 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	}
 
 	buffer := bytes.NewReader(exportedTree)
-	_, err = fs.WriteToDisk(buffer, nil, utils.GetStorageDirForTree(clientCtx), utils.GetFileNameForTree(fid))
+	_, err = f.WriteToDisk(buffer, nil, utils.GetStorageDirForTree(clientCtx), utils.GetFileNameForTree(fid))
 	if err != nil {
 		return err
 	}
 
 	// Save file to disk
-	_, err = fs.WriteToDisk(file, file, utils.GetStoragePath(clientCtx, fid), fid)
+	_, err = f.WriteToDisk(file, file, utils.GetStoragePath(clientCtx, fid), fid)
 	if err != nil {
 		ctx.Logger.Error("Write To Disk Error: %v", err)
 		return err
@@ -293,13 +283,25 @@ func StartFileServer(cmd *cobra.Command) {
 
 	q := queue.New()
 
+	ctx := utils.GetServerContextFromCmd(cmd)
+
+	blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
+	if err != nil {
+		fmt.Println("Cannot get chunk size")
+		return
+	}
+
+	fs, err := NewFileServer(blockSize, ctx.Logger)
+	if err != nil {
+		fmt.Println("Failed to initialize file server")
+		return
+	}
+
 	GetRoutes(cmd, router, db, &q)
-	PostRoutes(cmd, router, db, &q)
+	PostRoutes(cmd, fs, router, db, &q)
 	PProfRoutes(router)
 
 	handler := cors.Default().Handler(router)
-
-	ctx := utils.GetServerContextFromCmd(cmd)
 
 	threads, err := cmd.Flags().GetUint(types.FlagThreads)
 	if err != nil {
@@ -332,7 +334,7 @@ func StartFileServer(cmd *cobra.Command) {
 		manager.Init(cmd, threads, db)
 	}
 
-	go postProofs(cmd, db, &q, ctx)
+	go fs.postProofs(cmd, db, &q, ctx)
 	go NatCycle(cmd.Context())
 	go q.StartListener(cmd, providerName)
 
