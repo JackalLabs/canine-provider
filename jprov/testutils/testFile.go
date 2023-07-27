@@ -9,6 +9,7 @@ import (
 
 	storagetypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 
+
 	"github.com/wealdtech/go-merkletree"
 	"github.com/wealdtech/go-merkletree/sha3"
 )
@@ -55,3 +56,4 @@ func (m *MerkleFile) GetJsonProof() []byte {
 func (m *MerkleFile) GenerateActiveDeal() storagetypes.ActiveDeals {
 	return storagetypes.ActiveDeals{Blocktoprove: "0", Merkle: hex.EncodeToString(m.tree.Root())}
 }
+

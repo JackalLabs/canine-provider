@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -17,6 +18,40 @@ import (
 
 	"github.com/spf13/cobra"
 )
+
+func verifyAttest(deal storageTypes.ActiveDeals, attest types.AttestRequest) (verified bool, err error) {
+	merkle := deal.Merkle
+	block := deal.Blocktoprove
+	blockNum, err := strconv.ParseInt(block, 10, 64)
+	if err != nil {
+		return false, err
+	}
+
+	verified = storageKeeper.VerifyDeal(merkle, attest.HashList, blockNum, attest.Item)
+
+	return
+}
+
+func addMsgAttest(address string, cid string, q *queue.UploadQueue) (upload types.Upload, err error) {
+	msg := storageTypes.NewMsgAttest(address, cid)
+
+	if err := msg.ValidateBasic(); err != nil {
+		return upload, err
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	upload = types.Upload{
+		Message:  msg,
+		Err:      nil,
+		Callback: &wg,
+		Response: nil,
+	}
+
+	q.Append(&upload)
+	return
+}
 
 func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, q *queue.UploadQueue) {
 	clientCtx, qerr := client.GetClientTxContext(cmd)
@@ -45,22 +80,16 @@ func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, q *queu
 	deal, err := queryClient.ActiveDeals(context.Background(), dealReq)
 	if err != nil {
 		http.Error(*w, err.Error(), http.StatusBadRequest)
-		return
 	}
 
-	merkle := deal.ActiveDeals.Merkle
-	block := deal.ActiveDeals.Blocktoprove
-	blockNum, err := strconv.ParseInt(block, 10, 64)
+	verified, err := verifyAttest(deal.ActiveDeals, attest)
 	if err != nil {
 		http.Error(*w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	verified := storageKeeper.VerifyDeal(merkle, attest.HashList, blockNum, attest.Item)
-
 	if !verified {
-		http.Error(*w, err.Error(), http.StatusBadRequest)
-		return
+		http.Error(*w, errors.New("failed to verify attest").Error(), http.StatusBadRequest)
 	}
 
 	address, err := crypto.GetAddress(clientCtx)
@@ -69,35 +98,21 @@ func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, q *queu
 		return
 	}
 
-	msg := storageTypes.NewMsgAttest( // create new attest
-		address,
-		attest.Cid,
-	)
-	if err := msg.ValidateBasic(); err != nil {
+	upload, err := addMsgAttest(address, attest.Cid, q)
+	if err != nil {
 		http.Error(*w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(1)
+	upload.Callback.Wait()
 
-	u := types.Upload{
-		Message:  msg,
-		Err:      nil,
-		Callback: &wg,
-		Response: nil,
-	}
-
-	q.Append(&u)
-	wg.Wait()
-
-	if u.Err != nil {
-		http.Error(*w, u.Err.Error(), http.StatusBadRequest)
+	if upload.Err != nil {
+		http.Error(*w, upload.Err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if u.Response.Code != 0 {
-		http.Error(*w, fmt.Errorf(u.Response.RawLog).Error(), http.StatusBadRequest)
+	if upload.Response.Code != 0 {
+		http.Error(*w, fmt.Errorf(upload.Response.RawLog).Error(), http.StatusBadRequest)
 		return
 	}
 

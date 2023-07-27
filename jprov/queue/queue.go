@@ -1,6 +1,7 @@
 package queue
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -35,6 +36,58 @@ func (q *UploadQueue) Append(upload *types.Upload) {
 	q.Queue = append(q.Queue, upload)
 }
 
+// Return a list of messages of the upload queue up to maxMessageSize in FCFS order.
+// Returns nil in these conditions:
+//  1. maxMessageSize is too small
+//  2. the UploadQueue is locked
+//  3. the upload queue is empty
+func (q *UploadQueue) PrepareMessage(maxMessageSize int) (messages []cosmosTypes.Msg) {
+	if maxMessageSize < 1 || !q.Locked || len(q.Queue) == 0 {
+		return nil
+	}
+
+	var netMsgSize int
+	for _, q := range q.Queue {
+		msgSize := len(q.Message.String())
+
+		if netMsgSize+msgSize > maxMessageSize {
+			break
+		} else {
+			netMsgSize += msgSize
+			messages = append(messages, q.Message)
+		}
+	}
+
+	return
+}
+
+// Update the upload queue with the parameter fields of count
+func (q *UploadQueue) UpdateQueue(count int, err error, res *cosmosTypes.TxResponse) {
+	if !q.Locked || len(q.Queue) == 0 || len(q.Queue) < count {
+		return
+	}
+
+	for i := 0; i < count; i++ {
+		q := q.Queue[i]
+
+		if err != nil {
+			q.Err = err
+		} else {
+			if res != nil {
+				if res.Code != 0 {
+					q.Err = errors.New(res.RawLog)
+				} else {
+					q.Response = res
+				}
+			}
+		}
+
+		if q.Callback != nil {
+			q.Callback.Done()
+		}
+	}
+}
+
 func (q *UploadQueue) listenOnce(cmd *cobra.Command, providerName string) {
 	if q.Locked {
 		return
@@ -46,9 +99,7 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command, providerName string) {
 
 	ctx := utils.GetServerContextFromCmd(cmd)
 
-	l := len(q.Queue)
-
-	if l == 0 {
+	if len(q.Queue) == 0 {
 		return
 	}
 
@@ -57,56 +108,16 @@ func (q *UploadQueue) listenOnce(cmd *cobra.Command, providerName string) {
 		ctx.Logger.Error(err.Error())
 	}
 
-	var totalSizeOfMsgs int
-	msgs := make([]cosmosTypes.Msg, 0)
-	uploads := make([]*types.Upload, 0)
-
-	for i := 0; i < l; i++ { // loop through entire queue
-
-		upload := q.Queue[i]
-
-		uploadSize := len(upload.Message.String())
-
-		// if the size of the upload would put us past our cap, we cut off the queue and send only what fits
-		if totalSizeOfMsgs+uploadSize > maxSize {
-			msgs = msgs[:len(msgs)-1]
-			uploads = uploads[:len(uploads)-1]
-			l = i
-
-			break
-		} else {
-			uploads = append(uploads, upload)
-			msgs = append(msgs, upload.Message)
-			totalSizeOfMsgs += len(upload.Message.String())
-		}
-
-	}
+	msgs := q.PrepareMessage(maxSize)
 
 	clientCtx := client.GetClientContextFromCmd(cmd)
 	ctx.Logger.Debug(fmt.Sprintf("total no. of msgs in proof transaction is: %d", len(msgs)))
 
 	res, err := utils.SendTx(clientCtx, cmd.Flags(), fmt.Sprintf("Storage Provided by %s", providerName), msgs...)
-	for _, v := range uploads {
-		if v == nil {
-			continue
-		}
-		if err != nil {
-			v.Err = err
-		} else {
-			if res != nil {
-				if res.Code != 0 {
-					v.Err = fmt.Errorf(res.RawLog)
-				} else {
-					v.Response = res
-				}
-			}
-		}
-		if v.Callback != nil {
-			v.Callback.Done()
-		}
-	}
 
-	q.Queue = q.Queue[l:] // pop every upload that fit off the queue
+	q.UpdateQueue(len(msgs), err, res)
+
+	q.Queue = q.Queue[len(msgs):] // pop every upload that fit off the queue
 }
 
 func (q *UploadQueue) StartListener(cmd *cobra.Command, providerName string) {

@@ -52,19 +52,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 		return err
 	}
 
-	cidHash := sha256.New()
-
-	var str strings.Builder // building the FID
-	str.WriteString(sender)
-	str.WriteString(address)
-	str.WriteString(fid)
-
-	_, err = io.WriteString(cidHash, str.String())
-	if err != nil {
-		return err
-	}
-	cid := cidHash.Sum(nil)
-	strCid, err := utils.MakeCid(cid)
+	cid, err := buildCid(address, sender, fid)
 	if err != nil {
 		return err
 	}
@@ -79,33 +67,53 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	}
 	wg.Wait()
 
-	v := types.UploadResponse{
-		CID: strCid,
-		FID: fid,
-	}
-
 	if msg.Err != nil {
 		ctx.Logger.Error(msg.Err.Error())
-		v := types.ErrorResponse{
-			Error: msg.Err.Error(),
-		}
-		(*w).WriteHeader(http.StatusInternalServerError)
-		err = json.NewEncoder(*w).Encode(v)
-	} else {
-		err = json.NewEncoder(*w).Encode(v)
 	}
 
-	if err != nil {
+	if err = writeResponse(*w, *msg, fid, cid); err != nil {
 		ctx.Logger.Error("Json Encode Error: %v", err)
 		return err
 	}
 
-	err = utils.SaveToDatabase(fid, strCid, db, ctx.Logger)
+	err = utils.SaveToDatabase(fid, cid, db, ctx.Logger)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func writeResponse(w http.ResponseWriter, upload types.Upload, fid, cid string) error {
+	if upload.Err != nil {
+		resp := types.ErrorResponse{
+			Error: upload.Err.Error(),
+		}
+		return json.NewEncoder(w).Encode(resp)
+	}
+
+	resp := types.UploadResponse{
+		CID: cid,
+		FID: fid,
+	}
+
+	return json.NewEncoder(w).Encode(resp)
+}
+
+func buildCid(address, sender, fid string) (string, error) {
+	h := sha256.New()
+
+	var footprint strings.Builder // building FID
+	footprint.WriteString(sender)
+	footprint.WriteString(address)
+	footprint.WriteString(fid)
+
+	_, err := io.WriteString(h, footprint.String())
+	if err != nil {
+		return "", err
+	}
+
+	return utils.MakeCid(h.Sum(nil))
 }
 
 func MakeContract(cmd *cobra.Command, fid string, sender string, wg *sync.WaitGroup, q *queue.UploadQueue, merkleroot string, filesize string) (*types.Upload, error) {
