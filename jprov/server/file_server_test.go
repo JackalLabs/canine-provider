@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/JackalLabs/jackal-provider/jprov/server"
@@ -12,6 +13,49 @@ import (
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/stretchr/testify/assert"
 )
+
+// Do not run tests other than linux
+const testDir = "/tmp"
+
+func newFile(name string, t *testing.T) (f *os.File) {
+	f, err := os.CreateTemp(testDir, "_GO_" + name)
+	if err != nil {
+		t.Fatalf("TempFile %s: %s", name, err)
+	}
+	return
+}
+
+func TestGetPiece (t *testing.T) {
+	file := newFile("TestGetPiece", t)
+	defer os.Remove(file.Name())
+	defer file.Close()
+
+	const data = "hello, world\n"
+	_, err := file.WriteString(data)
+	if err != nil {
+		t.Fatalf("WriteString: %s", err)
+	}
+
+	if err != nil {
+		t.Fatalf("NewFileServer: %s", err)
+	}
+
+	resData, resErr := server.GetPiece(file.Name(), 0, 5)
+	if err != nil {
+		t.Errorf("GetPiece 0: %s", resErr)
+	}
+	if string(resData) != "hello" {
+		t.Errorf("GetPiece 0: have %q, want %q", string(resData), "hello")
+	}
+
+	resData, resErr = server.GetPiece(file.Name(), 1, 5)
+	if err != nil {
+		t.Errorf("GetPiece 0: %s", resErr)
+	}
+	if string(resData) != ", wor" {
+		t.Errorf("GetPiece 0: have %q, want %q", string(resData), ", wor")
+	}
+}
 
 func TestWriteResponse(t *testing.T) {
 	cases := map[string]struct {

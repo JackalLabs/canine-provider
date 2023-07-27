@@ -60,8 +60,8 @@ func GenerateMerkleProof(tree merkletree.MerkleTree, index int, item []byte) (va
 	return
 }
 
-func (f *FileServer) CreateMerkleForProof(clientCtx client.Context, filename string, index int, ctx *utils.Context) (string, string, error) {
-	data, err := f.GetPiece(clientCtx, filename, int64(index))
+func CreateMerkleForProof(clientCtx client.Context, filename string, blockSize, index int, ctx *utils.Context) (string, string, error) {
+	data, err := GetPiece(utils.GetContentsPath(clientCtx, filename), int64(index), int64(blockSize))
 	if err != nil {
 		return "", "", err
 	}
@@ -228,7 +228,7 @@ func requestAttestation(clientCtx client.Context, cid string, hashList string, i
 	return nil
 }
 
-func (f *FileServer) postProof(clientCtx client.Context, cid string, block string, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) error {
+func postProof(clientCtx client.Context, cid string, block string, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) error {
 	dex, ok := sdk.NewIntFromString(block)
 	ctx.Logger.Debug(fmt.Sprintf("BlockToProve: %s", block))
 	if !ok {
@@ -240,7 +240,7 @@ func (f *FileServer) postProof(clientCtx client.Context, cid string, block strin
 		return err
 	}
 
-	item, hashlist, err := f.CreateMerkleForProof(clientCtx, string(data), int(dex.Int64()), ctx)
+	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), int(dex.Int64()), ctx)
 	if err != nil {
 		return err
 	}

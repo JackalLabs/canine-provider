@@ -135,9 +135,9 @@ func GetRoutes(cmd *cobra.Command, router *httprouter.Router, db *leveldb.DB, q 
 	router.GET("/", ires)
 }
 
-func PostRoutes(cmd *cobra.Command, fs *FileServer, router *httprouter.Router, db *leveldb.DB, q *queue.UploadQueue) {
+func PostRoutes(cmd *cobra.Command, router *httprouter.Router, db *leveldb.DB, q *queue.UploadQueue) {
 	upfil := func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		fileUpload(&w, r, cmd, fs, db, q)
+		fileUpload(&w, r, cmd, db, q)
 	}
 
 	router.POST("/upload", upfil)
@@ -162,7 +162,7 @@ func PProfRoutes(router *httprouter.Router) {
 
 // This function returns the filename(to save in database) of the saved file
 // or an error if it occurs
-func fileUpload(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, fs *FileServer, db *leveldb.DB, q *queue.UploadQueue) {
+func fileUpload(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue) {
 	ctx := utils.GetServerContextFromCmd(cmd)
 
 	// ParseMultipartForm parses a request body as multipart/form-data
@@ -195,7 +195,7 @@ func fileUpload(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, fs 
 		return
 	}
 
-	err = fs.saveFile(file, handler, sender, cmd, db, w, q)
+	err = saveFile(file, handler, sender, cmd, db, w, q)
 	if err != nil {
 		v := types.ErrorResponse{
 			Error: err.Error(),

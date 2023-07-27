@@ -28,25 +28,15 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/cobra"
-	"github.com/tendermint/tendermint/libs/log"
 
 	_ "net/http/pprof"
 )
 
 const FilePerm os.FileMode = 0o666
 
-type FileServer struct {
-	blockSize int64
-	Logger    log.Logger
-}
-
-func NewFileServer(blockSize int64, logger log.Logger) (*FileServer, error) {
-	return &FileServer{blockSize: blockSize, Logger: logger}, nil
-}
-
 // GetPiece returns a piece of block at index of the fid file.
-func (f *FileServer) GetPiece(ctx client.Context, fid string, index int64) (block []byte, err error) {
-	file, err := os.Open(utils.GetContentsPath(ctx, fid))
+func GetPiece(path string, index, blockSize int64) (block []byte, err error) {
+	file, err := os.Open(path)
 	if err != nil {
 		return
 	}
@@ -54,10 +44,10 @@ func (f *FileServer) GetPiece(ctx client.Context, fid string, index int64) (bloc
 		err = errors.Join(err, file.Close())
 	}()
 
-	block = make([]byte, f.blockSize)
-	n, err := file.ReadAt(block, index*f.blockSize)
+	block = make([]byte, blockSize)
+	_, err = file.ReadAt(block, index*blockSize)
 	// ignoring io.EOF with n > 0 because the file size is not always n * blockSize
-	if (err != nil && err != io.EOF) || (err == io.EOF && n == 0) {
+	if err != nil {
 		return
 	}
 
@@ -67,7 +57,7 @@ func (f *FileServer) GetPiece(ctx client.Context, fid string, index int64) (bloc
 // WriteToDisk creates named file with data as contents at the directory.
 // The directory is created if it doesn't exist.
 // * This will consume the reader and close the io
-func (f *FileServer) WriteToDisk(data io.Reader, closer io.Closer, dir, name string) (written int64, err error) {
+func WriteToDisk(data io.Reader, closer io.Closer, dir, name string) (written int64, err error) {
 	err = os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
 		return
@@ -87,15 +77,14 @@ func (f *FileServer) WriteToDisk(data io.Reader, closer io.Closer, dir, name str
 
 	written, err = io.Copy(file, data)
 	if err != nil {
-		log := fmt.Sprintf("WriteToDisk: failed to write data to disk (wrote %d bytes)", written)
-		f.Logger.Error(log)
+		err = fmt.Errorf("WriteToDisk: failed to write data to disk (wrote %d bytes)", written)
 		return
 	}
 
 	return
 }
 
-func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader, sender string, cmd *cobra.Command, db *leveldb.DB, w *http.ResponseWriter, q *queue.UploadQueue) error {
+func saveFile(file multipart.File, handler *multipart.FileHeader, sender string, cmd *cobra.Command, db *leveldb.DB, w *http.ResponseWriter, q *queue.UploadQueue) error {
 	ctx := utils.GetServerContextFromCmd(cmd)
 	clientCtx, qerr := client.GetClientTxContext(cmd)
 	if qerr != nil {
@@ -119,13 +108,13 @@ func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader
 	}
 
 	buffer := bytes.NewReader(exportedTree)
-	_, err = f.WriteToDisk(buffer, nil, utils.GetStorageDirForTree(clientCtx), utils.GetFileNameForTree(fid))
+	_, err = WriteToDisk(buffer, nil, utils.GetStorageDirForTree(clientCtx), utils.GetFileNameForTree(fid))
 	if err != nil {
 		return err
 	}
 
 	// Save file to disk
-	_, err = f.WriteToDisk(file, file, utils.GetStoragePath(clientCtx, fid), fid)
+	_, err = WriteToDisk(file, file, utils.GetStoragePath(clientCtx, fid), fid)
 	if err != nil {
 		ctx.Logger.Error("Write To Disk Error: %v", err)
 		return err
@@ -285,20 +274,8 @@ func StartFileServer(cmd *cobra.Command) {
 
 	ctx := utils.GetServerContextFromCmd(cmd)
 
-	blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
-	if err != nil {
-		fmt.Println("Cannot get chunk size")
-		return
-	}
-
-	fs, err := NewFileServer(blockSize, ctx.Logger)
-	if err != nil {
-		fmt.Println("Failed to initialize file server")
-		return
-	}
-
 	GetRoutes(cmd, router, db, &q)
-	PostRoutes(cmd, fs, router, db, &q)
+	PostRoutes(cmd, router, db, &q)
 	PProfRoutes(router)
 
 	handler := cors.Default().Handler(router)
@@ -334,7 +311,7 @@ func StartFileServer(cmd *cobra.Command) {
 		manager.Init(cmd, threads, db)
 	}
 
-	go fs.postProofs(cmd, db, &q, ctx)
+	go postProofs(cmd, db, &q, ctx)
 	go NatCycle(cmd.Context())
 	go q.StartListener(cmd, providerName)
 
