@@ -3,8 +3,8 @@ package utils
 import (
 	"fmt"
 
-	"github.com/tendermint/tendermint/libs/log"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 func SaveToDatabase(fid string, strcid string, db *leveldb.DB, logger log.Logger) error {

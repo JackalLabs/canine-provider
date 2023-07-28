@@ -18,14 +18,14 @@ import (
 const testDir = "/tmp"
 
 func newFile(name string, t *testing.T) (f *os.File) {
-	f, err := os.CreateTemp(testDir, "_GO_" + name)
+	f, err := os.CreateTemp(testDir, "_GO_"+name)
 	if err != nil {
 		t.Fatalf("TempFile %s: %s", name, err)
 	}
 	return
 }
 
-func TestGetPiece (t *testing.T) {
+func TestGetPiece(t *testing.T) {
 	file := newFile("TestGetPiece", t)
 	defer os.Remove(file.Name())
 	defer file.Close()

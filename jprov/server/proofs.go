@@ -229,8 +229,6 @@ func requestAttestation(clientCtx client.Context, cid string, hashList string, i
 }
 
 func postProof(clientCtx client.Context, cid string, blockSize, block int64, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) error {
-
-
 	data, err := db.Get(utils.MakeFileKey(cid), nil)
 	if err != nil {
 		return err
@@ -464,7 +462,7 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 			dex, ok := sdk.NewIntFromString(block)
 			ctx.Logger.Debug(fmt.Sprintf("BlockToProve: %s", block))
 			if !ok {
-				ctx.Logger.Error(fmt.Sprint("cannot parse block number"))
+				ctx.Logger.Error("cannot parse block number")
 				continue
 			}
 

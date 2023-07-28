@@ -54,7 +54,7 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 	cli := http.Client{}
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/download/%s", url, fid), nil)
 	if err != nil {
-		return 
+		return
 	}
 
 	req.Header = http.Header{
@@ -89,7 +89,7 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 		ctx.Logger.Error("saveFile: Write To Disk Error: ", err)
 		return
 	}
-	
+
 	blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
 	if err != nil {
 		return

@@ -5,14 +5,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
-	"path/filepath"
 
 	"github.com/cosmos/cosmos-sdk/client"
 )
-
-
 
 func Migrate(ctx client.Context) {
 	fids, err := DiscoverFids(ctx.HomeDir)
@@ -22,7 +20,7 @@ func Migrate(ctx client.Context) {
 	}
 
 	for i, fid := range fids {
-		fmt.Printf("\033[2K\rGlueing %d/%d files...\n", i, len(fids))
+		fmt.Printf("\033[2K\rGlueing %d/%d files...", i, len(fids))
 		err := GlueAllBlocks(ctx.HomeDir, fid)
 		if err != nil {
 			fmt.Fprint(os.Stderr, err)
@@ -38,6 +36,7 @@ func Migrate(ctx client.Context) {
 			return
 		}
 	}
+	fmt.Printf("\n")
 	fmt.Println("Migration finished")
 }
 
@@ -99,7 +98,6 @@ func glueAllBlocks(homeDir, fid string, blocksCount int) (err error) {
 
 	// glue files in order
 	for i := 0; i < blocksCount; i++ {
-		fmt.Printf("\033[2K\rGlueing %d/%d blocks...\n", i, blocksCount)
 		path := filepath.Join(GetFidDir(homeDir, fid), getBlockFileName(i))
 		if err := combine(f, path); err != nil {
 			return err
@@ -146,16 +144,6 @@ func combine(dst io.Writer, srcFileName string) error {
 	return err
 }
 
-func checkAllFileNames(fileNames []string) (ok bool) {
-	for _, name := range fileNames {
-		if ok = checkFileName(name); !ok {
-			return
-		}
-	}
-
-	return true
-}
-
 // Check if the file name is a valid block file name
 // The fileName format should be in: i.jkl where i is an index
 func checkFileName(filename string) bool {
@@ -176,24 +164,6 @@ func getStoragePath(homeDir, fid string) string {
 	return configFilePath
 }
 
-func getStoragePathV2(homeDir, fid string) string {
-	builder := strings.Builder{}
-	builder.WriteString(fid)
-	builder.WriteString(".jkl")
-
-	configPath := filepath.Join(homeDir, "storage")
-	configFilePath := filepath.Join(configPath, builder.String())
-
-	return configFilePath
-}
-
-func getStoragePathForTree(ctx client.Context, fid string) string {
-	configPath := filepath.Join(ctx.HomeDir, "storage")
-	configFilePath := filepath.Join(configPath, fmt.Sprintf("%s.tree", fid))
-
-	return configFilePath
-}
-
 // create file name for a block
 func getBlockFileName(index int) string {
 	var name strings.Builder
@@ -202,5 +172,3 @@ func getBlockFileName(index int) string {
 
 	return name.String()
 }
-
-

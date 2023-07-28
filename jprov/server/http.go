@@ -94,7 +94,6 @@ func downfil(cmd *cobra.Command, w http.ResponseWriter, ps httprouter.Params, ct
 	}
 
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", written))
-	return
 }
 
 func GetRoutes(cmd *cobra.Command, router *httprouter.Router, db *leveldb.DB, q *queue.UploadQueue) {
