@@ -3,7 +3,6 @@ package utils
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client"
 )

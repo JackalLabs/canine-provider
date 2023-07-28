@@ -113,13 +113,13 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	}
 
 	buffer := bytes.NewReader(exportedTree)
-	_, err = WriteToDisk(buffer, nil, utils.GetStorageDirForTree(clientCtx), utils.GetFileNameForTree(fid))
+	_, err = WriteToDisk(buffer, nil, utils.GetFidDir(clientCtx.HomeDir, fid), utils.GetTreeFileName(fid))
 	if err != nil {
 		return err
 	}
 
 	// Save file to disk
-	_, err = WriteToDisk(file, file, utils.GetStoragePath(clientCtx, fid), fid)
+	_, err = WriteToDisk(file, file, utils.GetFidDir(clientCtx.HomeDir, fid), fid)
 	if err != nil {
 		ctx.Logger.Error("saveFile: Write To Disk Error: ", err)
 		return err

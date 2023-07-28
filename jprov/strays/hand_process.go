@@ -60,7 +60,7 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 		strays that we don't own, but if we caused an error when handling the file we can reclaim the stray with
 		the cached file from our filesystem which keeps the file alive)
 		*/
-		if _, err := os.Stat(utils.GetStoragePath(h.ClientContext, h.Stray.Fid)); os.IsNotExist(err) {
+		if _, err := os.Stat(utils.GetContentsPath(h.ClientContext.HomeDir, h.Stray.Fid)); os.IsNotExist(err) {
 			ctx.Logger.Info(fmt.Sprintf("Nobody, not even I have %s.", h.Stray.Fid))
 			return // If we don't have it and nobody else does, there is nothing we can do.
 		}
@@ -78,7 +78,7 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 				continue
 			}
 
-			_, err = utils.DownloadFileFromURL(h.Cmd, prov, h.Stray.Fid, h.Stray.Cid, h.Database, ctx.Logger)
+			err = DownloadFileFromURL(h.Cmd, prov, h.Stray.Fid, h.Stray.Cid, h.Database, ctx.Logger)
 			if err != nil {
 				ctx.Logger.Error(err.Error())
 				continue
