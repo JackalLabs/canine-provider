@@ -91,13 +91,18 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 		return qerr
 	}
 
+	blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
+	if err != nil {
+		return err
+	}
+
 	fid, err := utils.MakeFID(file, file)
 	if err != nil {
 		return err
 	}
 
 	// Create merkle and save to disk
-	merkle, err := utils.CreateMerkleTree(f.blockSize, handler.Size, file, file)
+	merkle, err := utils.CreateMerkleTree(blockSize, handler.Size, file, file)
 	if err != nil {
 		return err
 	}

@@ -60,8 +60,8 @@ func GenerateMerkleProof(tree merkletree.MerkleTree, index int, item []byte) (va
 	return
 }
 
-func CreateMerkleForProof(clientCtx client.Context, filename string, blockSize, index int, ctx *utils.Context) (string, string, error) {
-	data, err := GetPiece(utils.GetContentsPath(clientCtx, filename), int64(index), int64(blockSize))
+func CreateMerkleForProof(clientCtx client.Context, filename string, blockSize, index int64, ctx *utils.Context) (string, string, error) {
+	data, err := GetPiece(utils.GetContentsPath(clientCtx, filename), index, blockSize)
 	if err != nil {
 		return "", "", err
 	}
@@ -71,7 +71,7 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, blockSize, 
 		return "", "", err
 	}
 
-	verified, proof, err := GenerateMerkleProof(*mTree, index, data)
+	verified, proof, err := GenerateMerkleProof(*mTree, int(index), data)
 	if err != nil {
 		ctx.Logger.Error(err.Error())
 		return "", "", err
@@ -228,19 +228,15 @@ func requestAttestation(clientCtx client.Context, cid string, hashList string, i
 	return nil
 }
 
-func postProof(clientCtx client.Context, cid string, block string, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) error {
-	dex, ok := sdk.NewIntFromString(block)
-	ctx.Logger.Debug(fmt.Sprintf("BlockToProve: %s", block))
-	if !ok {
-		return fmt.Errorf("cannot parse block number")
-	}
+func postProof(clientCtx client.Context, cid string, blockSize, block int64, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) error {
+
 
 	data, err := db.Get(utils.MakeFileKey(cid), nil)
 	if err != nil {
 		return err
 	}
 
-	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), int(dex.Int64()), ctx)
+	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), blockSize, block, ctx)
 	if err != nil {
 		return err
 	}
@@ -298,8 +294,14 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 	return nil
 }
 
-func (f *FileServer) postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) {
+func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) {
 	intervalFromCMD, err := cmd.Flags().GetUint16(types.FlagInterval)
+	if err != nil {
+		ctx.Logger.Error(err.Error())
+		return
+	}
+
+	blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
 	if err != nil {
 		ctx.Logger.Error(err.Error())
 		return
@@ -459,7 +461,14 @@ func (f *FileServer) postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.Upl
 				continue
 			}
 
-			err = f.postProof(clientCtx, cid, block, db, q, ctx)
+			dex, ok := sdk.NewIntFromString(block)
+			ctx.Logger.Debug(fmt.Sprintf("BlockToProve: %s", block))
+			if !ok {
+				ctx.Logger.Error(fmt.Sprint("cannot parse block number"))
+				continue
+			}
+
+			err = postProof(clientCtx, cid, blockSize, dex.Int64(), db, q, ctx)
 			if err != nil {
 				ctx.Logger.Error(fmt.Sprintf("Posting Proof Error: %v", err))
 				continue
