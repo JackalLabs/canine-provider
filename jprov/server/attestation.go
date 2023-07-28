@@ -13,8 +13,8 @@ import (
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/cosmos/cosmos-sdk/client"
-	storageKeeper "github.com/jackalLabs/canine-chain/x/storage/keeper"
-	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
+	storageKeeper "github.com/jackalLabs/canine-chain/v3/x/storage/keeper"
+	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 
 	"github.com/spf13/cobra"
 )

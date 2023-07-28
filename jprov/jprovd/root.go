@@ -11,7 +11,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/jackalLabs/canine-chain/app"
+	"github.com/jackalLabs/canine-chain/v3/app"
 
 	"github.com/spf13/cobra"
 )

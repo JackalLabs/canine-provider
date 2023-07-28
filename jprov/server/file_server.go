@@ -7,11 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
@@ -22,7 +24,7 @@ import (
 	"github.com/rs/cors"
 	"github.com/syndtr/goleveldb/leveldb"
 
-	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
+	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/cobra"
@@ -234,6 +236,8 @@ func StartFileServer(cmd *cobra.Command) {
 	if !strs {
 		manager.Init(cmd, threads, db)
 	}
+	// Start the reporting system
+	reporter := InitReporter(cmd)
 
 	go postProofs(cmd, db, &q, ctx)
 	go NatCycle(cmd.Context())
@@ -242,6 +246,30 @@ func StartFileServer(cmd *cobra.Command) {
 	if !strs {
 		go manager.Start(cmd)
 	}
+
+	report, err := cmd.Flags().GetBool(types.FlagDoReport)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	go func() {
+		for {
+			if rand.Int63n(2) == 0 && report {
+				err := reporter.Report(cmd)
+				if err != nil {
+					fmt.Println(err)
+				}
+			} else {
+				err := reporter.AttestReport(&q)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
+
+			time.Sleep(30 * time.Second)
+		}
+	}()
 
 	port, err := cmd.Flags().GetInt(types.FlagPort)
 	if err != nil {

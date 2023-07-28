@@ -13,4 +13,5 @@ const (
 	FlagQueueInterval = "queue-interval"
 	FlagProviderName  = "moniker"
 	FlagSleep         = "sleep"
+	FlagDoReport      = "do-report"
 )
