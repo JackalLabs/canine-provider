@@ -36,7 +36,7 @@ import (
 )
 
 func GetMerkleTree(ctx client.Context, filename string) (*merkletree.MerkleTree, error) {
-	rawTree, err := os.ReadFile(utils.GetStoragePathForTree(ctx, filename))
+	rawTree, err := os.ReadFile(utils.GetStoragePathForTree(ctx.HomeDir, filename))
 	if err != nil {
 		return &merkletree.MerkleTree{}, fmt.Errorf("unable to find merkle tree for: %s", filename)
 	}
@@ -61,7 +61,7 @@ func GenerateMerkleProof(tree merkletree.MerkleTree, index int, item []byte) (va
 }
 
 func CreateMerkleForProof(clientCtx client.Context, filename string, blockSize, index int64, ctx *utils.Context) (string, string, error) {
-	data, err := GetPiece(utils.GetContentsPath(clientCtx, filename), index, blockSize)
+	data, err := GetPiece(utils.GetContentsPath(clientCtx.HomeDir, filename), index, blockSize)
 	if err != nil {
 		return "", "", err
 	}
@@ -397,12 +397,12 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 					if !duplicate {
 						ctx.Logger.Info("And we are removing the file on disk.")
 
-						err := os.RemoveAll(utils.GetStoragePath(clientCtx, value))
+						err := os.RemoveAll(utils.GetFidDir(clientCtx.HomeDir, value))
 						if err != nil {
 							ctx.Logger.Error(err.Error())
 						}
 
-						err = os.Remove(utils.GetStoragePathForTree(clientCtx, value))
+						err = os.Remove(utils.GetStoragePathForTree(clientCtx.HomeDir, value))
 						if err != nil {
 							ctx.Logger.Error(err.Error())
 							continue

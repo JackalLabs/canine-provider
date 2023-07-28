@@ -3,10 +3,10 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/pprof"
 	"os"
-	"path/filepath"
 
 	"github.com/syndtr/goleveldb/leveldb"
 
@@ -76,42 +76,25 @@ func checkVersion(cmd *cobra.Command, w http.ResponseWriter, ctx *utils.Context)
 
 func downfil(cmd *cobra.Command, w http.ResponseWriter, ps httprouter.Params, ctx *utils.Context) {
 	clientCtx := client.GetClientContextFromCmd(cmd)
-	chunkSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
+
+	file, err := os.Open(utils.GetContentsPath(clientCtx.HomeDir, ps.ByName("file")))
 	if err != nil {
-		fmt.Println(err)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-
-	var fileList []*[]byte
-
-	var dataLength int
-
-	var i int
-	for { // loop through every file in the directory and fail once it hits a file that it can't find
-		path := filepath.Join(utils.GetStoragePath(clientCtx, ps.ByName("file")), fmt.Sprintf("%d.jkl", i))
-		f, err := os.ReadFile(path)
-		if err != nil {
-			break
+	defer func() {
+		if err := file.Close(); err != nil {
+			ctx.Logger.Error("downfil: %s", err)
 		}
-		fileList = append(fileList, &f)
-		dataLength += len(f)
-		i++
-	}
+	}()
 
-	data := make([]byte, dataLength)
-
-	for i, file := range fileList {
-		for k, b := range *file {
-			data[i*int(chunkSize)+k] = b
-		}
-	}
-
-	w.Header().Set("Content-Length", fmt.Sprintf("%d", dataLength))
-
-	_, err = w.Write(data)
+	written, err := io.Copy(w, file)
 	if err != nil {
-		return
+		ctx.Logger.Error("downfil: %s", err)
 	}
+
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", written))
+	return
 }
 
 func GetRoutes(cmd *cobra.Command, router *httprouter.Router, db *leveldb.DB, q *queue.UploadQueue) {

@@ -34,53 +34,31 @@ func MakeDowntimeKey(cid string) []byte {
 	return []byte(fmt.Sprintf("%s%s", DowntimeKey, cid))
 }
 
-func GetStoragePath(ctx client.Context, fid string) string {
-	return filepath.Join(GetStorageRootDir(ctx), GetStorageFileName(fid))
+func getStorageRootDir(homeDir string) string {
+	return filepath.Join(homeDir, "storage")
 }
 
-func GetStorageRootDir(ctx client.Context) string {
-	return filepath.Join(ctx.HomeDir, "storage")
-}
-
-func GetStorageFileName(fid string) string {
+func GetContentsFileName(fid string) string {
 	return fid
 }
 
-func GetStoragePathV2(ctx client.Context, fid string) string {
-	builder := strings.Builder{}
-	builder.WriteString(fid)
-	builder.WriteString(".jkl")
-
-	configPath := filepath.Join(ctx.HomeDir, "storage")
-	configFilePath := filepath.Join(configPath, builder.String())
-
-	return configFilePath
-}
-
-func GetStoragePathForPiece(ctx client.Context, fid string, index int) string {
-	configPath := filepath.Join(ctx.HomeDir, "storage")
-	configFilePath := filepath.Join(configPath, fid, fmt.Sprintf("%d.jkl", index))
-
-	return configFilePath
+func GetFidDir(homeDir, fid string) string {
+	return filepath.Join(getStorageRootDir(homeDir), fid)
 }
 
 // GetContentsPath returns file path for the file that stores the user uploaded contents
 // e.g. ~/.provider/storage/<fid>/<fid>.jkl
-func GetContentsPath(ctx client.Context, fid string) string {
-	return filepath.Join(GetStorageRootDir(ctx), fid, GetStorageFileName(fid))
+func GetContentsPath(homeDir, fid string) string {
+	return filepath.Join(GetFidDir(homeDir, fid), GetContentsFileName(fid))
 }
 
 // GetStoragePathForTree returns full path for fid merkle tree file
 // e.g. ~/.provider/storage/<fid>/<fid>.tree
-func GetStoragePathForTree(ctx client.Context, fid string) string {
-	return filepath.Join(GetStorageDirForTree(ctx), fid, GetFileNameForTree(fid))
+func GetStoragePathForTree(homeDir, fid string) string {
+	return filepath.Join(GetFidDir(homeDir, fid), GetTreeFileName(fid))
 }
 
-func GetStorageDirForTree(ctx client.Context) string {
-	return filepath.Join(ctx.HomeDir, "storage")
-}
-
-func GetFileNameForTree(fid string) string {
+func GetTreeFileName(fid string) string {
 	return fmt.Sprintf("%s.tree", fid)
 }
 

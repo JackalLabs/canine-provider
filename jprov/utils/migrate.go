@@ -7,20 +7,23 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"path/filepath"
 
 	"github.com/cosmos/cosmos-sdk/client"
 )
 
+
+
 func Migrate(ctx client.Context) {
-	fids, err := DiscoverFids(ctx)
+	fids, err := DiscoverFids(ctx.HomeDir)
 	if err != nil {
 		fmt.Fprint(os.Stderr, err)
 		return
 	}
 
 	for i, fid := range fids {
-		fmt.Printf("\033[2K\rGlueing %d/%d files...", i, 10)
-		err := GlueAllBlocks(ctx, fid)
+		fmt.Printf("\033[2K\rGlueing %d/%d files...", i, len(fids))
+		err := GlueAllBlocks(ctx.HomeDir, fid)
 		if err != nil {
 			fmt.Fprint(os.Stderr, err)
 			return
@@ -40,7 +43,7 @@ func Migrate(ctx client.Context) {
 // postGlueCheck verifies the result of glueing was successful by generating fid
 // of the glued file and check against passed fid
 func postGlueCheck(ctx client.Context, fid string) (pass bool, err error) {
-	file, err := os.Open(GetContentsPath(ctx, fid))
+	file, err := os.Open(GetContentsPath(ctx.HomeDir, fid))
 	if err != nil {
 		return
 	}
@@ -56,8 +59,8 @@ func postGlueCheck(ctx client.Context, fid string) (pass bool, err error) {
 }
 
 // DiscoverFids reads all directory entry of the storage and returns fids
-func DiscoverFids(ctx client.Context) (fids []string, err error) {
-	dirs, err := os.ReadDir(GetStorageRootDir(ctx))
+func DiscoverFids(homeDir string) (fids []string, err error) {
+	dirs, err := os.ReadDir(getStorageRootDir(homeDir))
 	if err != nil {
 		return
 	}
@@ -72,8 +75,8 @@ func DiscoverFids(ctx client.Context) (fids []string, err error) {
 }
 
 // Glue all blocks for single fid
-func GlueAllBlocks(ctx client.Context, fid string) error {
-	fileNames, err := GetBlockFileNames(GetStoragePath(ctx, fid))
+func GlueAllBlocks(homeDir, fid string) error {
+	fileNames, err := GetBlockFileNames(getStoragePath(homeDir, fid))
 	if err != nil {
 		return err
 	}
@@ -149,6 +152,32 @@ func checkAllFileNames(fileNames []string) (ok bool) {
 	}
 
 	return true
+}
+
+// Legacy file paths
+func getStoragePath(homeDir, fid string) string {
+	configPath := filepath.Join(homeDir, "storage")
+	configFilePath := filepath.Join(configPath, fid)
+
+	return configFilePath
+}
+
+func getStoragePathV2(homeDir, fid string) string {
+	builder := strings.Builder{}
+	builder.WriteString(fid)
+	builder.WriteString(".jkl")
+
+	configPath := filepath.Join(homeDir, "storage")
+	configFilePath := filepath.Join(configPath, builder.String())
+
+	return configFilePath
+}
+
+func getStoragePathForTree(ctx client.Context, fid string) string {
+	configPath := filepath.Join(ctx.HomeDir, "storage")
+	configFilePath := filepath.Join(configPath, fmt.Sprintf("%s.tree", fid))
+
+	return configFilePath
 }
 
 // create file name for a block

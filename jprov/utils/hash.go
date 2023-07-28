@@ -11,9 +11,6 @@ import (
 
 	"github.com/wealdtech/go-merkletree"
 	"github.com/wealdtech/go-merkletree/sha3"
-
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/spf13/cobra"
 )
 
 // MakeFID generates fid from the data it reads from reader
@@ -44,49 +41,6 @@ func MakeFID(reader io.Reader, seeker io.Seeker) (fid string, err error) {
 		return
 	}
 	return fid, nil
-}
-
-func SaveFileToDisk(cmd *cobra.Command, fid string, file io.Reader) error {
-	clientCtx := client.GetClientContextFromCmd(cmd)
-
-	// creating file path
-	path := GetStoragePathV2(clientCtx, fid)
-	f, dirErr := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0o666)
-	if dirErr != nil {
-		return dirErr
-	}
-	defer f.Close()
-
-	_, err := io.Copy(f, file) // writing file to disk
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func WriteTreeToDisk(cmd *cobra.Command, fid string, tree *merkletree.MerkleTree) error {
-	clientCtx := client.GetClientContextFromCmd(cmd)
-
-	exportedTree, err := tree.Export()
-	if err != nil {
-		return err
-	}
-
-	f, err := os.OpenFile(GetStoragePathForTree(clientCtx, fid), os.O_WRONLY|os.O_CREATE, 0o666)
-	if err != nil {
-		return err
-	}
-	_, err = f.Write(exportedTree)
-	if err != nil {
-		return err
-	}
-	err = f.Close()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // This function generates merkletree from file.

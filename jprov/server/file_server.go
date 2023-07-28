@@ -71,7 +71,7 @@ func WriteToDisk(data io.Reader, closer io.Closer, dir, name string) (written in
 		err = errors.Join(err, file.Close())
 
 		if closer != nil {
-			err = errors.Join(err, file.Close())
+			err = errors.Join(err, closer.Close())
 		}
 	}()
 
@@ -121,7 +121,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	// Save file to disk
 	_, err = WriteToDisk(file, file, utils.GetStoragePath(clientCtx, fid), fid)
 	if err != nil {
-		ctx.Logger.Error("Write To Disk Error: %v", err)
+		ctx.Logger.Error("saveFile: Write To Disk Error: ", err)
 		return err
 	}
 
@@ -141,7 +141,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 
 	msg, ctrErr := MakeContract(cmd, fid, sender, &wg, q, string(merkle.Root()), fmt.Sprintf("%d", handler.Size))
 	if ctrErr != nil {
-		ctx.Logger.Error("CONTRACT ERROR: %v", ctrErr)
+		ctx.Logger.Error("saveFile: CONTRACT ERROR: ", ctrErr)
 		return ctrErr
 	}
 	wg.Wait()
@@ -151,7 +151,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	}
 
 	if err = writeResponse(*w, *msg, fid, cid); err != nil {
-		ctx.Logger.Error("Json Encode Error: %v", err)
+		ctx.Logger.Error("Json Encode Error: ", err)
 		return err
 	}
 
