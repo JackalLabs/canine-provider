@@ -33,24 +33,28 @@ func TestGetPiece(t *testing.T) {
 		t.Fatalf("WriteString: %s", err)
 	}
 
-	if err != nil {
-		t.Fatalf("NewFileServer: %s", err)
-	}
-
 	resData, resErr := server.GetPiece(file.Name(), 0, 5)
 	if err != nil {
-		t.Errorf("GetPiece 0: %s", resErr)
+		t.Errorf("GetPiece 0, 5: %s", resErr)
 	}
 	if string(resData) != "hello" {
-		t.Errorf("GetPiece 0: have %q, want %q", string(resData), "hello")
+		t.Errorf("GetPiece 0, 5: have %q, want %q", string(resData), "hello")
 	}
 
 	resData, resErr = server.GetPiece(file.Name(), 1, 5)
 	if err != nil {
-		t.Errorf("GetPiece 0: %s", resErr)
+		t.Errorf("GetPiece 1, 5: %s", resErr)
 	}
 	if string(resData) != ", wor" {
-		t.Errorf("GetPiece 0: have %q, want %q", string(resData), ", wor")
+		t.Errorf("GetPiece 1, 5: have %q, want %q", string(resData), ", wor")
+	}
+
+	resData, resErr = server.GetPiece(file.Name(), 1, 8)
+	if err != nil {
+		t.Errorf("GetPiece 1, 8: %s", resErr)
+	}
+	if string(resData) != "orld\n\x00\x00\x00" {
+		t.Errorf("GetPiece 1, 8: have %q, want %q", string(resData), "world")
 	}
 }
 

@@ -45,9 +45,9 @@ func GetPiece(path string, index, blockSize int64) (block []byte, err error) {
 	}()
 
 	block = make([]byte, blockSize)
-	_, err = file.ReadAt(block, index*blockSize)
+	n, err := file.ReadAt(block, index*blockSize)
 	// ignoring io.EOF with n > 0 because the file size is not always n * blockSize
-	if err != nil {
+	if (err != nil && err != io.EOF) || (err == io.EOF && n == 0) {
 		return
 	}
 
