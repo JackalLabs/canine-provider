@@ -14,11 +14,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Do not run tests other than linux
-const testDir = "/tmp"
-
 func newFile(name string, t *testing.T) (f *os.File) {
-	f, err := os.CreateTemp(testDir, "_GO_"+name)
+	f, err := os.CreateTemp("", "_GO_"+name)
 	if err != nil {
 		t.Fatalf("TempFile %s: %s", name, err)
 	}
