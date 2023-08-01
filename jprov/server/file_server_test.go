@@ -49,6 +49,7 @@ func TestGetPiece(t *testing.T) {
 		t.Errorf("GetPiece 1, 5: have %q, want %q", string(resData), ", wor")
 	}
 
+	// Test reading a block that starts almost at the end
 	resData, resErr = server.GetPiece(file.Name(), 1, 8)
 	if err != nil {
 		t.Errorf("GetPiece 1, 8: %s", resErr)
