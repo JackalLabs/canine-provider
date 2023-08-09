@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/version"
 
 	"github.com/JackalLabs/jackal-provider/jprov/server"
+	"github.com/JackalLabs/jackal-provider/jprov/strays"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -17,6 +19,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/spf13/cobra"
 	tmcli "github.com/tendermint/tendermint/libs/cli"
+
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 func StartServerCommand() *cobra.Command {
@@ -26,6 +30,34 @@ func StartServerCommand() *cobra.Command {
 		Long:  `Start the Jackal Storage Provider server with the specified port.`,
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+			dbPath := utils.GetDataPath(clientCtx)
+			db, err := leveldb.OpenFile(dbPath, nil)
+			if err != nil {
+				return fmt.Errorf("failed to open database: %s", err)
+			}
+			defer func() {
+				err = errors.Join(err, db.Close())
+			}()
+
+			// start stray service
+			if haltStray, err := cmd.Flags().GetBool(types.HaltStraysFlag); err != nil {
+				return err
+			} else if !haltStray {
+				manager := strays.NewStrayManager(cmd)
+
+				threads, err := cmd.Flags().GetUint(types.FlagThreads)
+				if err != nil {
+					return err
+				}
+
+				manager.Init(cmd, threads, db)
+				go manager.Start(cmd)
+			}
+
 			server.StartFileServer(cmd)
 			return nil
 		},
