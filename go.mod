@@ -10,7 +10,7 @@ require (
 	github.com/jackalLabs/canine-chain/v3 v3.0.0-alpha.1
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/rs/cors v1.9.0
-	github.com/rs/zerolog v1.29.1
+	github.com/rs/zerolog v1.30.0
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.16.0
