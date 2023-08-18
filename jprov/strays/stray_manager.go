@@ -72,32 +72,34 @@ func (m *StrayManager) Distribute() { // Hand out every available stray to an id
 	}
 }
 
-func (m *StrayManager) Init(cmd *cobra.Command, count uint, db *leveldb.DB) { // create all the hands for the manager
+func (m *StrayManager) Init(cmd *cobra.Command, queryService *utils.QueryService, db *leveldb.DB) { // create all the hands for the manager
 	fmt.Println("Starting initialization...")
-	var i uint
 	clientCtx := client.GetClientContextFromCmd(cmd)
-
 	address, err := crypto.GetAddress(clientCtx)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	qClient := storageTypes.NewQueryClient(clientCtx) // get my address from the chain
-	pres, err := qClient.Providers(cmd.Context(), &storageTypes.QueryProviderRequest{Address: address})
+	provider, err := queryService.QueryProvider(cmd.Context(), address)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	currentClaimers := pres.Providers.AuthClaimers
+	threads, err := cmd.Flags().GetUint(types.FlagThreads)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
-	for i = 1; i < count+1; i++ {
+	var i uint
+	for i = 1; i < threads+1; i++ {
 		fmt.Printf("Processing stray thread %d.\n", i)
 		h := m.AddHand(db, m.Cmd, i)
 
 		found := false
-		for _, claimer := range currentClaimers {
+		for _, claimer := range provider.AuthClaimers {
 			if claimer == h.Address {
 				found = true
 				break

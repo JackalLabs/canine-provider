@@ -7,10 +7,10 @@ import (
 	"os"
 
 	"github.com/JackalLabs/blanket/blanket"
-	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/cosmos/cosmos-sdk/version"
 
 	"github.com/JackalLabs/jackal-provider/jprov/server"
+	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/strays"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -43,18 +43,15 @@ func StartServerCommand() *cobra.Command {
 				err = errors.Join(err, db.Close())
 			}()
 
+			queryService := utils.NewQueryService(cmd)
+
 			// start stray service
 			if haltStray, err := cmd.Flags().GetBool(types.HaltStraysFlag); err != nil {
 				return err
 			} else if !haltStray {
 				manager := strays.NewStrayManager(cmd)
 
-				threads, err := cmd.Flags().GetUint(types.FlagThreads)
-				if err != nil {
-					return err
-				}
-
-				manager.Init(cmd, threads, db)
+				manager.Init(cmd, queryService, db)
 				go manager.Start(cmd)
 			}
 
