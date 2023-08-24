@@ -462,11 +462,13 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 				continue
 			}
 
-			err = postProof(clientCtx, cid, block, db, q, ctx)
-			if err != nil {
-				ctx.Logger.Error(fmt.Sprintf("Posting Proof Error: %v", err))
-				continue
-			}
+			go func() {
+				err = postProof(clientCtx, cid, block, db, q, ctx)
+				if err != nil {
+					ctx.Logger.Error(fmt.Sprintf("Posting Proof Error: %v", err))
+				}
+			}()
+
 			sleep, err := cmd.Flags().GetInt64(types.FlagSleep)
 			if err != nil {
 				ctx.Logger.Error(err.Error())
