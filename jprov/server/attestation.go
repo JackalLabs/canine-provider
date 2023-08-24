@@ -112,7 +112,7 @@ func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, q *queu
 	}
 
 	if upload.Response == nil {
-		http.Error(*w, fmt.Errorf(upload.Response.RawLog).Error(), http.StatusBadRequest)
+		http.Error(*w, "upload: no response", http.StatusBadRequest)
 		return
 	}
 
