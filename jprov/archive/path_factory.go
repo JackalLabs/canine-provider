@@ -28,7 +28,7 @@ func NewSingleCellPathFactory(rootDir string) *SingleCellPathFactory {
 }
 
 func (s *SingleCellPathFactory) FilePath(fid string) (path string) {
-	return filepath.Join(s.fileDir(fid), s.fileName(fid))
+	return filepath.Join(s.FileDir(fid), s.fileName(fid))
 }
 
 func (s *SingleCellPathFactory) fileName(fid string) (name string) {
@@ -40,12 +40,12 @@ func (s *SingleCellPathFactory) fileName(fid string) (name string) {
 	return b.String()
 }
 
-func (s *SingleCellPathFactory) fileDir(fid string) (dir string) {
+func (s *SingleCellPathFactory) FileDir(fid string) (dir string) {
 	return filepath.Join(s.rootDir, "storage", fid)
 }
 
 func (s *SingleCellPathFactory) TreePath(fid string) (path string) {
-	return filepath.Join(s.fileDir(fid), s.treeName(fid))
+	return filepath.Join(s.FileDir(fid), s.treeName(fid))
 }
 
 func (s *SingleCellPathFactory) treeName(fid string) (name string) {

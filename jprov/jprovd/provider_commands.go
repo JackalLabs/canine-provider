@@ -55,7 +55,11 @@ func StartServerCommand() *cobra.Command {
 				go manager.Start(cmd)
 			}
 
-			server.StartFileServer(cmd)
+			fs, err := server.NewFileServer(cmd)
+			if err != nil {
+				return err
+			}
+			fs.StartFileServer(cmd)
 			return nil
 		},
 	}

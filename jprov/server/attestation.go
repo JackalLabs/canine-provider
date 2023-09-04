@@ -12,11 +12,8 @@ import (
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
-	"github.com/cosmos/cosmos-sdk/client"
 	storageKeeper "github.com/jackalLabs/canine-chain/x/storage/keeper"
 	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
-
-	"github.com/spf13/cobra"
 )
 
 func verifyAttest(deal storageTypes.ActiveDeals, attest types.AttestRequest) (verified bool, err error) {
@@ -53,13 +50,7 @@ func addMsgAttest(address string, cid string, q *queue.UploadQueue) (upload type
 	return
 }
 
-func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, q *queue.UploadQueue) {
-	clientCtx, qerr := client.GetClientTxContext(cmd)
-	if qerr != nil {
-		fmt.Println(qerr)
-		return
-	}
-
+func (f *FileServer) attest(w *http.ResponseWriter, r *http.Request) {
 	var attest types.AttestRequest
 
 	err := json.NewDecoder(r.Body).Decode(&attest)
@@ -69,15 +60,13 @@ func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, q *queu
 		return
 	}
 
-	queryClient := storageTypes.NewQueryClient(clientCtx)
-
 	dealReq := &storageTypes.QueryActiveDealRequest{
 		Cid: attest.Cid,
 	}
 
 	fmt.Printf("Attesting for: %s\n", attest.Cid)
 
-	deal, err := queryClient.ActiveDeals(context.Background(), dealReq)
+	deal, err := f.queryClient.ActiveDeals(context.Background(), dealReq)
 	if err != nil {
 		http.Error(*w, err.Error(), http.StatusBadRequest)
 	}
@@ -92,13 +81,13 @@ func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, q *queu
 		http.Error(*w, errors.New("failed to verify attest").Error(), http.StatusBadRequest)
 	}
 
-	address, err := crypto.GetAddress(clientCtx)
+	address, err := crypto.GetAddress(f.cosmosCtx)
 	if err != nil {
 		http.Error(*w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	upload, err := addMsgAttest(address, attest.Cid, q)
+	upload, err := addMsgAttest(address, attest.Cid, f.queue)
 	if err != nil {
 		http.Error(*w, err.Error(), http.StatusBadRequest)
 		return

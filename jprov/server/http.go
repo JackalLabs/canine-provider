@@ -6,34 +6,20 @@ import (
 	"io"
 	"net/http"
 	"net/http/pprof"
-	"os"
 
-	"github.com/syndtr/goleveldb/leveldb"
-
-	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/version"
 
 	"github.com/julienschmidt/httprouter"
 
 	"github.com/JackalLabs/jackal-provider/jprov/api"
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
-	"github.com/JackalLabs/jackal-provider/jprov/queue"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
-	"github.com/JackalLabs/jackal-provider/jprov/utils"
-	"github.com/spf13/cobra"
 )
 
-func indexres(cmd *cobra.Command, w http.ResponseWriter) {
-	clientCtx, err := client.GetClientTxContext(cmd)
-	ctx := utils.GetServerContextFromCmd(cmd)
+func (f *FileServer) indexres(w http.ResponseWriter) {
+	address, err := crypto.GetAddress(f.cosmosCtx)
 	if err != nil {
-		ctx.Logger.Error(err.Error())
-		return
-	}
-
-	address, err := crypto.GetAddress(clientCtx)
-	if err != nil {
-		ctx.Logger.Error(err.Error())
+		f.serverCtx.Logger.Error(err.Error())
 		return
 	}
 
@@ -43,26 +29,19 @@ func indexres(cmd *cobra.Command, w http.ResponseWriter) {
 	}
 	err = json.NewEncoder(w).Encode(v)
 	if err != nil {
-		ctx.Logger.Error(err.Error())
+		f.serverCtx.Logger.Error(err.Error())
 	}
 }
 
-func checkVersion(cmd *cobra.Command, w http.ResponseWriter, ctx *utils.Context) {
-	res, err := cmd.Flags().GetString(types.VersionFlag)
+func (f *FileServer) checkVersion(w http.ResponseWriter) {
+	res, err := f.cmd.Flags().GetString(types.VersionFlag)
 	if err != nil {
-		ctx.Logger.Error(err.Error())
+		f.serverCtx.Logger.Error(err.Error())
 	}
-
-	clientCtx, error := client.GetClientTxContext(cmd)
-	if error != nil {
-		ctx.Logger.Error(err.Error())
-		return
-	}
-	chainID := clientCtx.ChainID
 
 	v := types.VersionResponse{
 		Version: version.Version,
-		ChainID: chainID,
+		ChainID: f.cosmosCtx.ChainID,
 	}
 	if len(res) > 0 {
 		v.Version = res
@@ -70,63 +49,60 @@ func checkVersion(cmd *cobra.Command, w http.ResponseWriter, ctx *utils.Context)
 
 	err = json.NewEncoder(w).Encode(v)
 	if err != nil {
-		ctx.Logger.Error(err.Error())
+		f.serverCtx.Logger.Error(err.Error())
 	}
 }
 
-func downfil(cmd *cobra.Command, w http.ResponseWriter, ps httprouter.Params, ctx *utils.Context) {
-	clientCtx := client.GetClientContextFromCmd(cmd)
-
-	file, err := os.Open(utils.GetContentsPath(clientCtx.HomeDir, ps.ByName("file")))
+func (f *FileServer) downfil(w http.ResponseWriter, ps httprouter.Params) {
+	fid := ps.ByName("file")
+	file, err := f.archive.RetrieveFile(fid)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	defer func() {
 		if err := file.Close(); err != nil {
-			ctx.Logger.Error("downfil: %s", err)
+			f.serverCtx.Logger.Error("downfil: %s", err)
 		}
 	}()
 
 	written, err := io.Copy(w, file)
 	if err != nil {
-		ctx.Logger.Error("downfil: %s", err)
+		f.serverCtx.Logger.Error("downfil: %s", err)
 	}
 
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", written))
 }
 
-func GetRoutes(cmd *cobra.Command, router *httprouter.Router, db *leveldb.DB, q *queue.UploadQueue) {
-	ctx := utils.GetServerContextFromCmd(cmd)
-
+func (f *FileServer) GetRoutes(router *httprouter.Router) {
 	dfil := func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		downfil(cmd, w, ps, ctx)
+		f.downfil(w, ps)
 	}
 
 	ires := func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		indexres(cmd, w)
+		f.indexres(w)
 	}
 
 	router.GET("/version", func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-		checkVersion(cmd, w, ctx)
+		f.checkVersion(w)
 	})
 	router.GET("/download/:file", dfil)
 
-	api.BuildApi(cmd, q, router, db)
+	api.BuildApi(f.cmd, f.queue, router, f.db)
 
 	router.GET("/", ires)
 }
 
-func PostRoutes(cmd *cobra.Command, router *httprouter.Router, db *leveldb.DB, q *queue.UploadQueue) {
+func (f *FileServer) PostRoutes(router *httprouter.Router) {
 	upfil := func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		fileUpload(&w, r, cmd, db, q)
+		f.fileUpload(&w, r)
 	}
 
 	router.POST("/upload", upfil)
 	router.POST("/u", upfil)
 
 	router.POST("/attest", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		attest(&w, r, cmd, q)
+		f.attest(&w, r)
 	})
 }
 
@@ -144,20 +120,18 @@ func PProfRoutes(router *httprouter.Router) {
 
 // This function returns the filename(to save in database) of the saved file
 // or an error if it occurs
-func fileUpload(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue) {
-	ctx := utils.GetServerContextFromCmd(cmd)
-
+func (f  *FileServer) fileUpload(w *http.ResponseWriter, r *http.Request) {
 	// ParseMultipartForm parses a request body as multipart/form-data
 	err := r.ParseMultipartForm(types.MaxFileSize) // MAX file size lives here
 	if err != nil {
-		ctx.Logger.Error("Error with parsing form!")
+		f.serverCtx.Logger.Error("Error with parsing form!")
 		v := types.ErrorResponse{
 			Error: err.Error(),
 		}
 		(*w).WriteHeader(http.StatusInternalServerError)
 		err = json.NewEncoder(*w).Encode(v)
 		if err != nil {
-			ctx.Logger.Error(err.Error())
+			f.serverCtx.Logger.Error(err.Error())
 		}
 		return
 	}
@@ -165,19 +139,19 @@ func fileUpload(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, db 
 
 	file, handler, err := r.FormFile("file") // Retrieve the file from form data
 	if err != nil {
-		ctx.Logger.Error("Error with form file!")
+		f.serverCtx.Logger.Error("Error with form file!")
 		v := types.ErrorResponse{
 			Error: err.Error(),
 		}
 		(*w).WriteHeader(http.StatusInternalServerError)
 		err = json.NewEncoder(*w).Encode(v)
 		if err != nil {
-			ctx.Logger.Error(err.Error())
+			f.serverCtx.Logger.Error(err.Error())
 		}
 		return
 	}
 
-	err = saveFile(file, handler, sender, cmd, db, w, q)
+	err = f.saveFile(file, handler, sender, w)
 	if err != nil {
 		v := types.ErrorResponse{
 			Error: err.Error(),
@@ -185,7 +159,7 @@ func fileUpload(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, db 
 		(*w).WriteHeader(http.StatusInternalServerError)
 		err = json.NewEncoder(*w).Encode(v)
 		if err != nil {
-			ctx.Logger.Error(err.Error())
+			f.serverCtx.Logger.Error(err.Error())
 		}
 	}
 }

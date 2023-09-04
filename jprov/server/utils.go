@@ -3,12 +3,16 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"crypto/sha256"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
+	"io"
 
 	"github.com/JackalLabs/jackal-provider/jprov/types"
+	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/cosmos/cosmos-sdk/client"
 	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
 )
@@ -116,4 +120,20 @@ func checkVerified(clientCtx *client.Context, cid string, self string) (bool, er
 	}
 
 	return ver, nil
+}
+
+func buildCid(address, sender, fid string) (string, error) {
+	h := sha256.New()
+
+	var footprint strings.Builder // building FID
+	footprint.WriteString(sender)
+	footprint.WriteString(address)
+	footprint.WriteString(fid)
+
+	_, err := io.WriteString(h, footprint.String())
+	if err != nil {
+		return "", err
+	}
+
+	return utils.MakeCid(h.Sum(nil))
 }

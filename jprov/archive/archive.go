@@ -29,13 +29,22 @@ type Archive interface {
 	// RetrieveTree returns *merkletree
 	// Returns error if the tree is not found
 	RetrieveTree(fid string) (tree *merkletree.MerkleTree, err error)
+	// Delete deletes archive from disk. This include the file and merkle tree.
+	Delete(fid string)
 }
 
 var _ Archive = &SingleCellArchive{}
 
 type SingleCellArchive struct {
 	rootDir string
-	pathFactory pathFactory
+	pathFactory *SingleCellPathFactory
+}
+
+func NewSingleCellArchive(rootDir string) *SingleCellArchive {
+	return &SingleCellArchive{
+		rootDir: rootDir,
+		pathFactory: NewSingleCellPathFactory(rootDir),
+	}
 }
 
 func (f *SingleCellArchive) WriteFileToDisk(data io.Reader, fid string) (written int64, err error) {
@@ -113,4 +122,15 @@ func (f *SingleCellArchive) RetrieveTree(fid string) (tree *merkletree.MerkleTre
 
 	tree, err = merkletree.ImportMerkleTree(rawTree, sha3.New512())
 	return
+}
+
+func (f *SingleCellArchive) Delete(fid string) {
+	// since the file and merkle tree is saved together in an isolated directory,
+	// just delete the whole directory
+	err := os.RemoveAll(f.pathFactory.FileDir(fid))
+	if err != nil {
+		// filePath factory might be broken
+		// read os.RemoveAll error conditions at std doc
+		panic(err)
+	}
 }
