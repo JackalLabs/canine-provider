@@ -353,6 +353,7 @@ func (f *FileServer) postProofs(interval uint16) {
 
 					duplicate := false
 					iter := f.db.NewIterator(nil, nil)
+					// find contracts with same fid
 					for iter.Next() {
 						c := string(iter.Key())
 						v := string(iter.Value())
