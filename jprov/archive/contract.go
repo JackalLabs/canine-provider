@@ -1,6 +1,8 @@
 package archive
 
 import (
+	"bytes"
+	"encoding/binary"
 	"errors"
 	"strings"
 
@@ -19,12 +21,7 @@ type ArchiveDB interface {
 	Close() error
 } 
 
-type DowntimeDB interface {
-	Get(cid types.Cid) (blocks int)
-	Set(cid types.Cid, blocks int)
-	Delete(cid types.Cid)
-	Close() error
-}
+
 
 var _ ArchiveDB = &DoubleRefArchiveDB{}
 
@@ -155,4 +152,49 @@ func (d *DoubleRefArchiveDB) key(cid types.Cid) (key []byte) {
 
 func (d *DoubleRefArchiveDB) refKey(fid types.Fid) []byte {
 	return []byte(fid)
+}
+
+type DowntimeDB struct {
+    db *leveldb.DB
+}
+
+func NewDowntimeDB(filepath string) (*DowntimeDB, error) {
+    db, err := leveldb.OpenFile(filepath, nil)
+    if err != nil {
+        return nil, err
+    }
+    return &DowntimeDB{db: db}, nil
+}
+
+func (d *DowntimeDB) Get(cid types.Cid) (block int64, err error) {
+    b, err := d.db.Get([]byte(cid), nil)
+    block, err = byteToBlock(b)
+    return
+}
+
+func (d *DowntimeDB) Set(cid types.Cid, block int64) error {
+    b, err := blockToByte(block)
+    if err != nil {
+        return err
+    }
+    return d.db.Put([]byte(cid), b, nil)
+}
+
+func (d *DowntimeDB) Delete(cid types.Cid) error {
+    return d.db.Delete([]byte(cid), nil)
+}
+func (d *DowntimeDB) Close() error {
+    return d.db.Close()
+}
+func byteToBlock(b []byte) (int64, error) {
+    r := bytes.NewReader(b)
+
+    var block int64
+    err := binary.Read(r, binary.LittleEndian, &block)
+    return block, err
+}
+func blockToByte(block int64) ([]byte, error) {
+    b := new(bytes.Buffer)
+    err := binary.Write(b, binary.LittleEndian, block)
+    return b.Bytes(), err
 }
