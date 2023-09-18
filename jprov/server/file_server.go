@@ -17,7 +17,6 @@ import (
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/rs/cors"
-	"github.com/syndtr/goleveldb/leveldb"
 
 	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
 	tmlog "github.com/tendermint/tendermint/libs/log"
@@ -34,7 +33,8 @@ type FileServer struct {
 	serverCtx *utils.Context
 	queryClient storageTypes.QueryClient
 	archive archive.Archive
-	db *leveldb.DB
+	archivedb archive.ArchiveDB
+	downtimedb archive.DowntimeDB
 	provider storageTypes.Providers
 	blockSize int64
 	queue *queue.UploadQueue
@@ -44,13 +44,12 @@ type FileServer struct {
 func NewFileServer (cmd *cobra.Command) (fs *FileServer, err error) {
 	sCtx := utils.GetServerContextFromCmd(cmd)
 	clientCtx := client.GetClientContextFromCmd(cmd)
-
-	path := utils.GetDataPath(clientCtx)
-
-	db, err := leveldb.OpenFile(path, nil)
-	if err != nil {
-		return nil, err
-	}
+    
+    dbPath := utils.GetDataPath(clientCtx)
+    archivedb, err := archive.NewDoubleRefArchiveDB(dbPath)
+    if err != nil {
+        return
+    }
 
 	blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
 	if err != nil {
@@ -64,7 +63,7 @@ func NewFileServer (cmd *cobra.Command) (fs *FileServer, err error) {
 		cosmosCtx: clientCtx,
 		serverCtx: sCtx,
 		archive: archive.NewSingleCellArchive(sCtx.Config.RootDir),
-		db: db,
+        archivedb: archivedb,
 		blockSize: blockSize,
 		queryClient: storageTypes.NewQueryClient(clientCtx),
 		queue: &queue,
@@ -127,13 +126,23 @@ func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader
 		return err
 	}
 
-	err = utils.SaveToDatabase(fid, cid, f.db, f.serverCtx.Logger)
+	err = f.saveToDatabase(types.Fid(fid), types.Cid(cid))
 	if err != nil {
 		return err
 	}
+	f.logger.Info(fmt.Sprintf("%s %s", fid, "Added to database"))
 
 	return nil
 }
+
+func (f *FileServer) saveToDatabase(fid types.Fid, cid types.Cid) error {
+    err := f.downtimedb.Set(cid, 0) 
+    if err != nil {
+        return err
+    }
+    return f.archivedb.SetContract(cid, fid)
+}
+
 
 func writeResponse(w http.ResponseWriter, upload types.Upload, fid, cid string) error {
 	if upload.Err != nil {

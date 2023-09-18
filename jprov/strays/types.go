@@ -4,27 +4,29 @@ import (
 	"math/rand"
 	"sync"
 
+	"github.com/JackalLabs/jackal-provider/jprov/archive"
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/jackalLabs/canine-chain/x/storage/types"
 	"github.com/spf13/cobra"
-	"github.com/syndtr/goleveldb/leveldb"
 )
 
 type StrayManager struct {
-	hands         []*LittleHand
-	Waiter        sync.WaitGroup
-	Strays        []*types.Strays
-	Context       *utils.Context
-	ClientContext client.Context
-	Address       string
-	Cmd           *cobra.Command
-	Ip            string
-	Rand          *rand.Rand
+    Address       string
+    Context       *utils.Context
+    ClientContext client.Context
+    Cmd           *cobra.Command
+    Db archive.ArchiveDB
+    hands         []*LittleHand
+    Waiter        sync.WaitGroup
+    Strays        []*types.Strays
+    Ip            string
+    Provider types.Providers
+    Rand          *rand.Rand
 }
 
-func NewStrayManager(cmd *cobra.Command) *StrayManager {
+func NewStrayManager(cmd *cobra.Command, db archive.ArchiveDB) *StrayManager {
 	clientCtx := client.GetClientContextFromCmd(cmd)
 	ctx := utils.GetServerContextFromCmd(cmd)
 
@@ -47,20 +49,22 @@ func NewStrayManager(cmd *cobra.Command) *StrayManager {
 	ip := provs.Providers.Address // Our IP address
 
 	return &StrayManager{
-		hands:         []*LittleHand{},
-		Strays:        []*types.Strays{},
-		Context:       ctx,
 		Address:       addr,
-		ClientContext: clientCtx,
-		Cmd:           cmd,
-		Ip:            ip,
+        Context:       ctx,
+        ClientContext: clientCtx,
+        Cmd:           cmd,
+        Db: db,
+		hands:         []*LittleHand{},
+        Ip:            ip,
+        Provider: provs.Providers,
+		Strays:        []*types.Strays{},
 	}
 }
 
 type LittleHand struct {
 	Stray         *types.Strays
 	Waiter        *sync.WaitGroup
-	Database      *leveldb.DB
+	Database      archive.ArchiveDB
 	Busy          bool
 	Cmd           *cobra.Command
 	ClientContext client.Context

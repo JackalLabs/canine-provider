@@ -8,19 +8,16 @@ import (
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
-	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/bech32"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/cosmos/cosmos-sdk/x/feegrant"
 	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
 	"github.com/spf13/cobra"
-	"github.com/syndtr/goleveldb/leveldb"
 )
 
-func (m *StrayManager) AddHand(db *leveldb.DB, cmd *cobra.Command, index uint) *LittleHand {
-	clientCtx := client.GetClientContextFromCmd(cmd)
-	pkeyStruct, err := crypto.ReadKey(clientCtx)
+func (m *StrayManager) AddHand(index uint) *LittleHand {
+	pkeyStruct, err := crypto.ReadKey(m.ClientContext)
 	if err != nil {
 		return nil
 	}
@@ -38,10 +35,10 @@ func (m *StrayManager) AddHand(db *leveldb.DB, cmd *cobra.Command, index uint) *
 	hand := LittleHand{
 		Waiter:        &m.Waiter,
 		Stray:         nil,
-		Database:      db,
+		Database:      m.Db,
 		Busy:          false,
-		Cmd:           cmd,
-		ClientContext: clientCtx,
+		Cmd:           m.Cmd,
+		ClientContext: m.ClientContext,
 		Id:            index,
 		Address:       address,
 	}
@@ -72,22 +69,10 @@ func (m *StrayManager) Distribute() { // Hand out every available stray to an id
 	}
 }
 
-func (m *StrayManager) Init(cmd *cobra.Command, queryService *utils.QueryService, db *leveldb.DB) { // create all the hands for the manager
+func (m *StrayManager) Init() { // create all the hands for the manager
 	fmt.Println("Starting initialization...")
-	clientCtx := client.GetClientContextFromCmd(cmd)
-	address, err := crypto.GetAddress(clientCtx)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
 
-	provider, err := queryService.QueryProvider(cmd.Context(), address)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	threads, err := cmd.Flags().GetUint(types.FlagThreads)
+	threads, err := m.Cmd.Flags().GetUint(types.FlagThreads)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -96,10 +81,10 @@ func (m *StrayManager) Init(cmd *cobra.Command, queryService *utils.QueryService
 	var i uint
 	for i = 1; i < threads+1; i++ {
 		fmt.Printf("Processing stray thread %d.\n", i)
-		h := m.AddHand(db, m.Cmd, i)
+		h := m.AddHand(i)
 
 		found := false
-		for _, claimer := range provider.AuthClaimers {
+		for _, claimer := range m.Provider.AuthClaimers {
 			if claimer == h.Address {
 				found = true
 				break
@@ -111,9 +96,9 @@ func (m *StrayManager) Init(cmd *cobra.Command, queryService *utils.QueryService
 
 		fmt.Println("Adding hand to my claim whitelist...")
 
-		msg := storageTypes.NewMsgAddClaimer(address, h.Address)
+		msg := storageTypes.NewMsgAddClaimer(m.Address, h.Address)
 
-		res, err := utils.SendTx(clientCtx, cmd.Flags(), "", msg)
+		res, err := utils.SendTx(m.ClientContext, m.Cmd.Flags(), "", msg)
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -127,7 +112,7 @@ func (m *StrayManager) Init(cmd *cobra.Command, queryService *utils.QueryService
 
 		fmt.Println("Authorizing hand to transact on my behalf...")
 
-		adr, nerr := sdk.AccAddressFromBech32(address)
+		adr, nerr := sdk.AccAddressFromBech32(m.Address)
 		if nerr != nil {
 			fmt.Println(nerr)
 			continue
@@ -150,7 +135,7 @@ func (m *StrayManager) Init(cmd *cobra.Command, queryService *utils.QueryService
 			continue
 		}
 
-		grantRes, nerr := utils.SendTx(clientCtx, cmd.Flags(), "", grantMsg)
+		grantRes, nerr := utils.SendTx(m.ClientContext, m.Cmd.Flags(), "", grantMsg)
 		if nerr != nil {
 			fmt.Println(nerr)
 			continue

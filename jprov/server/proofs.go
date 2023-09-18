@@ -226,12 +226,12 @@ func requestAttestation(clientCtx client.Context, cid string, hashList string, i
 }
 
 func (f *FileServer) postProof(cid string, blockSize, block int64) error {
-	data, err := f.db.Get(utils.MakeFileKey(cid), nil)
-	if err != nil {
-		return err
-	}
+    fid, err := f.archivedb.GetFid(types.Cid(cid))
+    if err != nil {
+        return err
+    }
 
-	item, hashlist, err := f.CreateMerkleForProof(string(data), blockSize, block)
+	item, hashlist, err := f.CreateMerkleForProof(string(fid), blockSize, block)
 	if err != nil {
 		return err
 	}
@@ -313,24 +313,18 @@ func (f *FileServer) postProofs(interval uint16) {
 		f.logger.Debug(fmt.Sprintf("The interval between proofs is now %d", interval))
 		start := time.Now()
 
-		iter := f.db.NewIterator(nil, nil)
+		iter := f.archivedb.NewIterator()
 
 		for iter.Next() {
 			// get next cid / fid
-			cid := string(iter.Key())
-			value := string(iter.Value())
+			cid := types.Cid(iter.Key())
+			fid := types.Fid(iter.Value())
 
-			if cid[:len(utils.FileKey)] != utils.FileKey {
-				continue
-			}
-
-			cid = cid[len(utils.FileKey):]
-
-			f.logger.Debug(fmt.Sprintf("filename: %s", value))
+			f.logger.Debug(fmt.Sprintf("filename: %s", string(fid)))
 
 			f.logger.Debug(fmt.Sprintf("CID: %s", cid))
 
-			ver, verr := checkVerified(&f.cosmosCtx, cid, address)
+			ver, verr := checkVerified(&f.cosmosCtx, string(cid), address)
 			if verr != nil {
 				f.logger.Error(verr.Error())
 				rr := strings.Contains(verr.Error(), "key not found")
@@ -338,51 +332,28 @@ func (f *FileServer) postProofs(interval uint16) {
 				if !rr && !ny {
 					continue
 				}
-				val, err := f.db.Get(utils.MakeDowntimeKey(cid), nil)
-				newval := 0
-				if err == nil {
-					newval, err = strconv.Atoi(string(val))
-					if err != nil {
-						continue
-					}
-				}
+                downtime, err := f.downtimedb.Get(types.Cid(cid))
+                if err != nil {
+                    f.logger.Error(err.Error())
+                    continue
+                }
 
-				newval += 1
+				if downtime > int64(maxMisses) {
+					duplicate := f.archivedb.IsDuplicate(types.Fid(fid))
+                    err := f.archivedb.DeleteContract(types.Cid(cid))
+                    if err != nil {
+						f.logger.Error(err.Error())
+                    } 
+                    f.archive.Delete(fid)
 
-				if newval > maxMisses {
-
-					duplicate := false
-					iter := f.db.NewIterator(nil, nil)
-					// find contracts with same fid
-					for iter.Next() {
-						c := string(iter.Key())
-						v := string(iter.Value())
-
-						if c[:len(utils.FileKey)] != utils.FileKey {
-							continue
-						}
-
-						c = c[len(utils.FileKey):]
-
-						if c != cid && v == value {
-							f.logger.Info(fmt.Sprintf("%s != %s but it is also %s, so we must keep the file on disk.", c, cid, v))
-							duplicate = true
-							break
-						}
-					}
 					f.logger.Info(fmt.Sprintf("%s is being removed", cid))
 
-					if !duplicate {
-						f.logger.Info("And we are removing the file on disk.")
-						f.archive.Delete(value)
-					}
-					err = f.db.Delete(utils.MakeFileKey(cid), nil)
-					if err != nil {
-						f.logger.Error(err.Error())
-						continue
-					}
+                    if !duplicate {
+                        f.logger.Info("And we are removing the file on disk.")
+                        f.archive.Delete(fid)
+                    }
 
-					err = f.db.Delete(utils.MakeDowntimeKey(cid), nil)
+                    err = f.downtimedb.Delete(cid)
 					if err != nil {
 						f.logger.Error(err.Error())
 						continue
@@ -390,31 +361,24 @@ func (f *FileServer) postProofs(interval uint16) {
 					continue
 				}
 
-				f.logger.Info(fmt.Sprintf("%s will be removed in %d cycles", value, (maxMisses+1)-newval))
+				f.logger.Info(fmt.Sprintf("%s will be removed in %d cycles", string(fid), int64(maxMisses)-downtime+1))
 
-				err = f.db.Put(utils.MakeDowntimeKey(cid), []byte(fmt.Sprintf("%d", newval)), nil)
+                err = f.downtimedb.Set(cid, downtime)
 				if err != nil {
-					continue
+                    f.logger.Error(err.Error())
 				}
 				continue
 			}
 
-			val, err := f.db.Get(utils.MakeDowntimeKey(cid), nil)
-			newval := 0
-			if err == nil {
-				newval, err = strconv.Atoi(string(val))
-				if err != nil {
-					continue
-				}
+            downtime, err := f.downtimedb.Get(cid)
+
+			if downtime > 0 {
+                downtime -= 1 // lower the downtime counter to only account for consecutive misses.
 			}
 
-			newval -= 1 // lower the downtime counter to only account for consecutive misses.
-			if newval < 0 {
-				newval = 0
-			}
-
-			err = f.db.Put(utils.MakeDowntimeKey(cid), []byte(fmt.Sprintf("%d", newval)), nil)
+            err = f.downtimedb.Set(cid, downtime)
 			if err != nil {
+                f.logger.Error(err.Error())
 				continue
 			}
 
@@ -423,7 +387,7 @@ func (f *FileServer) postProofs(interval uint16) {
 				continue
 			}
 
-			block, berr := queryBlock(&f.cosmosCtx, cid)
+			block, berr := queryBlock(&f.cosmosCtx, string(cid))
 			if berr != nil {
 				f.logger.Error(fmt.Sprintf("Query Error: %v", berr))
 				continue
@@ -436,7 +400,7 @@ func (f *FileServer) postProofs(interval uint16) {
 				continue
 			}
 
-			err = f.postProof(cid, f.blockSize, dex.Int64())
+			err = f.postProof(string(cid), f.blockSize, dex.Int64())
 			if err != nil {
 				f.logger.Error(fmt.Sprintf("Posting Proof Error: %v", err))
 				continue
