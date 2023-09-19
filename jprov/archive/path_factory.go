@@ -52,5 +52,5 @@ func (s *SingleCellPathFactory) treeName(fid string) (name string) {
 	var b strings.Builder
 	_, _ = b.WriteString(string(fid))
 	_, _ = b.WriteString(s.treeExt)
-	return name
+	return b.String()
 }

@@ -92,7 +92,7 @@ func (f *SingleCellArchive) RetrieveFile(fid string) (data io.ReadSeekCloser, er
 
 func (f *SingleCellArchive) WriteTreeToDisk(fid string, tree *merkletree.MerkleTree) (err error){
 	path := f.pathFactory.TreePath(fid)
-	err = os.Mkdir(filepath.Dir(path), os.ModePerm)
+	err = os.MkdirAll(filepath.Dir(path), os.ModePerm)
 	if err != nil {
 		return
 	}
