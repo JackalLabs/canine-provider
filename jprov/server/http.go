@@ -54,7 +54,7 @@ func (f *FileServer) checkVersion(w http.ResponseWriter) {
 }
 
 func (f *FileServer) downfil(w http.ResponseWriter, ps httprouter.Params) {
-	fid := ps.ByName("file")
+	fid := string(ps.ByName("file"))
 	file, err := f.archive.RetrieveFile(fid)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -88,7 +88,7 @@ func (f *FileServer) GetRoutes(router *httprouter.Router) {
 	})
 	router.GET("/download/:file", dfil)
 
-	api.BuildApi(f.cmd, f.queue, router, f.db)
+	api.BuildApi(f.cmd, f.queue, router, f.archivedb, f.downtimedb)
 
 	router.GET("/", ires)
 }

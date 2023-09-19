@@ -13,7 +13,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/cosmos/cosmos-sdk/x/feegrant"
 	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
-	"github.com/spf13/cobra"
 )
 
 func (m *StrayManager) AddHand(index uint) *LittleHand {
@@ -35,12 +34,13 @@ func (m *StrayManager) AddHand(index uint) *LittleHand {
 	hand := LittleHand{
 		Waiter:        &m.Waiter,
 		Stray:         nil,
-		Database:      m.Db,
+        Database: m.archivedb, 
 		Busy:          false,
 		Cmd:           m.Cmd,
 		ClientContext: m.ClientContext,
 		Id:            index,
 		Address:       address,
+        Logger: m.Context.Logger,
 	}
 
 	m.hands = append(m.hands, &hand)
@@ -153,7 +153,7 @@ func (m *StrayManager) Init() { // create all the hands for the manager
 	fmt.Println("Finished Initialization...")
 }
 
-func (m *StrayManager) CollectStrays(cmd *cobra.Command, lastCount uint64) uint64 {
+func (m *StrayManager) CollectStrays(lastCount uint64) uint64 {
 	m.Context.Logger.Info(fmt.Sprintf("Collecting strays from chain... ~ %d", lastCount))
 	qClient := storageTypes.NewQueryClient(m.ClientContext)
 
@@ -169,7 +169,7 @@ func (m *StrayManager) CollectStrays(cmd *cobra.Command, lastCount uint64) uint6
 		CountTotal: true,
 	}
 
-	res, err := qClient.StraysAll(cmd.Context(), &storageTypes.QueryAllStraysRequest{
+	res, err := qClient.StraysAll(m.Cmd.Context(), &storageTypes.QueryAllStraysRequest{
 		Pagination: page,
 	})
 	if err != nil {
@@ -198,8 +198,8 @@ func (m *StrayManager) CollectStrays(cmd *cobra.Command, lastCount uint64) uint6
 	return res.Pagination.Total
 }
 
-func (m *StrayManager) Start(cmd *cobra.Command) { // loop through stray system
-	tm, err := cmd.Flags().GetInt64(types.FlagStrayInterval)
+func (m *StrayManager) Start() { // loop through stray system
+	tm, err := m.Cmd.Flags().GetInt64(types.FlagStrayInterval)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	m.Rand = r
 	if err != nil {
@@ -208,7 +208,7 @@ func (m *StrayManager) Start(cmd *cobra.Command) { // loop through stray system
 
 	var s uint64
 	for {
-		s = m.CollectStrays(cmd, s)    // query strays from the chain
+		s = m.CollectStrays(s)    // query strays from the chain
 		m.Distribute()                 // hands strays out to hands
 		for _, hand := range m.hands { // process every stray in parallel
 			go hand.Process(m.Context, m)

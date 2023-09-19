@@ -9,9 +9,10 @@ import (
 	"github.com/JackalLabs/blanket/blanket"
 	"github.com/cosmos/cosmos-sdk/version"
 
+	"github.com/JackalLabs/jackal-provider/jprov/archive"
 	"github.com/JackalLabs/jackal-provider/jprov/server"
-	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/strays"
+	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -19,8 +20,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/spf13/cobra"
 	tmcli "github.com/tendermint/tendermint/libs/cli"
-
-	"github.com/syndtr/goleveldb/leveldb"
 )
 
 func StartServerCommand() *cobra.Command {
@@ -30,32 +29,36 @@ func StartServerCommand() *cobra.Command {
 		Long:  `Start the Jackal Storage Provider server with the specified port.`,
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
-			if err != nil {
-				return err
-			}
-			dbPath := utils.GetDataPath(clientCtx)
-			db, err := leveldb.OpenFile(dbPath, nil)
-			if err != nil {
-				return fmt.Errorf("failed to open database: %s", err)
-			}
-			defer func() {
-				err = errors.Join(err, db.Close())
-			}()
+            clientCtx := client.GetClientContextFromCmd(cmd)
+            dbPath := utils.GetArchiveDBPath(clientCtx)
+            archivedb, err := archive.NewDoubleRefArchiveDB(dbPath)
+            if err != nil {
+                return err
+            }
+            defer func() {
+                err = errors.Join(err, archivedb.Close())
+            }()
 
-			queryService := utils.NewQueryService(cmd)
+            downtimedbPath := utils.GetDowntimeDBPath(clientCtx)
+            downtimedb, err := archive.NewDowntimeDB(downtimedbPath)
+            if err != nil {
+                return err
+            }
+            defer func() {
+                err = errors.Join(err, downtimedb.Close())
+            }()
 
 			// start stray service
 			if haltStray, err := cmd.Flags().GetBool(types.HaltStraysFlag); err != nil {
 				return err
 			} else if !haltStray {
-				manager := strays.NewStrayManager(cmd)
+				manager := strays.NewStrayManager(cmd, archivedb, downtimedb)
 
-				manager.Init(cmd, queryService, db)
-				go manager.Start(cmd)
+				manager.Init()
+				go manager.Start()
 			}
 
-			fs, err := server.NewFileServer(cmd)
+			fs, err := server.NewFileServer(cmd, archivedb, downtimedb)
 			if err != nil {
 				return err
 			}
@@ -199,7 +202,7 @@ func ResetCommand() *cobra.Command {
 				return err
 			}
 
-			err = os.RemoveAll(utils.GetDataPath(clientCtx))
+			err = os.RemoveAll(utils.GetArchiveDBPath(clientCtx))
 			if err != nil {
 				return err
 			}

@@ -9,15 +9,19 @@ import (
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/jackalLabs/canine-chain/x/storage/types"
+
+	"github.com/tendermint/tendermint/libs/log"
 	"github.com/spf13/cobra"
 )
 
 type StrayManager struct {
     Address       string
+    Archive archive.Archive
     Context       *utils.Context
     ClientContext client.Context
     Cmd           *cobra.Command
-    Db archive.ArchiveDB
+    archivedb archive.ArchiveDB
+    downtimedb *archive.DowntimeDB
     hands         []*LittleHand
     Waiter        sync.WaitGroup
     Strays        []*types.Strays
@@ -26,7 +30,11 @@ type StrayManager struct {
     Rand          *rand.Rand
 }
 
-func NewStrayManager(cmd *cobra.Command, db archive.ArchiveDB) *StrayManager {
+func NewStrayManager(
+    cmd *cobra.Command,
+    archivedb archive.ArchiveDB, 
+    downtimedb *archive.DowntimeDB,
+) *StrayManager {
 	clientCtx := client.GetClientContextFromCmd(cmd)
 	ctx := utils.GetServerContextFromCmd(cmd)
 
@@ -53,7 +61,8 @@ func NewStrayManager(cmd *cobra.Command, db archive.ArchiveDB) *StrayManager {
         Context:       ctx,
         ClientContext: clientCtx,
         Cmd:           cmd,
-        Db: db,
+        archivedb: archivedb,
+        downtimedb: downtimedb,
 		hands:         []*LittleHand{},
         Ip:            ip,
         Provider: provs.Providers,
@@ -62,6 +71,7 @@ func NewStrayManager(cmd *cobra.Command, db archive.ArchiveDB) *StrayManager {
 }
 
 type LittleHand struct {
+    Archive archive.Archive
 	Stray         *types.Strays
 	Waiter        *sync.WaitGroup
 	Database      archive.ArchiveDB
@@ -70,4 +80,5 @@ type LittleHand struct {
 	ClientContext client.Context
 	Id            uint
 	Address       string
+    Logger log.Logger 
 }

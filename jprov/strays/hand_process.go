@@ -78,7 +78,7 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 				continue
 			}
 
-			err = DownloadFileFromURL(h.Cmd, prov, h.Stray.Fid, h.Stray.Cid, h.Database, ctx.Logger)
+			err = h.DownloadFileFromURL(prov, h.Stray.Fid, h.Stray.Cid)
 			if err != nil {
 				ctx.Logger.Error(err.Error())
 				continue
@@ -120,7 +120,7 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 		return
 	}
 
-	err = utils.SaveToDatabase(h.Stray.Fid, h.Stray.Cid, h.Database, ctx.Logger)
+    err = h.Database.SetContract(h.Stray.Cid, h.Stray.Fid)
 	if err != nil {
 		ctx.Logger.Error(err.Error())
 		return

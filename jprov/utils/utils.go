@@ -67,8 +67,13 @@ func GetStorageAllPath(ctx client.Context) string {
 	return configPath
 }
 
-func GetDataPath(ctx client.Context) string {
-	dataPath := filepath.Join(ctx.HomeDir, "data")
+func GetArchiveDBPath(ctx client.Context) string {
+	dataPath := filepath.Join(ctx.HomeDir, "archivedb")
+
+	return dataPath
+}
+func GetDowntimeDBPath(ctx client.Context) string {
+	dataPath := filepath.Join(ctx.HomeDir, "downtimedb")
 
 	return dataPath
 }

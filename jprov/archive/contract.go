@@ -8,15 +8,13 @@ import (
 
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
-
-	"github.com/JackalLabs/jackal-provider/jprov/types"
 )
 
 type ArchiveDB interface {
-	GetFid(cid types.Cid) (types.Fid, error)
-	GetContracts(fid types.Fid) ([]types.Cid, error)
-	SetContract(cid types.Cid, fid types.Fid) error
-	DeleteContract(cid types.Cid) error
+	GetFid(cid string) (string, error)
+	GetContracts(fid string) ([]string, error)
+	SetContract(cid string, fid string) error
+	DeleteContract(cid string) (purge bool, err error)
 	NewIterator() iterator.Iterator
 	Close() error
 } 
@@ -41,28 +39,28 @@ func NewDoubleRefArchiveDB (filepath string) (*DoubleRefArchiveDB, error) {
 	return &DoubleRefArchiveDB{db: db}, nil
 }
 
-func (d *DoubleRefArchiveDB) GetFid(cid types.Cid) (types.Fid, error) {
+func (d *DoubleRefArchiveDB) GetFid(cid string) (string, error) {
 	value, err := d.db.Get(d.key(cid), nil)
 	if err != nil {
 		return "", err
 	}
-	return types.Fid(value), err
+	return string(value), err
 }
 
-func (d *DoubleRefArchiveDB) GetContracts(fid types.Fid) ([]types.Cid, error){
+func (d *DoubleRefArchiveDB) GetContracts(fid string) ([]string, error){
 	value, err := d.db.Get([]byte(fid), nil)
 	if err != nil {
 		return nil, err
 	}
-	var cid []types.Cid
+	var cid []string
 	cids := strings.Split(string(value), cidSeparator)
 	for _, c := range cids {
-		cid = append(cid, types.Cid(c))
+		cid = append(cid, string(c))
 	}
 	return cid, nil
 }
 
-func (d *DoubleRefArchiveDB) SetContract(cid types.Cid, fid types.Fid) error {
+func (d *DoubleRefArchiveDB) SetContract(cid string, fid string) error {
 	value, err := d.db.Get([]byte(cid), nil)
 	if err != nil {
 		return err
@@ -82,7 +80,7 @@ func (d *DoubleRefArchiveDB) SetContract(cid types.Cid, fid types.Fid) error {
 	return err
 }
 
-func (d *DoubleRefArchiveDB) addReference(batch *leveldb.Batch, cid types.Cid, fid types.Fid) error {
+func (d *DoubleRefArchiveDB) addReference(batch *leveldb.Batch, cid string, fid string) error {
 	value, err := d.db.Get([]byte(cid), nil)
 	if err == leveldb.ErrNotFound {
 		value = nil
@@ -100,27 +98,31 @@ func (d *DoubleRefArchiveDB) addReference(batch *leveldb.Batch, cid types.Cid, f
 	return nil
 }
 
-func (d *DoubleRefArchiveDB) DeleteContract(cid types.Cid) error {
+func (d *DoubleRefArchiveDB) DeleteContract(cid string) (purge bool, err error) {
 	batch := new(leveldb.Batch)
-	err := d.deleteReference(batch, cid)
+	purge, err = d.deleteReference(batch, cid)
 	if err != nil {
-		return err
+		return
 	}
 
 	batch.Delete([]byte(cid))
 	err = d.db.Write(batch, nil)
-	return err
+	return
 }
 
-func (d *DoubleRefArchiveDB) deleteReference (batch *leveldb.Batch, cid types.Cid) error {
+func (d *DoubleRefArchiveDB) deleteReference (
+    batch *leveldb.Batch, 
+    cid string,
+) (purge bool, err error) {
+    purge = false
 	fid, err := d.db.Get([]byte(cid), nil)
 	if err != nil {
-		return err
+		return
 	}
 
 	cidList, err := d.db.Get(fid, nil)
 	if err != nil {
-		return err
+		return
 	}
 	
 	var b strings.Builder
@@ -131,11 +133,12 @@ func (d *DoubleRefArchiveDB) deleteReference (batch *leveldb.Batch, cid types.Ci
 
 	if len(result) == 0 {
 		batch.Delete(fid)
+        purge = true
 	} else {
 		batch.Put(fid, []byte(result))
 	}
 
-	return nil
+    return
 }
 
 func (d *DoubleRefArchiveDB) NewIterator() iterator.Iterator{
@@ -146,11 +149,11 @@ func (d *DoubleRefArchiveDB) Close() error{
 	return d.db.Close()
 }
 
-func (d *DoubleRefArchiveDB) key(cid types.Cid) (key []byte) {
+func (d *DoubleRefArchiveDB) key(cid string) (key []byte) {
 	return []byte(cid)
 }
 
-func (d *DoubleRefArchiveDB) refKey(fid types.Fid) []byte {
+func (d *DoubleRefArchiveDB) refKey(fid string) []byte {
 	return []byte(fid)
 }
 
@@ -166,34 +169,38 @@ func NewDowntimeDB(filepath string) (*DowntimeDB, error) {
     return &DowntimeDB{db: db}, nil
 }
 
-func (d *DowntimeDB) Get(cid types.Cid) (block int64, err error) {
+func (d *DowntimeDB) NewIterator() iterator.Iterator{
+	return d.db.NewIterator(nil, nil)
+}
+
+func (d *DowntimeDB) Get(cid string) (block int64, err error) {
     b, err := d.db.Get([]byte(cid), nil)
-    block, err = byteToBlock(b)
+    block, err = ByteToBlock(b)
     return
 }
 
-func (d *DowntimeDB) Set(cid types.Cid, block int64) error {
-    b, err := blockToByte(block)
+func (d *DowntimeDB) Set(cid string, block int64) error {
+    b, err := BlockToByte(block)
     if err != nil {
         return err
     }
     return d.db.Put([]byte(cid), b, nil)
 }
 
-func (d *DowntimeDB) Delete(cid types.Cid) error {
+func (d *DowntimeDB) Delete(cid string) error {
     return d.db.Delete([]byte(cid), nil)
 }
 func (d *DowntimeDB) Close() error {
     return d.db.Close()
 }
-func byteToBlock(b []byte) (int64, error) {
+func ByteToBlock(b []byte) (int64, error) {
     r := bytes.NewReader(b)
 
     var block int64
     err := binary.Read(r, binary.LittleEndian, &block)
     return block, err
 }
-func blockToByte(block int64) ([]byte, error) {
+func BlockToByte(block int64) ([]byte, error) {
     b := new(bytes.Buffer)
     err := binary.Write(b, binary.LittleEndian, block)
     return b.Bytes(), err

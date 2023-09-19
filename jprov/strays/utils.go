@@ -1,7 +1,6 @@
 package strays
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -11,11 +10,6 @@ import (
 
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
-
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/spf13/cobra"
-	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/tendermint/tendermint/libs/log"
 )
 
 // NOTE: this is exact copy of server.WriteToDisk. It's copied here to avoid import cycle. This needs to be fixed!
@@ -48,8 +42,8 @@ func WriteToDisk(data io.Reader, closer io.Closer, dir, name string) (written in
 	return
 }
 
-func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string, db *leveldb.DB, logger log.Logger) (err error) {
-	logger.Info(fmt.Sprintf("Getting %s from %s", fid, url))
+func (h *LittleHand) DownloadFileFromURL(url string, fid string, cid string) (err error) {
+	h.Logger.Info(fmt.Sprintf("Getting %s from %s", fid, url))
 
 	cli := http.Client{}
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/download/%s", url, fid), nil)
@@ -78,24 +72,18 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 		err = errors.Join(err, resp.Body.Close())
 	}()
 
-	ctx := utils.GetServerContextFromCmd(cmd)
-	clientCtx, err := client.GetClientTxContext(cmd)
+    fileSize, err := h.Archive.WriteFileToDisk(resp.Body, fid)
+	if err != nil {
+		h.Logger.Error("saveFile: Write To Disk Error: ", err)
+		return
+	}
+
+	blockSize, err := h.Cmd.Flags().GetInt64(types.FlagChunkSize)
 	if err != nil {
 		return
 	}
 
-	fileSize, err := WriteToDisk(resp.Body, resp.Body, utils.GetFidDir(clientCtx.HomeDir, fid), fid)
-	if err != nil {
-		ctx.Logger.Error("saveFile: Write To Disk Error: ", err)
-		return
-	}
-
-	blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
-	if err != nil {
-		return
-	}
-
-	file, err := os.Open(utils.GetContentsPath(clientCtx.HomeDir, fid))
+    file, err := h.Archive.RetrieveFile(fid)
 	if err != nil {
 		return
 	}
@@ -103,23 +91,11 @@ func DownloadFileFromURL(cmd *cobra.Command, url string, fid string, cid string,
 		err = errors.Join(err, file.Close())
 	}()
 
-	fid, err = utils.MakeFID(file, file)
-	if err != nil {
-		return err
-	}
-
 	// Create merkle and save to disk
 	merkle, err := utils.CreateMerkleTree(blockSize, fileSize, file, file)
 	if err != nil {
 		return err
 	}
 
-	exportedTree, err := merkle.Export()
-	if err != nil {
-		return err
-	}
-
-	buffer := bytes.NewReader(exportedTree)
-	_, err = WriteToDisk(buffer, nil, utils.GetFidDir(clientCtx.HomeDir, fid), utils.GetTreeFileName(fid))
-	return
+	return h.Archive.WriteTreeToDisk(fid, merkle)
 }

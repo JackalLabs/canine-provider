@@ -34,14 +34,14 @@ func (s *SingleCellPathFactory) FilePath(fid string) (path string) {
 func (s *SingleCellPathFactory) fileName(fid string) (name string) {
 	var b strings.Builder
 	// ignore length of string and nil error
-	_, _ = b.WriteString(fid)
+	_, _ = b.WriteString(string(fid))
 	_, _ = b.WriteString(s.fileExt)
 
 	return b.String()
 }
 
 func (s *SingleCellPathFactory) FileDir(fid string) (dir string) {
-	return filepath.Join(s.rootDir, "storage", fid)
+	return filepath.Join(s.rootDir, "storage", string(fid))
 }
 
 func (s *SingleCellPathFactory) TreePath(fid string) (path string) {
@@ -50,7 +50,7 @@ func (s *SingleCellPathFactory) TreePath(fid string) (path string) {
 
 func (s *SingleCellPathFactory) treeName(fid string) (name string) {
 	var b strings.Builder
-	_, _ = b.WriteString(fid)
+	_, _ = b.WriteString(string(fid))
 	_, _ = b.WriteString(s.treeExt)
 	return name
 }

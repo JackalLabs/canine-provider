@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"mime/multipart"
 	"net/http"
-	"os"
 	"sync"
 
 	"github.com/JackalLabs/jackal-provider/jprov/archive"
@@ -34,23 +33,21 @@ type FileServer struct {
 	queryClient storageTypes.QueryClient
 	archive archive.Archive
 	archivedb archive.ArchiveDB
-	downtimedb archive.DowntimeDB
+	downtimedb *archive.DowntimeDB
 	provider storageTypes.Providers
 	blockSize int64
 	queue *queue.UploadQueue
 	logger tmlog.Logger
 }
 
-func NewFileServer (cmd *cobra.Command) (fs *FileServer, err error) {
+func NewFileServer (
+    cmd *cobra.Command,
+    archivedb archive.ArchiveDB,
+    downtimedb *archive.DowntimeDB,
+) (fs *FileServer, err error) {
 	sCtx := utils.GetServerContextFromCmd(cmd)
 	clientCtx := client.GetClientContextFromCmd(cmd)
     
-    dbPath := utils.GetDataPath(clientCtx)
-    archivedb, err := archive.NewDoubleRefArchiveDB(dbPath)
-    if err != nil {
-        return
-    }
-
 	blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
 	if err != nil {
 		return nil, err
@@ -64,6 +61,7 @@ func NewFileServer (cmd *cobra.Command) (fs *FileServer, err error) {
 		serverCtx: sCtx,
 		archive: archive.NewSingleCellArchive(sCtx.Config.RootDir),
         archivedb: archivedb,
+        downtimedb: downtimedb,
 		blockSize: blockSize,
 		queryClient: storageTypes.NewQueryClient(clientCtx),
 		queue: &queue,
@@ -126,7 +124,7 @@ func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader
 		return err
 	}
 
-	err = f.saveToDatabase(types.Fid(fid), types.Cid(cid))
+	err = f.saveToDatabase(fid, cid)
 	if err != nil {
 		return err
 	}
@@ -135,7 +133,7 @@ func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader
 	return nil
 }
 
-func (f *FileServer) saveToDatabase(fid types.Fid, cid types.Cid) error {
+func (f *FileServer) saveToDatabase(fid string, cid string) error {
     err := f.downtimedb.Set(cid, 0) 
     if err != nil {
         return err
@@ -263,6 +261,6 @@ func (f *FileServer) StartFileServer(cmd *cobra.Command) {
 		return
 	} else if err != nil {
 		fmt.Printf("error starting server: %s\n", err)
-		os.Exit(1)
+        return
 	}
 }

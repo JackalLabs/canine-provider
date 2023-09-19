@@ -22,7 +22,7 @@ type Archive interface {
 	// RetrieveFile returns an io.ReaderCloser for the file data
 	// The data must be closed after reading is done
 	// Error is returned when such file does not exist
-	RetrieveFile(fid string) (data io.ReadCloser, err error)
+	RetrieveFile(fid string) (data io.ReadSeekCloser, err error)
 	// WriteTreeToDisk creates a directory and file to store merkle tree
 	// Returns error if the process fails
 	WriteTreeToDisk(fid string, tree *merkletree.MerkleTree) (err error)
@@ -85,7 +85,7 @@ func (f *SingleCellArchive) GetPiece(fid string, index, blockSize int64) (block 
 	return block, nil
 }
 
-func (f *SingleCellArchive) RetrieveFile(fid string) (data io.ReadCloser, err error) {
+func (f *SingleCellArchive) RetrieveFile(fid string) (data io.ReadSeekCloser, err error) {
 	data, err = os.Open(f.pathFactory.FilePath(fid))
 	return
 }

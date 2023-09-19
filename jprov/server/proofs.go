@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -226,7 +225,7 @@ func requestAttestation(clientCtx client.Context, cid string, hashList string, i
 }
 
 func (f *FileServer) postProof(cid string, blockSize, block int64) error {
-    fid, err := f.archivedb.GetFid(types.Cid(cid))
+    fid, err := f.archivedb.GetFid(string(cid))
     if err != nil {
         return err
     }
@@ -317,8 +316,8 @@ func (f *FileServer) postProofs(interval uint16) {
 
 		for iter.Next() {
 			// get next cid / fid
-			cid := types.Cid(iter.Key())
-			fid := types.Fid(iter.Value())
+			cid := string(iter.Key())
+			fid := string(iter.Value())
 
 			f.logger.Debug(fmt.Sprintf("filename: %s", string(fid)))
 
@@ -332,15 +331,14 @@ func (f *FileServer) postProofs(interval uint16) {
 				if !rr && !ny {
 					continue
 				}
-                downtime, err := f.downtimedb.Get(types.Cid(cid))
+                downtime, err := f.downtimedb.Get(string(cid))
                 if err != nil {
                     f.logger.Error(err.Error())
                     continue
                 }
 
 				if downtime > int64(maxMisses) {
-					duplicate := f.archivedb.IsDuplicate(types.Fid(fid))
-                    err := f.archivedb.DeleteContract(types.Cid(cid))
+                    purge, err := f.archivedb.DeleteContract(string(cid))
                     if err != nil {
 						f.logger.Error(err.Error())
                     } 
@@ -348,7 +346,7 @@ func (f *FileServer) postProofs(interval uint16) {
 
 					f.logger.Info(fmt.Sprintf("%s is being removed", cid))
 
-                    if !duplicate {
+                    if purge {
                         f.logger.Info("And we are removing the file on disk.")
                         f.archive.Delete(fid)
                     }
