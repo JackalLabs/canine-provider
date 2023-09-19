@@ -40,6 +40,7 @@ func (m *StrayManager) AddHand(index uint) *LittleHand {
 		ClientContext: m.ClientContext,
 		Id:            index,
 		Address:       address,
+        Archive: m.Archive,
         Logger: m.Context.Logger,
 	}
 

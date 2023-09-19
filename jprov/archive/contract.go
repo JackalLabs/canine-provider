@@ -62,7 +62,7 @@ func (d *DoubleRefArchiveDB) GetContracts(fid string) ([]string, error){
 
 func (d *DoubleRefArchiveDB) SetContract(cid string, fid string) error {
 	value, err := d.db.Get([]byte(cid), nil)
-	if err != nil {
+	if err != nil && err != leveldb.ErrNotFound {
 		return err
 	}
 	if value != nil {

@@ -3,44 +3,11 @@ package strays
 import (
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 )
-
-// NOTE: this is exact copy of server.WriteToDisk. It's copied here to avoid import cycle. This needs to be fixed!
-const FilePerm os.FileMode = 0o666
-
-func WriteToDisk(data io.Reader, closer io.Closer, dir, name string) (written int64, err error) {
-	err = os.MkdirAll(dir, os.ModePerm)
-	if err != nil {
-		return
-	}
-
-	file, err := os.OpenFile(filepath.Join(dir, name), os.O_WRONLY|os.O_CREATE, FilePerm)
-	if err != nil {
-		return
-	}
-	defer func() {
-		err = errors.Join(err, file.Close())
-
-		if closer != nil {
-			err = errors.Join(err, closer.Close())
-		}
-	}()
-
-	written, err = io.Copy(file, data)
-	if err != nil {
-		err = fmt.Errorf("WriteToDisk: failed to write data to disk (wrote %d bytes)", written)
-		return
-	}
-
-	return
-}
 
 func (h *LittleHand) DownloadFileFromURL(url string, fid string, cid string) (err error) {
 	h.Logger.Info(fmt.Sprintf("Getting %s from %s", fid, url))

@@ -56,11 +56,14 @@ func NewStrayManager(
 	}
 	ip := provs.Providers.Address // Our IP address
 
+    archive := archive.NewSingleCellArchive(ctx.Config.RootDir)
+
 	return &StrayManager{
 		Address:       addr,
         Context:       ctx,
         ClientContext: clientCtx,
         Cmd:           cmd,
+        Archive: archive,
         archivedb: archivedb,
         downtimedb: downtimedb,
 		hands:         []*LittleHand{},
