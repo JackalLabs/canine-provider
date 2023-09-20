@@ -175,6 +175,12 @@ func (d *DowntimeDB) NewIterator() iterator.Iterator{
 
 func (d *DowntimeDB) Get(cid string) (block int64, err error) {
     b, err := d.db.Get([]byte(cid), nil)
+    if err == leveldb.ErrNotFound {
+        return 0, nil
+    }
+    if err != nil {
+        return
+    }
     block, err = ByteToBlock(b)
     return
 }

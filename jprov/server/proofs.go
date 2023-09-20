@@ -358,8 +358,9 @@ func (f *FileServer) postProofs(interval uint16) {
 					}
 					continue
 				}
+                downtime += 1
 
-				f.logger.Info(fmt.Sprintf("%s will be removed in %d cycles", string(fid), int64(maxMisses)-downtime+1))
+				f.logger.Info(fmt.Sprintf("%s will be removed in %d cycles", string(fid), int64(maxMisses)-downtime))
 
                 err = f.downtimedb.Set(cid, downtime)
 				if err != nil {
@@ -369,6 +370,10 @@ func (f *FileServer) postProofs(interval uint16) {
 			}
 
             downtime, err := f.downtimedb.Get(cid)
+            if err != nil {
+                f.logger.Error(err.Error())
+            }
+
 
 			if downtime > 0 {
                 downtime -= 1 // lower the downtime counter to only account for consecutive misses.

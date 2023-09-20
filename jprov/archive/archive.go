@@ -23,6 +23,8 @@ type Archive interface {
 	// The data must be closed after reading is done
 	// Error is returned when such file does not exist
 	RetrieveFile(fid string) (data io.ReadSeekCloser, err error)
+    // Only use this for claiming strays check
+    FileExist(fid string) bool
 	// WriteTreeToDisk creates a directory and file to store merkle tree
 	// Returns error if the process fails
 	WriteTreeToDisk(fid string, tree *merkletree.MerkleTree) (err error)
@@ -88,6 +90,11 @@ func (f *SingleCellArchive) GetPiece(fid string, index, blockSize int64) (block 
 func (f *SingleCellArchive) RetrieveFile(fid string) (data io.ReadSeekCloser, err error) {
 	data, err = os.Open(f.pathFactory.FilePath(fid))
 	return
+}
+
+func (f *SingleCellArchive) FileExist(fid string) bool {
+    _, err := os.Stat(f.pathFactory.FilePath(fid))
+    return errors.Is(err, os.ErrNotExist)
 }
 
 func (f *SingleCellArchive) WriteTreeToDisk(fid string, tree *merkletree.MerkleTree) (err error){
