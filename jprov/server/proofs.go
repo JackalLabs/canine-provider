@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+    "strconv"
 	"sync"
 	"time"
 
@@ -40,9 +41,13 @@ func GetMerkleTree(ctx client.Context, filename string) (*merkletree.MerkleTree,
 	return merkletree.ImportMerkleTree(rawTree, sha3.New512())
 }
 
-func GenerateMerkleProof(tree merkletree.MerkleTree, index int, item []byte) (valid bool, proof *merkletree.Proof, err error) {
+func GenerateMerkleProof(tree merkletree.MerkleTree, index, blockSize int64, item []byte) (valid bool, proof *merkletree.Proof, err error) {
 	h := sha256.New()
-	_, err = io.WriteString(h, fmt.Sprintf("%d%x", index, item))
+
+    var hashBuilder strings.Builder
+    hashBuilder.WriteString(strconv.FormatInt(index/blockSize, 10))
+    hashBuilder.WriteString(hex.EncodeToString(item))
+	_, err = io.WriteString(h, hashBuilder.String())
 	if err != nil {
 		return
 	}
@@ -67,7 +72,7 @@ func (f *FileServer) CreateMerkleForProof(filename string, blockSize, index int6
 		return "", "", err
 	}
 
-	verified, proof, err := GenerateMerkleProof(*mTree, int(index), data)
+	verified, proof, err := GenerateMerkleProof(*mTree, index, blockSize, data)
 	if err != nil {
 		f.logger.Error(err.Error())
 		return "", "", err
