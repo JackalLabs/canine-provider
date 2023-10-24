@@ -51,3 +51,38 @@ func TestGetFid(t *testing.T) {
         t.Errorf("%s: %s, expected %s", string(key), string(value), string(v))
     }
 }
+
+func TestGetContracts(t *testing.T) {
+    db := OpenDB(t)
+    defer CleanUp(t, db)
+    
+    archive := DoubleRefArchiveDB{db: db}
+
+    k0 := []byte("fid0")
+    v0 := []byte("cid0,cid1,cid2")
+
+    err := db.Put(k0, v0, nil)
+    if err != nil {
+        t.Fatal(err)
+    }
+    
+    cids, err := archive.GetContracts(string(k0))
+    if err != nil {
+        t.Fatal(err)
+    }
+
+    for _, c := range cids {
+        switch string(c) {
+        case "cid0":
+            continue
+        case "cid1":
+            continue
+        case "cid2":
+            continue
+        default:
+            t.Errorf("%s: %v, expected [cid0, cid1, cid2]", k0, cids)
+        }
+    }
+}
+
+
