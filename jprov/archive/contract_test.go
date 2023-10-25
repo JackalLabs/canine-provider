@@ -116,4 +116,19 @@ func TestSetContract(t *testing.T) {
     if string(ref) != string("cid0,") {
         t.Errorf("%s: %s, expected cid0", string(fid), string(ref))
     }
+
+    cid1 := "cid1"
+    err = archive.SetContract(cid1, string(fid))
+    if err != nil {
+        t.Error(err)
+    }
+
+    ref, err = db.Get(fid, nil)
+    if err != nil {
+        t.Error(err)
+    }
+
+    if string(ref) != string("cid0,cid1,") {
+        t.Errorf("%s: %s, expected cid0,cid1", string(fid), string(ref))
+    }
 }
