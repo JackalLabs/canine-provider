@@ -81,7 +81,7 @@ func (d *DoubleRefArchiveDB) SetContract(cid string, fid string) error {
 }
 
 func (d *DoubleRefArchiveDB) addReference(batch *leveldb.Batch, cid string, fid string) error {
-	value, err := d.db.Get([]byte(cid), nil)
+	value, err := d.db.Get([]byte(fid), nil)
 	if err == leveldb.ErrNotFound {
 		value = nil
 	} else if err != nil {
