@@ -80,9 +80,40 @@ func TestGetContracts(t *testing.T) {
         case "cid2":
             continue
         default:
-            t.Errorf("%s: %v, expected [cid0, cid1, cid2]", k0, cids)
+            t.Errorf("%s: %v, expected [cid0,cid1,cid2]", k0, cids)
         }
     }
 }
 
+func TestSetContract(t *testing.T) {
+    db := OpenDB(t)
+    defer CleanUp(t, db)
 
+    archive := DoubleRefArchiveDB{db: db}
+
+    fid := []byte("fid0")
+    cid := []byte("cid0")
+
+    err := archive.SetContract(string(cid), string(fid))
+    if err != nil {
+        t.Error(err)
+    }
+
+    value, err := db.Get(cid, nil)
+    if err != nil {
+        t.Error(err)
+    }
+
+    if string(value) != string(fid) {
+        t.Errorf("%s: %s, expected %s", string(cid), string(value), string(fid))
+    }
+
+    ref, err := db.Get(fid, nil)
+    if err != nil {
+        t.Error(err)
+    }
+
+    if string(ref) != string("cid0,") {
+        t.Errorf("%s: %s, expected cid0", string(fid), string(ref))
+    }
+}
