@@ -132,3 +132,41 @@ func TestSetContract(t *testing.T) {
         t.Errorf("%s: %s, expected cid0,cid1", string(fid), string(ref))
     }
 }
+
+func TestDeleteContract(t *testing.T) {
+    db := OpenDB(t)
+    defer CleanUp(t, db)
+
+    archive:= DoubleRefArchiveDB{db: db}
+
+    fid := []byte("fid0")
+    cid := []byte("cid0")
+
+    err := db.Put(cid, fid, nil)
+    if err != nil {
+        t.Fatal(err)
+    }
+
+    err = db.Put(fid, []byte("cid1,cid0,cid1"), nil)
+    if err != nil {
+        t.Fatal(err)
+    }
+    
+    purge, err := archive.DeleteContract(string(cid))
+    if err != nil {
+        t.Fatal(err)
+    }
+
+    value, err := db.Get(fid, nil)
+    if err != nil {
+        t.Fatal(err)
+    }
+
+    if string(value) != "cid1,cid1" {
+        t.Errorf("%s: %s, expected cid1,cid2", string(fid), string(value))
+    }
+    
+    if purge {
+        t.Errorf("%s: %t, expected false", string(fid), purge)
+    }
+}
