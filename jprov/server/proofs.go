@@ -45,7 +45,7 @@ func GenerateMerkleProof(tree merkletree.MerkleTree, index, blockSize int64, ite
 	h := sha256.New()
 
     var hashBuilder strings.Builder
-    hashBuilder.WriteString(strconv.FormatInt(index/blockSize, 10))
+    hashBuilder.WriteString(strconv.FormatInt(index, 10))
     hashBuilder.WriteString(hex.EncodeToString(item))
 	_, err = io.WriteString(h, hashBuilder.String())
 	if err != nil {
@@ -230,12 +230,12 @@ func requestAttestation(clientCtx client.Context, cid string, hashList string, i
 }
 
 func (f *FileServer) postProof(cid string, blockSize, block int64) error {
-    fid, err := f.archivedb.GetFid(string(cid))
+    fid, err := f.archivedb.GetFid(cid)
     if err != nil {
         return err
     }
 
-	item, hashlist, err := f.CreateMerkleForProof(string(fid), blockSize, block)
+	item, hashlist, err := f.CreateMerkleForProof(fid, blockSize, block)
 	if err != nil {
 		return err
 	}
