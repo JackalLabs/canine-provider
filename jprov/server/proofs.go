@@ -293,7 +293,135 @@ func (f *FileServer) postProof(cid string, blockSize, block int64) error {
 	return nil
 }
 
-func (f *FileServer) postProofs(interval uint16) {
+func (f *FileServer) Purge(cid string) error {
+    fid, err := f.archivedb.GetFid(cid)
+    if err != nil {
+        return err
+    }
+
+    err = f.downtimedb.Delete(cid)
+    if err != nil {
+        return err
+    }
+
+    purge, err := f.archivedb.DeleteContract(cid)
+    if err != nil {
+        return err
+    }
+
+    if purge {
+        f.archive.Delete(fid)
+    }
+
+    return nil
+}
+
+func (f *FileServer) CleanExpired() error {
+	maxMisses, err := f.cmd.Flags().GetInt(types.FlagMaxMisses)
+	if err != nil {
+		f.logger.Error(err.Error())
+        return err
+	}
+
+    iter := f.archivedb.NewIterator()
+    defer iter.Release()
+
+    for iter.Next() {
+        cid := string(iter.Key())
+        fid := string(iter.Value())
+
+        downtime, err := f.downtimedb.Get(cid)
+        if err != nil {
+            f.logger.Error("CleanExpired: ", err)
+            continue
+        }
+
+        if downtime > int64(maxMisses) {
+            err := f.Purge(cid)
+            if err != nil {
+                return err
+            }
+            f.logger.Info(fmt.Sprintf("file %s is removed", string(fid)))
+        } else {
+            f.logger.Info(fmt.Sprintf("%s will be removed in %d cycles", 
+            string(fid), int64(maxMisses)-downtime))
+        }
+    }
+
+    return nil
+}
+
+func (f *FileServer) IncrementDowntime(cid string) error {
+    downtime, err := f.downtimedb.Get(cid)
+    if err != nil {
+        return err
+    }
+
+    err = f.downtimedb.Set(cid, downtime+1)
+
+    return err
+}
+
+func (f *FileServer) ContractState(cid string) string {
+    return f.QueryContractState(cid)
+}
+
+func (f *FileServer) Prove(cid string) error {
+    block, err := queryBlock(&f.cosmosCtx, string(cid))
+    if err != nil {
+        return err
+    }
+
+    dex, ok := sdk.NewIntFromString(block)
+    f.logger.Debug(fmt.Sprintf("BlockToProve: %s", block))
+    if !ok {
+        return fmt.Errorf("failed to parse block number: %s", block)
+    }
+
+    return f.postProof(string(cid), f.blockSize, dex.Int64())
+}
+
+func (f *FileServer) handleContracts() error {
+    iter := f.archivedb.NewIterator()
+    defer iter.Release()
+
+    for iter.Next() {
+        cid := string(iter.Key())
+        fid := string(iter.Value())
+
+        f.logger.Debug(fmt.Sprintf("FID: %s", string(fid)))
+        f.logger.Debug(fmt.Sprintf("CID: %s", cid))
+
+        switch state := f.QueryContractState(cid); state {
+        case verified:
+            continue
+        case notFound:
+            err := f.IncrementDowntime(cid)
+            if err != nil {
+                return err
+            }
+        case notVerified:
+            err := f.Prove(cid)
+            if err != nil {
+                f.logger.Error("failed to prove ", cid, ": ", err)
+            }
+        default:
+            f.logger.Error("unknown state to handle: ", state)
+        }
+    }
+    return nil
+}
+
+func (f *FileServer) startShift() error {
+    err := f.CleanExpired()
+    if err != nil {
+        return err
+    }
+
+    return f.handleContracts()
+}
+
+func (f *FileServer) StartProofServer(interval uint16) {
 	maxMisses, err := f.cmd.Flags().GetInt(types.FlagMaxMisses)
 	if err != nil {
 		f.logger.Error(err.Error())
@@ -312,7 +440,6 @@ func (f *FileServer) postProofs(interval uint16) {
 
 			r := rand.New(rand.NewSource(time.Now().UnixNano()))
 			interval = uint16(r.Intn(3601) + 60) // Generate interval between 1-60 minutes
-
 		}
 		f.logger.Debug(fmt.Sprintf("The interval between proofs is now %d", interval))
 		start := time.Now()
