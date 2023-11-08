@@ -32,6 +32,12 @@ import (
 	merkletree "github.com/wealdtech/go-merkletree"
 )
 
+const (
+    verified = "verified"
+    notVerified = "not verified"
+    notFound = "not found"
+)
+
 func GetMerkleTree(ctx client.Context, filename string) (*merkletree.MerkleTree, error) {
 	rawTree, err := os.ReadFile(utils.GetStoragePathForTree(ctx.HomeDir, filename))
 	if err != nil {
