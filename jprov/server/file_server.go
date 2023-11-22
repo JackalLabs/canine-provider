@@ -239,7 +239,7 @@ func (f *FileServer) StartFileServer(cmd *cobra.Command) {
 		interval = 0
 	}
 
-	go f.postProofs(interval)
+	go f.StartProofServer(interval)
 	go NatCycle(cmd.Context())
 	go f.queue.StartListener(cmd, providerName)
 

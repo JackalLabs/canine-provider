@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -30,12 +29,6 @@ import (
 	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
 
 	merkletree "github.com/wealdtech/go-merkletree"
-)
-
-const (
-    verified = "verified"
-    notVerified = "not verified"
-    notFound = "not found"
 )
 
 func GetMerkleTree(ctx client.Context, filename string) (*merkletree.MerkleTree, error) {
@@ -428,149 +421,20 @@ func (f *FileServer) startShift() error {
 }
 
 func (f *FileServer) StartProofServer(interval uint16) {
-	maxMisses, err := f.cmd.Flags().GetInt(types.FlagMaxMisses)
-	if err != nil {
-		f.logger.Error(err.Error())
-		return
-	}
+    start := time.Now()
+    err := f.startShift()
+    if err != nil {
+        f.logger.Error(err.Error())
+    }
 
-	address, err := crypto.GetAddress(f.cosmosCtx)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+    end := time.Since(start)
+    if end.Seconds() > 120 {
+        f.logger.Error(fmt.Sprintf("proof took %d", end.Nanoseconds()))
+    }
 
-	for {
-	// 1. Every interval, check contracts that needs proofs verified
-		if interval == 0 { // If the provider picked an interval that's less than 30 minutes, we generate a random interval for them anyways
+    tm := time.Duration(interval) * time.Second
 
-			r := rand.New(rand.NewSource(time.Now().UnixNano()))
-			interval = uint16(r.Intn(3601) + 60) // Generate interval between 1-60 minutes
-		}
-		f.logger.Debug(fmt.Sprintf("The interval between proofs is now %d", interval))
-		start := time.Now()
-
-		iter := f.archivedb.NewIterator()
-
-		for iter.Next() {
-			// get next cid / fid
-			cid := string(iter.Key())
-			fid := string(iter.Value())
-
-			f.logger.Debug(fmt.Sprintf("filename: %s", string(fid)))
-
-			f.logger.Debug(fmt.Sprintf("CID: %s", cid))
-
-			ver, verr := checkVerified(&f.cosmosCtx, string(cid), address)
-			if verr != nil {
-				f.logger.Error(verr.Error())
-				rr := strings.Contains(verr.Error(), "key not found")
-				ny := strings.Contains(verr.Error(), ErrNotYours)
-				if !rr && !ny {
-					continue
-				}
-                downtime, err := f.downtimedb.Get(string(cid))
-                if err != nil {
-                    f.logger.Error(err.Error())
-                    continue
-                }
-
-				if downtime > int64(maxMisses) {
-                    purge, err := f.archivedb.DeleteContract(string(cid))
-                    if err != nil {
-						f.logger.Error(err.Error())
-                    } 
-                    f.archive.Delete(fid)
-
-					f.logger.Info(fmt.Sprintf("%s is being removed", cid))
-
-                    if purge {
-                        f.logger.Info("And we are removing the file on disk.")
-                        f.archive.Delete(fid)
-                    }
-
-                    err = f.downtimedb.Delete(cid)
-					if err != nil {
-						f.logger.Error(err.Error())
-						continue
-					}
-					continue
-				}
-                downtime += 1
-
-				f.logger.Info(fmt.Sprintf("%s will be removed in %d cycles", string(fid), int64(maxMisses)-downtime))
-
-                err = f.downtimedb.Set(cid, downtime)
-				if err != nil {
-                    f.logger.Error(err.Error())
-				}
-				continue
-			}
-
-            downtime, err := f.downtimedb.Get(cid)
-            if err != nil {
-                f.logger.Error(err.Error())
-            }
-
-
-			if downtime > 0 {
-                downtime -= 1 // lower the downtime counter to only account for consecutive misses.
-			}
-
-            err = f.downtimedb.Set(cid, downtime)
-			if err != nil {
-                f.logger.Error(err.Error())
-				continue
-			}
-
-			if ver {
-				f.logger.Debug("Skipping file as it's already verified.")
-				continue
-			}
-
-			block, berr := queryBlock(&f.cosmosCtx, string(cid))
-			if berr != nil {
-				f.logger.Error(fmt.Sprintf("Query Error: %v", berr))
-				continue
-			}
-
-			dex, ok := sdk.NewIntFromString(block)
-			f.logger.Debug(fmt.Sprintf("BlockToProve: %s", block))
-			if !ok {
-				f.logger.Error("cannot parse block number")
-				continue
-			}
-
-			err = f.postProof(string(cid), f.blockSize, dex.Int64())
-			if err != nil {
-				f.logger.Error(fmt.Sprintf("Posting Proof Error: %v", err))
-				continue
-			}
-			sleep, err := f.cmd.Flags().GetInt64(types.FlagSleep)
-			if err != nil {
-				f.logger.Error(err.Error())
-				continue
-			}
-			time.Sleep(time.Duration(sleep) * time.Millisecond)
-
-		}
-
-		iter.Release()
-		err = iter.Error()
-		if err != nil {
-			f.logger.Error("Iterator Error: %s", err.Error())
-		}
-
-		end := time.Since(start)
-		if end.Seconds() > 120 {
-			f.logger.Error(fmt.Sprintf("proof took %d", end.Nanoseconds()))
-		}
-
-		tm := time.Duration(interval) * time.Second
-
-		if tm.Nanoseconds()-end.Nanoseconds() > 0 {
-			time.Sleep(time.Duration(interval) * time.Second)
-		}
-
-	}
+    if tm.Nanoseconds()-end.Nanoseconds() > 0 {
+        time.Sleep(time.Duration(interval) * time.Second)
+    }
 }
