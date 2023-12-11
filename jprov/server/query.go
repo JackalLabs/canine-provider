@@ -17,6 +17,9 @@ const (
 func (f *FileServer) QueryContractState(cid string) string {
     req := storageTypes.QueryActiveDealRequest{Cid: cid}
     resp, err := f.queryClient.ActiveDeals(f.cmd.Context(), &req)
+    if resp == nil {
+        return notFound
+    }
 
     stat, ok := status.FromError(err)
     isDealMine := resp.ActiveDeals.Provider == f.provider.Address

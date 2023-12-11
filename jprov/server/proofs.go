@@ -421,20 +421,22 @@ func (f *FileServer) startShift() error {
 }
 
 func (f *FileServer) StartProofServer(interval uint16) {
-    start := time.Now()
-    err := f.startShift()
-    if err != nil {
-        f.logger.Error(err.Error())
-    }
+    for {
+        start := time.Now()
+        err := f.startShift()
+        if err != nil {
+            f.logger.Error(err.Error())
+        }
 
-    end := time.Since(start)
-    if end.Seconds() > 120 {
-        f.logger.Error(fmt.Sprintf("proof took %d", end.Nanoseconds()))
-    }
+        end := time.Since(start)
+        if end.Seconds() > 120 {
+            f.logger.Error(fmt.Sprintf("proof took %d", end.Nanoseconds()))
+        }
 
-    tm := time.Duration(interval) * time.Second
+        tm := time.Duration(interval) * time.Second
 
-    if tm.Nanoseconds()-end.Nanoseconds() > 0 {
-        time.Sleep(time.Duration(interval) * time.Second)
+        if tm.Nanoseconds()-end.Nanoseconds() > 0 {
+            time.Sleep(time.Duration(interval) * time.Second)
+        }
     }
 }

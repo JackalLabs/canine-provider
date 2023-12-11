@@ -4,11 +4,10 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+    "os"
 	"testing"
 
 	"github.com/JackalLabs/jackal-provider/jprov/server"
-	//	"github.com/JackalLabs/jackal-provider/jprov/types"
-	//	"github.com/JackalLabs/jackal-provider/jprov/testutils"
 	"github.com/stretchr/testify/require"
 	merkletree "github.com/wealdtech/go-merkletree"
 	"github.com/wealdtech/go-merkletree/sha3"
