@@ -3,6 +3,7 @@ package strays
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
@@ -17,10 +18,58 @@ import (
 	"github.com/spf13/pflag"
 )
 
+func (h *LittleHand) SearchFile(ctx *utils.Context, fid string) []string {
+	qClient := storageTypes.NewQueryClient(h.ClientContext)
+	fileRes, err := qClient.FindFile(h.Cmd.Context(), &storageTypes.QueryFindFileRequest{Fid: h.Stray.Fid}) // List all providers that currently have the file active.
+	if err != nil {
+		ctx.Logger.Error(err.Error())
+		return nil // There was an issue, so we pretend like it didn't happen.
+	}
+
+	if fileRes == nil {
+		return nil
+	}
+    
+    var arr []string // Create an array of IPs from the request.
+	err = json.Unmarshal([]byte(fileRes.ProviderIps), &arr)
+	if err != nil {
+		ctx.Logger.Error(err.Error())
+		return nil // There was an issue, so we pretend like it didn't happen.
+	}
+
+    return arr
+}
+
+func (h *LittleHand) ClaimStray(m *StrayManager) error {
+    msg := storageTypes.NewMsgClaimStray( // Attempt to claim the stray, this may fail if someone else has already tried to claim our stray.
+		h.Address,
+		h.Stray.Cid,
+		m.Address,
+	)
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+
+	res, err := h.SendTx(h.ClientContext, h.Cmd.Flags(), msg)
+	if err != nil {
+		return err
+	}
+
+	if res == nil {
+		return errors.New("nil transaction response")
+	}
+
+	if res.Code != 0 {
+        return fmt.Errorf("unsuccessful transaction: %s", res.String())
+	}
+
+    return nil
+}
+
 func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process the stray and make the txn, when done, free the hand & delete the stray entry
 	m.Context.Logger.Info(fmt.Sprintf("Processing hand #%d", h.Id))
 	if h.Stray == nil {
-		m.Context.Logger.Info(fmt.Sprintf("Hand #%d is busy.", h.Id))
+		m.Context.Logger.Info(fmt.Sprintf("Hand #%d is free.", h.Id))
 		return
 	}
 	if h.Busy {
@@ -35,23 +84,7 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 	}()
 
 	ctx.Logger.Info(fmt.Sprintf("Getting info for %s", h.Stray.Cid))
-	qClient := storageTypes.NewQueryClient(h.ClientContext)
-	fileRes, err := qClient.FindFile(h.Cmd.Context(), &storageTypes.QueryFindFileRequest{Fid: h.Stray.Fid}) // List all providers that currently have the file active.
-	if err != nil {
-		ctx.Logger.Error(err.Error())
-		return // There was an issue, so we pretend like it didn't happen.
-	}
-
-	if fileRes == nil {
-		return
-	}
-
-	var arr []string // Create an array of IPs from the request.
-	err = json.Unmarshal([]byte(fileRes.ProviderIps), &arr)
-	if err != nil {
-		ctx.Logger.Error(err.Error())
-		return // There was an issue, so we pretend like it didn't happen.
-	}
+    arr := h.SearchFile(ctx, h.Stray.Fid)
 
 	if len(arr) == 0 {
 		/**
@@ -77,7 +110,7 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 				continue
 			}
 
-			err = h.DownloadFileFromURL(prov, h.Stray.Fid, h.Stray.Cid)
+            err := h.DownloadFileFromURL(prov, h.Stray.Fid, h.Stray.Cid)
 			if err != nil {
 				ctx.Logger.Error(err.Error())
 				continue
@@ -93,33 +126,12 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 
 	ctx.Logger.Info(fmt.Sprintf("Attempting to claim %s on chain", h.Stray.Cid))
 
-	msg := storageTypes.NewMsgClaimStray( // Attempt to claim the stray, this may fail if someone else has already tried to claim our stray.
-		h.Address,
-		h.Stray.Cid,
-		m.Address,
-	)
-	if err := msg.ValidateBasic(); err != nil {
-		ctx.Logger.Error(err.Error())
-		return
-	}
+    err := h.ClaimStray(m)
+    if err != nil {
+        ctx.Logger.Error("failed to claim stray: ", err.Error())
+    }
 
-	res, err := h.SendTx(h.ClientContext, h.Cmd.Flags(), msg)
-	if err != nil {
-		ctx.Logger.Error(err.Error())
-		return
-	}
-
-	if res == nil {
-		ctx.Logger.Error("res is nil")
-		return
-	}
-
-	if res.Code != 0 {
-		ctx.Logger.Error(res.RawLog)
-		return
-	}
-
-    err = h.Database.SetContract(h.Stray.Cid, h.Stray.Fid)
+	err = h.Database.SetContract(h.Stray.Cid, h.Stray.Fid)
 	if err != nil {
 		ctx.Logger.Error(err.Error())
 		return
