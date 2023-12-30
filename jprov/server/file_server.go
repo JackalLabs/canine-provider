@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -167,12 +168,14 @@ func (f *FileServer) MakeContract(fid string, sender string, wg *sync.WaitGroup,
 		return nil, err
 	}
 
+    xRoot := hex.EncodeToString([]byte(merkleroot))
+
 	msg := storageTypes.NewMsgPostContract(
 		address,
 		sender,
 		filesize,
 		fid,
-		merkleroot,
+		xRoot,
 	)
 	if err := msg.ValidateBasic(); err != nil {
 		return nil, err

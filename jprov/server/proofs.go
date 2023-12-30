@@ -273,21 +273,18 @@ func (f *FileServer) postProof(cid string, blockSize, block int64) error {
 		Response: nil,
 	}
 
-	go func() {
-		f.queue.Append(&u)
-		wg.Wait()
+    f.queue.Append(&u)
+    wg.Wait()
 
-		if u.Err != nil {
+    if u.Err != nil {
+        f.logger.Error(fmt.Sprintf("Posting Error: %s", u.Err.Error()))
+        return nil
+    }
 
-			f.logger.Error(fmt.Sprintf("Posting Error: %s", u.Err.Error()))
-			return
-		}
-
-		if u.Response.Code != 0 {
-			f.logger.Error("Contract Response Error: %s", fmt.Errorf(u.Response.RawLog))
-			return
-		}
-	}()
+    if u.Response.Code != 0 {
+        f.logger.Error("Contract Response Error: %s", fmt.Errorf(u.Response.RawLog))
+        return nil
+    }
 
 	return nil
 }
@@ -388,8 +385,8 @@ func (f *FileServer) handleContracts() error {
         cid := string(iter.Key())
         fid := string(iter.Value())
 
-        f.logger.Debug(fmt.Sprintf("FID: %s", string(fid)))
-        f.logger.Debug(fmt.Sprintf("CID: %s", cid))
+        f.logger.Info(fmt.Sprintf("FID: %s", string(fid)))
+        f.logger.Info(fmt.Sprintf("CID: %s", cid))
 
         switch state := f.QueryContractState(cid); state {
         case verified:
