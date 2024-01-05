@@ -17,7 +17,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/rs/cors"
 
-	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
+	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	"github.com/julienschmidt/httprouter"
@@ -27,27 +27,27 @@ import (
 )
 
 type FileServer struct {
-	cmd *cobra.Command
-	cosmosCtx client.Context
-	serverCtx *utils.Context
+	cmd         *cobra.Command
+	cosmosCtx   client.Context
+	serverCtx   *utils.Context
 	queryClient storageTypes.QueryClient
-	archive archive.Archive
-	archivedb archive.ArchiveDB
-	downtimedb *archive.DowntimeDB
-	provider storageTypes.Providers
-	blockSize int64
-	queue *queue.UploadQueue
-	logger tmlog.Logger
+	archive     archive.Archive
+	archivedb   archive.ArchiveDB
+	downtimedb  *archive.DowntimeDB
+	provider    storageTypes.Providers
+	blockSize   int64
+	queue       *queue.UploadQueue
+	logger      tmlog.Logger
 }
 
-func NewFileServer (
-    cmd *cobra.Command,
-    archivedb archive.ArchiveDB,
-    downtimedb *archive.DowntimeDB,
+func NewFileServer(
+	cmd *cobra.Command,
+	archivedb archive.ArchiveDB,
+	downtimedb *archive.DowntimeDB,
 ) (fs *FileServer, err error) {
 	sCtx := utils.GetServerContextFromCmd(cmd)
 	clientCtx := client.GetClientContextFromCmd(cmd)
-    
+
 	blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
 	if err != nil {
 		return nil, err
@@ -56,21 +56,20 @@ func NewFileServer (
 	queue := queue.New()
 
 	return &FileServer{
-		cmd: cmd,
-		cosmosCtx: clientCtx,
-		serverCtx: sCtx,
-		archive: archive.NewSingleCellArchive(sCtx.Config.RootDir),
-        archivedb: archivedb,
-        downtimedb: downtimedb,
-		blockSize: blockSize,
+		cmd:         cmd,
+		cosmosCtx:   clientCtx,
+		serverCtx:   sCtx,
+		archive:     archive.NewSingleCellArchive(sCtx.Config.RootDir),
+		archivedb:   archivedb,
+		downtimedb:  downtimedb,
+		blockSize:   blockSize,
 		queryClient: storageTypes.NewQueryClient(clientCtx),
-		queue: &queue,
-		logger: sCtx.Logger,
+		queue:       &queue,
+		logger:      sCtx.Logger,
 	}, nil
 }
 
 func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader, sender string, w *http.ResponseWriter) error {
-
 	fid, err := utils.MakeFID(file, file)
 	if err != nil {
 		return err
@@ -134,13 +133,12 @@ func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader
 }
 
 func (f *FileServer) saveToDatabase(fid string, cid string) error {
-    err := f.downtimedb.Set(cid, 0) 
-    if err != nil {
-        return err
-    }
-    return f.archivedb.SetContract(cid, fid)
+	err := f.downtimedb.Set(cid, 0)
+	if err != nil {
+		return err
+	}
+	return f.archivedb.SetContract(cid, fid)
 }
-
 
 func writeResponse(w http.ResponseWriter, upload types.Upload, fid, cid string) error {
 	if upload.Err != nil {
@@ -157,8 +155,6 @@ func writeResponse(w http.ResponseWriter, upload types.Upload, fid, cid string) 
 
 	return json.NewEncoder(w).Encode(resp)
 }
-
-
 
 func (f *FileServer) MakeContract(fid string, sender string, wg *sync.WaitGroup, merkleroot string, filesize string) (*types.Upload, error) {
 	address, err := crypto.GetAddress(f.cosmosCtx)
@@ -209,7 +205,7 @@ func (f *FileServer) Init() (router *httprouter.Router, err error) {
 		err = fmt.Errorf("Provider not initialized on the blockchain, or connection to the RPC node has been lost. Please make sure your RPC node is available then run `jprovd init` to fix this.")
 		return
 	}
-	
+
 	f.provider = response.Providers
 
 	router = httprouter.New()
@@ -261,6 +257,6 @@ func (f *FileServer) StartFileServer(cmd *cobra.Command) {
 		return
 	} else if err != nil {
 		fmt.Printf("error starting server: %s\n", err)
-        return
+		return
 	}
 }

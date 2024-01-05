@@ -29,24 +29,24 @@ func StartServerCommand() *cobra.Command {
 		Long:  `Start the Jackal Storage Provider server with the specified port.`,
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-            clientCtx := client.GetClientContextFromCmd(cmd)
-            dbPath := utils.GetArchiveDBPath(clientCtx)
-            archivedb, err := archive.NewDoubleRefArchiveDB(dbPath)
-            if err != nil {
-                return err
-            }
-            defer func() {
-                err = errors.Join(err, archivedb.Close())
-            }()
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			dbPath := utils.GetArchiveDBPath(clientCtx)
+			archivedb, err := archive.NewDoubleRefArchiveDB(dbPath)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				err = errors.Join(err, archivedb.Close())
+			}()
 
-            downtimedbPath := utils.GetDowntimeDBPath(clientCtx)
-            downtimedb, err := archive.NewDowntimeDB(downtimedbPath)
-            if err != nil {
-                return err
-            }
-            defer func() {
-                err = errors.Join(err, downtimedb.Close())
-            }()
+			downtimedbPath := utils.GetDowntimeDBPath(clientCtx)
+			downtimedb, err := archive.NewDowntimeDB(downtimedbPath)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				err = errors.Join(err, downtimedb.Close())
+			}()
 
 			// start stray service
 			if haltStray, err := cmd.Flags().GetBool(types.HaltStraysFlag); err != nil {

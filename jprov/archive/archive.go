@@ -23,8 +23,8 @@ type Archive interface {
 	// The data must be closed after reading is done
 	// Error is returned when such file does not exist
 	RetrieveFile(fid string) (data io.ReadSeekCloser, err error)
-    // Only use this for claiming strays check
-    FileExist(fid string) bool
+	// Only use this for claiming strays check
+	FileExist(fid string) bool
 	// WriteTreeToDisk creates a directory and file to store merkle tree
 	// Returns error if the process fails
 	WriteTreeToDisk(fid string, tree *merkletree.MerkleTree) (err error)
@@ -38,13 +38,13 @@ type Archive interface {
 var _ Archive = &SingleCellArchive{}
 
 type SingleCellArchive struct {
-	rootDir string
+	rootDir     string
 	pathFactory *SingleCellPathFactory
 }
 
 func NewSingleCellArchive(rootDir string) *SingleCellArchive {
 	return &SingleCellArchive{
-		rootDir: rootDir,
+		rootDir:     rootDir,
 		pathFactory: NewSingleCellPathFactory(rootDir),
 	}
 }
@@ -62,7 +62,7 @@ func (f *SingleCellArchive) WriteFileToDisk(data io.Reader, fid string) (written
 	}
 	defer func() {
 		err = errors.Join(err, file.Close())
-	} ()
+	}()
 
 	written, err = io.Copy(file, data)
 	return
@@ -93,11 +93,11 @@ func (f *SingleCellArchive) RetrieveFile(fid string) (data io.ReadSeekCloser, er
 }
 
 func (f *SingleCellArchive) FileExist(fid string) bool {
-    _, err := os.Stat(f.pathFactory.FilePath(fid))
-    return errors.Is(err, os.ErrNotExist)
+	_, err := os.Stat(f.pathFactory.FilePath(fid))
+	return errors.Is(err, os.ErrNotExist)
 }
 
-func (f *SingleCellArchive) WriteTreeToDisk(fid string, tree *merkletree.MerkleTree) (err error){
+func (f *SingleCellArchive) WriteTreeToDisk(fid string, tree *merkletree.MerkleTree) (err error) {
 	path := f.pathFactory.TreePath(fid)
 	err = os.MkdirAll(filepath.Dir(path), os.ModePerm)
 	if err != nil {

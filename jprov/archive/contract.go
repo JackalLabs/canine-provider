@@ -17,12 +17,9 @@ type ArchiveDB interface {
 	DeleteContract(cid string) (purge bool, err error)
 	NewIterator() iterator.Iterator
 	Close() error
-} 
-
-
+}
 
 var _ ArchiveDB = &DoubleRefArchiveDB{}
-
 
 const cidSeparator = ","
 
@@ -30,7 +27,7 @@ type DoubleRefArchiveDB struct {
 	db *leveldb.DB
 }
 
-func NewDoubleRefArchiveDB (filepath string) (*DoubleRefArchiveDB, error) {
+func NewDoubleRefArchiveDB(filepath string) (*DoubleRefArchiveDB, error) {
 	db, err := leveldb.OpenFile(filepath, nil)
 	if err != nil {
 		return nil, err
@@ -47,7 +44,7 @@ func (d *DoubleRefArchiveDB) GetFid(cid string) (string, error) {
 	return string(value), err
 }
 
-func (d *DoubleRefArchiveDB) GetContracts(fid string) ([]string, error){
+func (d *DoubleRefArchiveDB) GetContracts(fid string) ([]string, error) {
 	value, err := d.db.Get([]byte(fid), nil)
 	if err != nil {
 		return nil, err
@@ -110,11 +107,11 @@ func (d *DoubleRefArchiveDB) DeleteContract(cid string) (purge bool, err error) 
 	return
 }
 
-func (d *DoubleRefArchiveDB) deleteReference (
-    batch *leveldb.Batch, 
-    cid string,
+func (d *DoubleRefArchiveDB) deleteReference(
+	batch *leveldb.Batch,
+	cid string,
 ) (purge bool, err error) {
-    purge = false
+	purge = false
 	fid, err := d.db.Get([]byte(cid), nil)
 	if err != nil {
 		return
@@ -124,28 +121,28 @@ func (d *DoubleRefArchiveDB) deleteReference (
 	if err != nil {
 		return
 	}
-	
+
 	var b strings.Builder
 	b.WriteString(string(cid))
 	b.WriteString(cidSeparator)
-	
+
 	result := strings.Replace(string(cidList), b.String(), "", 1)
 
 	if len(result) == 0 {
 		batch.Delete(fid)
-        purge = true
+		purge = true
 	} else {
 		batch.Put(fid, []byte(result))
 	}
 
-    return
+	return
 }
 
-func (d *DoubleRefArchiveDB) NewIterator() iterator.Iterator{
+func (d *DoubleRefArchiveDB) NewIterator() iterator.Iterator {
 	return d.db.NewIterator(nil, nil)
 }
 
-func (d *DoubleRefArchiveDB) Close() error{
+func (d *DoubleRefArchiveDB) Close() error {
 	return d.db.Close()
 }
 
@@ -153,61 +150,64 @@ func (d *DoubleRefArchiveDB) key(cid string) (key []byte) {
 	return []byte(cid)
 }
 
-func (d *DoubleRefArchiveDB) refKey(fid string) []byte {
+func (d *DoubleRefArchiveDB) RefKey(fid string) []byte {
 	return []byte(fid)
 }
 
 type DowntimeDB struct {
-    db *leveldb.DB
+	db *leveldb.DB
 }
 
 func NewDowntimeDB(filepath string) (*DowntimeDB, error) {
-    db, err := leveldb.OpenFile(filepath, nil)
-    if err != nil {
-        return nil, err
-    }
-    return &DowntimeDB{db: db}, nil
+	db, err := leveldb.OpenFile(filepath, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &DowntimeDB{db: db}, nil
 }
 
-func (d *DowntimeDB) NewIterator() iterator.Iterator{
+func (d *DowntimeDB) NewIterator() iterator.Iterator {
 	return d.db.NewIterator(nil, nil)
 }
 
 func (d *DowntimeDB) Get(cid string) (block int64, err error) {
-    b, err := d.db.Get([]byte(cid), nil)
-    if err == leveldb.ErrNotFound {
-        return 0, nil
-    }
-    if err != nil {
-        return
-    }
-    block, err = ByteToBlock(b)
-    return
+	b, err := d.db.Get([]byte(cid), nil)
+	if err == leveldb.ErrNotFound {
+		return 0, nil
+	}
+	if err != nil {
+		return
+	}
+	block, err = ByteToBlock(b)
+	return
 }
 
 func (d *DowntimeDB) Set(cid string, block int64) error {
-    b, err := BlockToByte(block)
-    if err != nil {
-        return err
-    }
-    return d.db.Put([]byte(cid), b, nil)
+	b, err := BlockToByte(block)
+	if err != nil {
+		return err
+	}
+	return d.db.Put([]byte(cid), b, nil)
 }
 
 func (d *DowntimeDB) Delete(cid string) error {
-    return d.db.Delete([]byte(cid), nil)
+	return d.db.Delete([]byte(cid), nil)
 }
-func (d *DowntimeDB) Close() error {
-    return d.db.Close()
-}
-func ByteToBlock(b []byte) (int64, error) {
-    r := bytes.NewReader(b)
 
-    var block int64
-    err := binary.Read(r, binary.LittleEndian, &block)
-    return block, err
+func (d *DowntimeDB) Close() error {
+	return d.db.Close()
 }
+
+func ByteToBlock(b []byte) (int64, error) {
+	r := bytes.NewReader(b)
+
+	var block int64
+	err := binary.Read(r, binary.LittleEndian, &block)
+	return block, err
+}
+
 func BlockToByte(block int64) ([]byte, error) {
-    b := new(bytes.Buffer)
-    err := binary.Write(b, binary.LittleEndian, block)
-    return b.Bytes(), err
+	b := new(bytes.Buffer)
+	err := binary.Write(b, binary.LittleEndian, block)
+	return b.Bytes(), err
 }

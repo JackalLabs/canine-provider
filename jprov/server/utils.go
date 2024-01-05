@@ -2,19 +2,19 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
-	"io"
 
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/cosmos/cosmos-sdk/client"
-	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
+	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 )
 
 const ErrNotYours = "not your deal"
@@ -96,7 +96,7 @@ func queryBlock(clientCtx *client.Context, cid string) (string, error) {
 	return res.ActiveDeals.Blocktoprove, nil
 }
 
-func checkVerified(clientCtx *client.Context, cid string, self string) (bool, error) {
+func CheckVerified(clientCtx *client.Context, cid string, self string) (bool, error) {
 	queryClient := storageTypes.NewQueryClient(clientCtx)
 
 	argCid := cid

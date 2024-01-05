@@ -7,14 +7,14 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 
-	"github.com/jackalLabs/canine-chain/x/storage/types"
+	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 )
 
 type QueryService struct {
 	queryClient types.QueryClient
 }
 
-func NewQueryService (cmd *cobra.Command) *QueryService {
+func NewQueryService(cmd *cobra.Command) *QueryService {
 	return &QueryService{queryClient: types.NewQueryClient(client.GetClientContextFromCmd(cmd))}
 }
 

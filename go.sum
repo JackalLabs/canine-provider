@@ -43,8 +43,8 @@ cloud.google.com/go/storage v1.8.0/go.mod h1:Wv1Oy7z6Yz3DshWRJFhqM/UCfaWIRTdp0RX
 cloud.google.com/go/storage v1.10.0/go.mod h1:FLPqc6j+Ki4BU591ie1oL6qBQGu2Bl/tZ9ullr3+Kg0=
 cloud.google.com/go/storage v1.14.0/go.mod h1:GrKmX003DSIwi9o29oFT7YDnHYwZoctc3fOKtUw0Xmo=
 collectd.org v0.3.0/go.mod h1:A/8DzQBkF6abtvrT2j/AU/4tiBgJWYyh0y/oB/4MlWE=
-cosmossdk.io/api v0.2.6 h1:AoNwaLLapcLsphhMK6+o0kZl+D6MMUaHVqSdwinASGU=
-cosmossdk.io/api v0.2.6/go.mod h1:u/d+GAxil0nWpl1XnQL8nkziQDIWuBDhv8VnDm/s6dI=
+cosmossdk.io/api v0.4.0 h1:x90DmdidP6EhzktAa/6/IofSHidDnPjahdlrUvyQZQw=
+cosmossdk.io/api v0.4.0/go.mod h1:TWDzBhUBhI1LhSf2XSYpfIBf6D4mbLu/fvzvDfhcaYM=
 cosmossdk.io/core v0.5.1 h1:vQVtFrIYOQJDV3f7rw4pjjVqc1id4+mE0L9hHP66pyI=
 cosmossdk.io/core v0.5.1/go.mod h1:KZtwHCLjcFuo0nmDc24Xy6CRNEL9Vl/MeimQ2aC7NLE=
 cosmossdk.io/depinject v1.0.0-alpha.3 h1:6evFIgj//Y3w09bqOUOzEpFj5tsxBqdc5CfkO7z+zfw=
@@ -85,8 +85,6 @@ github.com/DataDog/zstd v1.5.2/go.mod h1:g4AWEaM3yOg3HYfnJ3YIawPnVdXJh9QME85blwS
 github.com/HdrHistogram/hdrhistogram-go v1.1.2/go.mod h1:yDgFjdqOqDEKOvasDdhWNXYg9BVp4O+o5f6V/ehm6Oo=
 github.com/JackalLabs/blanket v0.0.0 h1:bMuUe12mRO8rekDIo7T37xPLOvLsEOMkzgK5Uqul+FU=
 github.com/JackalLabs/blanket v0.0.0/go.mod h1:jl68zTyytfS6oyTbqwcMKyq9Jvvv0IE0eHFMFMcgsD4=
-github.com/JackalLabs/canine-chain v1.2.3-0.20230621063218-8fde7f21c65b h1:tWBt15Gnd1WkHgr+k4Skoc06j/O9AYii7qKWHszjoeI=
-github.com/JackalLabs/canine-chain v1.2.3-0.20230621063218-8fde7f21c65b/go.mod h1:OVSoZkHP0Z4IoJZmOx06Biqy+45FFLkDkuK4tyuWH1w=
 github.com/JackalLabs/cosmos-sdk-new v0.45.17-0.20230525190516-b9142076b70c h1:Ju0uBSyOi03+kCC7gMth8s9m4/QSfd+1IaBe2o6l5ZM=
 github.com/JackalLabs/cosmos-sdk-new v0.45.17-0.20230525190516-b9142076b70c/go.mod h1:bScuNwWAP0TZJpUf+SHXRU3xGoUPp+X9nAzfeIXts40=
 github.com/Joker/hpp v1.0.0/go.mod h1:8x5n+M1Hp5hC0g8okX3sR3vFQwynaX/UgSOM9MeBKzY=

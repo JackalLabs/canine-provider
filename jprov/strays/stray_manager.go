@@ -12,7 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/bech32"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/cosmos/cosmos-sdk/x/feegrant"
-	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
+	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 )
 
 func (m *StrayManager) AddHand(index uint) *LittleHand {
@@ -34,14 +34,14 @@ func (m *StrayManager) AddHand(index uint) *LittleHand {
 	hand := LittleHand{
 		Waiter:        &m.Waiter,
 		Stray:         nil,
-        Database: m.archivedb, 
+		Database:      m.archivedb,
 		Busy:          false,
 		Cmd:           m.Cmd,
 		ClientContext: m.ClientContext,
 		Id:            index,
 		Address:       address,
-        Archive: m.Archive,
-        Logger: m.Context.Logger,
+		Archive:       m.Archive,
+		Logger:        m.Context.Logger,
 	}
 
 	m.hands = append(m.hands, &hand)
@@ -209,7 +209,7 @@ func (m *StrayManager) Start() { // loop through stray system
 
 	var s uint64
 	for {
-		s = m.CollectStrays(s)    // query strays from the chain
+		s = m.CollectStrays(s)         // query strays from the chain
 		m.Distribute()                 // hands strays out to hands
 		for _, hand := range m.hands { // process every stray in parallel
 			go hand.Process(m.Context, m)

@@ -14,7 +14,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
-	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
+	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/spf13/pflag"
 )
 
@@ -29,19 +29,19 @@ func (h *LittleHand) SearchFile(ctx *utils.Context, fid string) []string {
 	if fileRes == nil {
 		return nil
 	}
-    
-    var arr []string // Create an array of IPs from the request.
+
+	var arr []string // Create an array of IPs from the request.
 	err = json.Unmarshal([]byte(fileRes.ProviderIps), &arr)
 	if err != nil {
 		ctx.Logger.Error(err.Error())
 		return nil // There was an issue, so we pretend like it didn't happen.
 	}
 
-    return arr
+	return arr
 }
 
 func (h *LittleHand) ClaimStray(m *StrayManager) error {
-    msg := storageTypes.NewMsgClaimStray( // Attempt to claim the stray, this may fail if someone else has already tried to claim our stray.
+	msg := storageTypes.NewMsgClaimStray( // Attempt to claim the stray, this may fail if someone else has already tried to claim our stray.
 		h.Address,
 		h.Stray.Cid,
 		m.Address,
@@ -60,10 +60,10 @@ func (h *LittleHand) ClaimStray(m *StrayManager) error {
 	}
 
 	if res.Code != 0 {
-        return fmt.Errorf("unsuccessful transaction: %s", res.String())
+		return fmt.Errorf("unsuccessful transaction: %s", res.String())
 	}
 
-    return nil
+	return nil
 }
 
 func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process the stray and make the txn, when done, free the hand & delete the stray entry
@@ -84,7 +84,7 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 	}()
 
 	ctx.Logger.Info(fmt.Sprintf("Getting info for %s", h.Stray.Cid))
-    arr := h.SearchFile(ctx, h.Stray.Fid)
+	arr := h.SearchFile(ctx, h.Stray.Fid)
 
 	if len(arr) == 0 {
 		/**
@@ -92,7 +92,7 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 		strays that we don't own, but if we caused an error when handling the file we can reclaim the stray with
 		the cached file from our filesystem which keeps the file alive)
 		*/
-		if h.Archive.FileExist(h.Stray.Fid){
+		if h.Archive.FileExist(h.Stray.Fid) {
 			ctx.Logger.Info(fmt.Sprintf("Nobody, not even I have %s.", h.Stray.Fid))
 			return // If we don't have it and nobody else does, there is nothing we can do.
 		}
@@ -110,7 +110,7 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 				continue
 			}
 
-            err := h.DownloadFileFromURL(prov, h.Stray.Fid, h.Stray.Cid)
+			err := h.DownloadFileFromURL(prov, h.Stray.Fid, h.Stray.Cid)
 			if err != nil {
 				ctx.Logger.Error(err.Error())
 				continue
@@ -126,10 +126,10 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 
 	ctx.Logger.Info(fmt.Sprintf("Attempting to claim %s on chain", h.Stray.Cid))
 
-    err := h.ClaimStray(m)
-    if err != nil {
-        ctx.Logger.Error("failed to claim stray: ", err.Error())
-    }
+	err := h.ClaimStray(m)
+	if err != nil {
+		ctx.Logger.Error("failed to claim stray: ", err.Error())
+	}
 
 	err = h.Database.SetContract(h.Stray.Cid, h.Stray.Fid)
 	if err != nil {

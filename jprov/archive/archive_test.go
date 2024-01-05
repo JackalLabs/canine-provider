@@ -1,14 +1,14 @@
 package archive_test
 
 import (
-    "bytes"
+	"bytes"
 	"os"
 	"testing"
 
 	"github.com/JackalLabs/jackal-provider/jprov/archive"
 )
 
-func newFile(name string, t *testing.T) (f *os.File) {
+func NewFile(name string, t *testing.T) (f *os.File) {
 	f, err := os.CreateTemp("", "_GO_"+name)
 	if err != nil {
 		t.Fatalf("TempFile %s: %s", name, err)
@@ -17,25 +17,25 @@ func newFile(name string, t *testing.T) (f *os.File) {
 }
 
 func TestGetPiece(t *testing.T) {
-    buf := bytes.NewBuffer(nil)
-    _, err := buf.WriteString("hello, world\n")
-    if err != nil {
-        t.Fatal(err)
-    }
+	buf := bytes.NewBuffer(nil)
+	_, err := buf.WriteString("hello, world\n")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-    archive := archive.NewSingleCellArchive("")
+	archive := archive.NewSingleCellArchive("")
 
-    fileName := "testfile"
-    _, err = archive.WriteFileToDisk(buf, fileName)
-    if err != nil {
-        t.Fatalf("archive.WriteFileToDisk: %s", err)
-    }
-    defer func(){
-        if err := os.RemoveAll("storage"); err != nil {
-            t.Fatal(err)
-            return
-        }
-    }()
+	fileName := "testfile"
+	_, err = archive.WriteFileToDisk(buf, fileName)
+	if err != nil {
+		t.Fatalf("archive.WriteFileToDisk: %s", err)
+	}
+	defer func() {
+		if err := os.RemoveAll("storage"); err != nil {
+			t.Fatal(err)
+			return
+		}
+	}()
 
 	resData, resErr := archive.GetPiece(fileName, 0, 5)
 	if err != nil {
@@ -61,5 +61,4 @@ func TestGetPiece(t *testing.T) {
 	if string(resData) != "orld\n\x00\x00\x00" {
 		t.Errorf("GetPiece 1, 8: have %q, want %q", string(resData), "world")
 	}
-
 }

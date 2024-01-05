@@ -7,7 +7,7 @@ require (
 	github.com/cosmos/cosmos-sdk v0.45.17
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/huin/goupnp v1.2.0
-	github.com/jackalLabs/canine-chain v0.0.0-00010101000000-000000000000
+	github.com/jackalLabs/canine-chain/v3 v3.0.2
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/rs/cors v1.9.0
 	github.com/rs/zerolog v1.29.1
@@ -19,10 +19,11 @@ require (
 	github.com/tendermint/tendermint v0.34.27
 	github.com/wealdtech/go-merkletree v1.0.0
 	golang.org/x/sync v0.3.0
+	google.golang.org/grpc v1.55.0
 )
 
 require (
-	cosmossdk.io/api v0.2.6 // indirect
+	cosmossdk.io/api v0.4.0 // indirect
 	cosmossdk.io/core v0.5.1 // indirect
 	cosmossdk.io/depinject v1.0.0-alpha.3 // indirect
 	filippo.io/edwards25519 v1.0.0-rc.1 // indirect
@@ -156,7 +157,6 @@ require (
 	golang.org/x/term v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
-	google.golang.org/grpc v1.55.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
@@ -182,7 +182,8 @@ replace (
 	// use cosmos-flavored protobufs
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
-	github.com/jackalLabs/canine-chain => github.com/JackalLabs/canine-chain v1.2.3-0.20230621063218-8fde7f21c65b
+	//github.com/jackalLabs/canine-chain => github.com/JackalLabs/canine-chain v1.2.3-0.20230621063218-8fde7f21c65b
+	github.com/jackalLabs/canine-chain/v3 => ../canine-chain
 
 	github.com/tendermint/tendermint => github.com/cometbft/cometbft v0.34.27
 
