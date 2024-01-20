@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -107,7 +108,7 @@ func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	msg, ctrErr := f.MakeContract(fid, sender, &wg, string(tree.Root()), fmt.Sprintf("%d", handler.Size))
+	msg, ctrErr := f.MakeContract(fid, sender, &wg, hex.EncodeToString(tree.Root()), fmt.Sprintf("%d", handler.Size))
 	if ctrErr != nil {
 		f.serverCtx.Logger.Error("saveFile: CONTRACT ERROR: ", ctrErr)
 		return ctrErr

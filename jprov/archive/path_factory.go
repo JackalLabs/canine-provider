@@ -41,7 +41,7 @@ func (s *SingleCellPathFactory) fileName(fid string) (name string) {
 }
 
 func (s *SingleCellPathFactory) FileDir(fid string) (dir string) {
-	return filepath.Join(s.rootDir, "storage", string(fid))
+	return filepath.Join(s.rootDir, "storage", fid)
 }
 
 func (s *SingleCellPathFactory) TreePath(fid string) (path string) {
@@ -50,7 +50,7 @@ func (s *SingleCellPathFactory) TreePath(fid string) (path string) {
 
 func (s *SingleCellPathFactory) treeName(fid string) (name string) {
 	var b strings.Builder
-	_, _ = b.WriteString(string(fid))
+	_, _ = b.WriteString(fid)
 	_, _ = b.WriteString(s.treeExt)
 	return b.String()
 }

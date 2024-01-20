@@ -63,23 +63,22 @@ func GenerateMerkleProof(tree merkletree.MerkleTree, index, blockSize int64, ite
 func (f *FileServer) CreateMerkleForProof(filename string, blockSize, index int64) (string, string, error) {
 	data, err := f.archive.GetPiece(filename, index, blockSize)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("failed to get piece: %w", err)
 	}
 
 	mTree, err := f.archive.RetrieveTree(filename)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("failed to get tree: %w", err)
 	}
 
 	verified, proof, err := GenerateMerkleProof(*mTree, index, blockSize, data)
 	if err != nil {
-		f.logger.Error(err.Error())
-		return "", "", err
+		return "", "", fmt.Errorf("failed to generate merkle proof: %w", err)
 	}
 
 	jproof, err := json.Marshal(*proof)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("failed to marshal proof: %w", err)
 	}
 
 	if !verified {
@@ -231,17 +230,17 @@ func requestAttestation(clientCtx client.Context, cid string, hashList string, i
 func (f *FileServer) postProof(cid string, blockSize, block int64) error {
 	fid, err := f.archivedb.GetFid(cid)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to find fid: %w", err)
 	}
 
 	item, hashlist, err := f.CreateMerkleForProof(fid, blockSize, block)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create merkle for proof on fid: %s: %w", fid, err)
 	}
 
 	address, err := crypto.GetAddress(f.cosmosCtx)
 	if err != nil {
-		f.logger.Error(err.Error())
+		f.logger.Error(fmt.Errorf("failed to get address: %w", err).Error())
 		return err
 	}
 
@@ -366,18 +365,18 @@ func (f *FileServer) ContractState(cid string) string {
 }
 
 func (f *FileServer) Prove(cid string) error {
-	block, err := queryBlock(&f.cosmosCtx, string(cid))
+	block, err := queryBlock(&f.cosmosCtx, cid)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse query block number from chain: %w", err)
 	}
 
-	dex, ok := sdk.NewIntFromString(block)
+	dex, err := strconv.ParseInt(block, 10, 64)
 	f.logger.Debug(fmt.Sprintf("BlockToProve: %s", block))
-	if !ok {
-		return fmt.Errorf("failed to parse block number: %s", block)
+	if err != nil {
+		return fmt.Errorf("failed to parse block number: %w", err)
 	}
 
-	return f.postProof(string(cid), f.blockSize, dex.Int64())
+	return f.postProof(cid, f.blockSize, dex)
 }
 
 func (f *FileServer) handleContracts() error {
@@ -402,7 +401,7 @@ func (f *FileServer) handleContracts() error {
 		case notVerified:
 			err := f.Prove(cid)
 			if err != nil {
-				f.logger.Error("failed to prove ", cid, ": ", err)
+				f.logger.Error(fmt.Errorf("failed to prove %s : %w", cid, err).Error())
 			}
 		default:
 			f.logger.Error("unknown state to handle: ", state)
