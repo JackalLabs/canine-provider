@@ -9,8 +9,50 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/JackalLabs/jackal-provider/jprov/archive"
+
 	"github.com/cosmos/cosmos-sdk/client"
 )
+
+// old version of tree path stores merkle trees at homeDir/storage/fid.tree
+func GetOldTreePath(homeDir, fid string) string {
+    fileName := fmt.Sprintf("%s.tree", fid)
+    storageDir := filepath.Join(homeDir, "storage")
+    return filepath.Join(storageDir, fileName)
+}
+
+func MoveTree(homeDir, fid string) error {
+    pathFactory := archive.NewSingleCellPathFactory(homeDir)
+    oldPath := GetOldTreePath(homeDir, fid)
+
+    oldTree, err := os.Open(oldPath)
+    if err != nil {
+        return err
+    }
+    defer func() {
+        err = errors.Join(err, oldTree.Close())
+    }()
+
+    newTree, err := os.Create(pathFactory.TreePath(fid))
+    if err != nil {
+        return err
+    }
+    defer func() {
+        err = errors.Join(err, oldTree.Close())
+    }()
+
+    _, err = io.Copy(newTree, oldTree)
+    if err != nil {
+        return fmt.Errorf("failed to copy old tree to new tree: %s", err.Error())
+    }
+
+    err = os.Remove(oldPath)
+    if err != nil {
+        return fmt.Errorf("failed to delete old tree: %s", err.Error())
+    }
+
+    return nil
+}
 
 func Migrate(ctx client.Context) {
 	fids, err := DiscoverFids(ctx.HomeDir)
@@ -35,6 +77,11 @@ func Migrate(ctx client.Context) {
 			fmt.Printf("Check failure: %s is corrupted\n", fid)
 			return
 		}
+        err = MoveTree(ctx.HomeDir, fid)
+        if err != nil {
+            fmt.Printf("Failed to move merkle tree to new location: %s", err.Error())
+            return
+        }
 	}
 	fmt.Printf("\n")
 	fmt.Println("Migration finished")
@@ -43,7 +90,8 @@ func Migrate(ctx client.Context) {
 // postGlueCheck verifies the result of glueing was successful by generating fid
 // of the glued file and check against passed fid
 func postGlueCheck(ctx client.Context, fid string) (pass bool, err error) {
-	file, err := os.Open(GetContentsPath(ctx.HomeDir, fid))
+    pathFactory := archive.NewSingleCellPathFactory(ctx.HomeDir)
+	file, err := os.Open(pathFactory.FilePath(fid))
 	if err != nil {
 		return
 	}
@@ -88,7 +136,9 @@ func GlueAllBlocks(homeDir, fid string) error {
 
 // glue all blocks starting from 1.jkl to <blocksCount>.jkl
 func glueAllBlocks(homeDir, fid string, blocksCount int) (err error) {
-	f, err := os.Create(GetContentsPath(homeDir, fid))
+    pathFactory := archive.NewSingleCellPathFactory(homeDir)
+
+	f, err := os.Create(pathFactory.FilePath(fid))
 	if err != nil {
 		return
 	}
