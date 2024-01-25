@@ -82,9 +82,32 @@ func Migrate(ctx client.Context) {
             fmt.Printf("Failed to move merkle tree to new location: %s", err.Error())
             return
         }
+        err = cleanOld(ctx.HomeDir, fid)
+        if err != nil {
+            fmt.Printf("failed to clean blocks: %s", err.Error())
+            return
+        }
+        
 	}
 	fmt.Printf("\n")
 	fmt.Println("Migration finished")
+}
+
+func cleanOld(homeDir, fid string) error {
+    pathFactory := archive.NewSingleCellPathFactory(homeDir)
+    fileNames, err := GetBlockFileNames(pathFactory.FileDir(fid))
+    if err != nil {
+        return fmt.Errorf("failed to get block file names: %s", err)
+    }
+    for _, f := range fileNames {
+        fullPath := filepath.Join(pathFactory.FileDir(fid), f)
+        err = os.Remove(fullPath)
+        if err != nil {
+            return fmt.Errorf("failed to remove old blocks: %s", err)
+        }
+    }
+    
+    return nil
 }
 
 // postGlueCheck verifies the result of glueing was successful by generating fid
