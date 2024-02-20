@@ -66,7 +66,7 @@ require (
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/dustin/go-humanize v1.0.1-0.20200219035652-afde56e7acac // indirect
-	github.com/dvsekhvalnov/jose2go v1.5.0 // indirect
+	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect
 	github.com/ecies/go/v2 v2.0.6 // indirect
 	github.com/ethereum/go-ethereum v1.12.1 // indirect
 	github.com/felixge/httpsnoop v1.0.2 // indirect
