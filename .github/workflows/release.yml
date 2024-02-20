@@ -23,7 +23,7 @@ jobs:
         run: |
           make build
           cp "build/jprovd" "jprovd-$RUNNER_OS"
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: jprovd-${{runner.os}}
           path: jprovd-${{runner.os}}
@@ -44,7 +44,7 @@ jobs:
   #       run: |
   #         make build_macos_arm64_cli
   #         cp "jprovd-macos-arm64" "jprovd-MacOS-arm64"
-  #     - uses: actions/upload-artifact@v3
+  #     - uses: actions/upload-artifact@v4
   #       with:
   #         name: jprovd-MacOS-arm64
   #         path: jprovd-MacOS-arm64
