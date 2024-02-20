@@ -151,7 +151,7 @@ func (f  *FileServer) fileUpload(w *http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = f.saveFile(file, handler, sender, w)
+	err = f.handleUploadRequest(file, handler, sender, w)
 	if err != nil {
 		v := types.ErrorResponse{
 			Error: err.Error(),

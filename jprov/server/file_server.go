@@ -18,7 +18,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/rs/cors"
 
-	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
+	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	"github.com/julienschmidt/httprouter"
@@ -70,18 +70,15 @@ func NewFileServer (
 	}, nil
 }
 
-func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader, sender string, w *http.ResponseWriter) error {
-
-	fid, err := utils.MakeFID(file, file)
-	if err != nil {
-		return err
-	}
+func (f *FileServer) handleUploadRequest(file multipart.File, handler *multipart.FileHeader, uploader string, w *http.ResponseWriter) error {
 
 	// Create merkle and save to disk
 	tree, err := utils.CreateMerkleTree(f.blockSize, handler.Size, file, file)
 	if err != nil {
 		return err
 	}
+
+    fid := hex.EncodeToString(tree.Root())
 
 	err = f.archive.WriteTreeToDisk(fid, tree)
 	if err != nil {
@@ -91,45 +88,16 @@ func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader
 	// Save file to disk
 	_, err = f.archive.WriteFileToDisk(file, fid)
 	if err != nil {
-		f.serverCtx.Logger.Error("saveFile: Write To Disk Error: ", err)
-		return err
+		f.serverCtx.Logger.Error("handleUploadRequest: Write To Disk Error: ", err)
+		return errors.New("failed to save file on server")
 	}
 
-	address, err := crypto.GetAddress(f.cosmosCtx)
-	if err != nil {
-		f.serverCtx.Logger.Error(err.Error())
-		return err
-	}
+    
 
-	cid, err := buildCid(address, sender, fid)
-	if err != nil {
-		return err
-	}
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	msg, ctrErr := f.MakeContract(fid, sender, &wg, string(tree.Root()), fmt.Sprintf("%d", handler.Size))
-	if ctrErr != nil {
-		f.serverCtx.Logger.Error("saveFile: CONTRACT ERROR: ", ctrErr)
-		return ctrErr
-	}
-	wg.Wait()
-
-	if msg.Err != nil {
-		f.serverCtx.Logger.Error(msg.Err.Error())
-	}
-
-	if err = writeResponse(*w, *msg, fid, cid); err != nil {
+	if err = writeResponse(*w, fid); err != nil {
 		f.serverCtx.Logger.Error("Json Encode Error: ", err)
 		return err
 	}
-
-	err = f.saveToDatabase(fid, cid)
-	if err != nil {
-		return err
-	}
-	f.logger.Info(fmt.Sprintf("%s %s", fid, "Added to database"))
 
 	return nil
 }
@@ -142,40 +110,32 @@ func (f *FileServer) saveToDatabase(fid string, cid string) error {
     return f.archivedb.SetContract(cid, fid)
 }
 
+func (f *FileServer) isFileOnChain(fid string) bool {
 
-func writeResponse(w http.ResponseWriter, upload types.Upload, fid, cid string) error {
-	if upload.Err != nil {
-		resp := types.ErrorResponse{
-			Error: upload.Err.Error(),
-		}
-		return json.NewEncoder(w).Encode(resp)
-	}
+}
 
+func writeResponse(w http.ResponseWriter, fid string) error {
 	resp := types.UploadResponse{
-		CID: cid,
+		CID: fid,
 		FID: fid,
 	}
 
 	return json.NewEncoder(w).Encode(resp)
 }
 
-
-
-func (f *FileServer) MakeContract(fid string, sender string, wg *sync.WaitGroup, merkleroot string, filesize string) (*types.Upload, error) {
+func (f *FileServer) MakeContract(fid string, sender string, wg *sync.WaitGroup, filesize string) (*types.Upload, error) {
 	address, err := crypto.GetAddress(f.cosmosCtx)
 	if err != nil {
 		f.serverCtx.Logger.Error(err.Error())
 		return nil, err
 	}
 
-    xRoot := hex.EncodeToString([]byte(merkleroot))
-
 	msg := storageTypes.NewMsgPostContract(
 		address,
 		sender,
 		filesize,
 		fid,
-		xRoot,
+		fid,
 	)
 	if err := msg.ValidateBasic(); err != nil {
 		return nil, err
