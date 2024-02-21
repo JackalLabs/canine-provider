@@ -72,7 +72,6 @@ func NewFileServer (
 
 func (f *FileServer) handleUploadRequest(file multipart.File, handler *multipart.FileHeader, uploader string, w *http.ResponseWriter) error {
 
-	// Create merkle and save to disk
 	tree, err := utils.CreateMerkleTree(f.blockSize, handler.Size, file, file)
 	if err != nil {
 		return err
@@ -85,19 +84,22 @@ func (f *FileServer) handleUploadRequest(file multipart.File, handler *multipart
 		return err
 	}
 
-	// Save file to disk
 	_, err = f.archive.WriteFileToDisk(file, fid)
 	if err != nil {
 		f.serverCtx.Logger.Error("handleUploadRequest: Write To Disk Error: ", err)
 		return errors.New("failed to save file on server")
 	}
 
-    
-
 	if err = writeResponse(*w, fid); err != nil {
-		f.serverCtx.Logger.Error("Json Encode Error: ", err)
+        f.serverCtx.Logger.Error("handleUploadRequest: Json Encode Error: ", err)
 		return err
 	}
+
+    err = f.Prove(fid)
+    if err != nil {
+        f.serverCtx.Logger.Error("handleUploadRequest: failed to prove: ", err)
+        return errors.New("failed to add myself as the file provider")
+    }
 
 	return nil
 }
@@ -110,10 +112,6 @@ func (f *FileServer) saveToDatabase(fid string, cid string) error {
     return f.archivedb.SetContract(cid, fid)
 }
 
-func (f *FileServer) isFileOnChain(fid string) bool {
-
-}
-
 func writeResponse(w http.ResponseWriter, fid string) error {
 	resp := types.UploadResponse{
 		CID: fid,
@@ -123,65 +121,25 @@ func writeResponse(w http.ResponseWriter, fid string) error {
 	return json.NewEncoder(w).Encode(resp)
 }
 
-func (f *FileServer) MakeContract(fid string, sender string, wg *sync.WaitGroup, filesize string) (*types.Upload, error) {
+func (f *FileServer) Init() (*httprouter.Router, error) {
 	address, err := crypto.GetAddress(f.cosmosCtx)
 	if err != nil {
-		f.serverCtx.Logger.Error(err.Error())
 		return nil, err
 	}
 
-	msg := storageTypes.NewMsgPostContract(
-		address,
-		sender,
-		filesize,
-		fid,
-		fid,
-	)
-	if err := msg.ValidateBasic(); err != nil {
-		return nil, err
-	}
-
-	f.serverCtx.Logger.Info(fmt.Sprintf("Contract being pushed: %s", msg.String()))
-
-	u := types.Upload{
-		Message:  msg,
-		Callback: wg,
-		Err:      nil,
-		Response: nil,
-	}
-
-	k := &u
-
-	f.queue.Queue = append(f.queue.Queue, k)
-
-	return k, nil
-}
-
-func (f *FileServer) Init() (router *httprouter.Router, err error) {
-	address, err := crypto.GetAddress(f.cosmosCtx)
-	if err != nil {
-		return
-	}
-
-	request := &storageTypes.QueryProviderRequest{
-		Address: address,
-	}
-
-	response, err := f.queryClient.Providers(context.Background(), request)
-	if err != nil {
+    provider := f.QueryProvider(address)
+	if address != provider.Address {
 		err = fmt.Errorf("Provider not initialized on the blockchain, or connection to the RPC node has been lost. Please make sure your RPC node is available then run `jprovd init` to fix this.")
-		return
+		return nil, err
 	}
 	
-	f.provider = response.Providers
-
-	router = httprouter.New()
+    router := httprouter.New()
 
 	f.GetRoutes(router)
 	f.PostRoutes(router)
 	PProfRoutes(router)
 
-	return
+	return router, nil
 }
 
 func (f *FileServer) StartFileServer(cmd *cobra.Command) {
