@@ -77,7 +77,6 @@ func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader
 		return err
 	}
 
-	// Create merkle and save to disk
 	tree, err := utils.CreateMerkleTree(f.blockSize, handler.Size, file, file)
 	if err != nil {
 		return err
@@ -88,7 +87,6 @@ func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader
 		return err
 	}
 
-	// Save file to disk
 	_, err = f.archive.WriteFileToDisk(file, fid)
 	if err != nil {
 		f.serverCtx.Logger.Error("saveFile: Write To Disk Error: ", err)
