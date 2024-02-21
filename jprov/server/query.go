@@ -1,44 +1,17 @@
 package server
 
 import (
-    "strconv"
-    "google.golang.org/grpc/status"
-    "google.golang.org/grpc/codes"
+
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 )
 
-const (
-    verified = "verified"
-    notVerified = "not verified"
-    notFound = "not found"
-)
+func (f *FileServer) QueryAllFilesByMerkle(fid []byte) ([]storageTypes.UnifiedFile, error) {
+    req := storageTypes.QueryAllFilesByMerkle{Merkle: fid}
 
-// returns verified, notVerified or notFound
-func (f *FileServer) QueryContractState(cid string) string {
-    req := storageTypes.QueryActiveDealRequest{Cid: cid}
-    resp, err := f.queryClient.ActiveDeals(f.cmd.Context(), &req)
-    if resp == nil {
-        return notFound
-    }
-
-    stat, ok := status.FromError(err)
-    isDealMine := resp.ActiveDeals.Provider == f.provider.Address
-    if (ok && stat.Code() == codes.NotFound) || !isDealMine {
-        return notFound
-    }
-
-    v, err := strconv.ParseBool(resp.ActiveDeals.Proofverified)
+    resp, err := f.queryClient.AllFilesByMerkle(f.cmd.Context(), &req)
     if err != nil {
-        // if this happens then api must have changed in chain
-        f.logger.Error("failed to parse ActiveDeals.Proofverified query resp")
-        return notFound
+        return nil, err
     }
 
-    if v {
-        return verified
-    }
-
-    return notVerified
+    return resp.Files, nil
 }
-
-func (f *FileServer) QueryAllFilesByMerkle(fid string) 

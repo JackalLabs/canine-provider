@@ -19,9 +19,10 @@ func NewQueryService (cmd *cobra.Command) *QueryService {
 }
 
 func (q *QueryService) QueryProvider(ctx context.Context, address string) (provider types.Providers, err error) {
-	resp, err := q.queryClient.Providers(ctx, &types.QueryProviderRequest{Address: address})
+	resp, err := q.queryClient.Provider(ctx, &types.QueryProvider{Address: address})
+
 	if err != nil {
 		return
 	}
-	return resp.Providers, nil
+	return resp.Provider, nil
 }
