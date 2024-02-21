@@ -4,7 +4,7 @@ import (
     "strconv"
     "google.golang.org/grpc/status"
     "google.golang.org/grpc/codes"
-	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
+	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
 )
 
 const (
@@ -40,5 +40,3 @@ func (f *FileServer) QueryContractState(cid string) string {
 
     return notVerified
 }
-
-func (f *FileServer) QueryAllFilesByMerkle(fid string) 

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	storagetypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
+	storagetypes "github.com/jackalLabs/canine-chain/x/storage/types"
 
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
 	"github.com/JackalLabs/jackal-provider/jprov/types"

@@ -2,7 +2,7 @@ package types
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	storagetypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
+	storagetypes "github.com/jackalLabs/canine-chain/x/storage/types"
 )
 
 type DataBlock struct {
