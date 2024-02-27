@@ -21,37 +21,124 @@ func GetOldTreePath(homeDir, fid string) string {
     return filepath.Join(storageDir, fileName)
 }
 
-func MoveTree(homeDir, fid string) error {
-    pathFactory := archive.NewSingleCellPathFactory(homeDir)
-    oldPath := GetOldTreePath(homeDir, fid)
-
-    oldTree, err := os.Open(oldPath)
-    if err != nil {
-        return err
+func FindMigratedFile(ctx client.Context, fid string) (bool, error) {
+    pathFactory := archive.NewSingleCellPathFactory(ctx.HomeDir)
+    
+    _, err := os.Stat(pathFactory.FileDir(fid))
+    if err == nil {
+        return true, nil
+    } else if errors.Is(err, os.ErrNotExist) {
+        return false, nil
     }
-    defer func() {
-        err = errors.Join(err, oldTree.Close())
+
+    //we should never reach here because at this point file exist and not exist
+    //manual investigation required at this point
+    return false, fmt.Errorf("Error: FindMigratedFile: file exist and not exist at the same time: %s", err.Error())
+}
+
+func checkFileIntegrity(matchFid string, file *os.File) (bool, error){
+	resultFid, err := MakeFID(file, file)
+    if err != nil {
+        return false, fmt.Errorf("CheckFileIntegrity: failed to make FID: %s", err.Error())
+    }
+
+    return resultFid == matchFid, nil
+}
+
+func postGlueCheck(homeDir, fid string) (bool, error){
+    pathFactory := archive.NewSingleCellPathFactory(homeDir) 
+    file, err := os.Open(pathFactory.FilePath(fid))
+    if err != nil {
+        return false, err
+    }
+    defer func(){
+        err = errors.Join(err, file.Close())
     }()
 
-    newTree, err := os.Create(pathFactory.TreePath(fid))
-    if err != nil {
-        return err
-    }
-    defer func() {
-        err = errors.Join(err, oldTree.Close())
-    }()
+    pass, err := checkFileIntegrity(fid, file)
+    return pass, err
+}
 
-    _, err = io.Copy(newTree, oldTree)
-    if err != nil {
-        return fmt.Errorf("failed to copy old tree to new tree: %s", err.Error())
-    }
+func findOldMerkleTree(homedir, fid string) (bool, error){
+    oldTreePath := GetOldTreePath(homedir, fid)
 
-    err = os.Remove(oldPath)
-    if err != nil {
-        return fmt.Errorf("failed to delete old tree: %s", err.Error())
+    _, err := os.Stat(oldTreePath)
+    if err == nil {
+        return true, nil
+    } else if errors.Is(err, os.ErrNotExist) {
+        return false, nil
     }
 
-    return nil
+    //we should never reach here because at this point file exist and not exist
+    //manual investigation required at this point
+    return false, fmt.Errorf("Error: FindMigratedFile: file exist and not exist at the same time: %s", err.Error())
+}
+
+func fixOutOfPlaceMerkleTreeFile(homedir, fid string) error {
+    pathFactory := archive.NewSingleCellPathFactory(homedir)
+    oldLocation := oldMerkleTreePath(homedir, fid)
+
+    return os.Rename(oldLocation, pathFactory.TreePath(fid))
+}
+
+func handleGlueingProcess(ctx client.Context, fid string) {
+    fmt.Printf("Glueing blocks... ")
+    alreadyMigrated, err := FindMigratedFile(ctx, fid)
+    if err != nil {
+        fmt.Printf("Error: Migrate: %s", err.Error())
+        alreadyMigrated = true //skip glueing
+    }
+    if !alreadyMigrated {
+        err = GlueAllBlocks(ctx.HomeDir, fid) 
+        if err != nil {
+            fmt.Printf("Error: Glueing failed: %s", err)
+        }
+    }
+    fmt.Printf("done\n")
+
+}
+
+func handleFileIntegrityCheckProcess(ctx client.Context, fid string) {
+    fmt.Printf("File integrity check... ")
+    pass, err := postGlueCheck(ctx.HomeDir, fid)
+    if err != nil {
+        fmt.Printf("Error: Migrate: error during file integrity check: %s", err)
+    }
+
+    if !pass {
+        fmt.Printf("File integrity check for %s failed! Delete the file or get it from other providers\n", fid)
+    } else {
+        fmt.Printf("passed\n")
+
+        fmt.Printf("Cleaning old blocks... ")
+        err = cleanOld(ctx.HomeDir, fid)
+        if err != nil {
+            fmt.Printf("Error: failed to clean old blocks, manual cleaning required: %s\n", err.Error())
+        } else {
+            fmt.Printf("done\n")
+        }
+    }
+}
+
+func handleMerkleTreeProcess(ctx client.Context, fid string) {
+    fmt.Printf("Looking for old merkle tree... ")
+    found, err := findOldMerkleTree(ctx.HomeDir, fid)
+    if err != nil {
+        fmt.Printf("Error: Migrate: error during search of old merkle tree: %s\n", err.Error())
+    }
+
+    if found {
+        fmt.Printf("found\n")
+        fmt.Printf("Moving old tree to new location... ")
+        err = fixOutOfPlaceMerkleTreeFile(ctx.HomeDir, fid)
+        if err != nil {
+            fmt.Printf("Error: Migrate: failed to move the tree to new location: %s", err.Error())
+        } else {
+            fmt.Printf("done\n")
+        }
+    } else {
+        fmt.Printf("not found\n")
+    }
 }
 
 func Migrate(ctx client.Context) {
@@ -61,34 +148,14 @@ func Migrate(ctx client.Context) {
 		return
 	}
 
-	for i, fid := range fids {
-		fmt.Printf("\033[2K\rGlueing %d/%d files...", i, len(fids))
-		err := GlueAllBlocks(ctx.HomeDir, fid)
-		if err != nil {
-			fmt.Fprint(os.Stderr, err)
-			return
-		}
-		ok, err := postGlueCheck(ctx, fid)
-		if err != nil {
-			fmt.Fprint(os.Stderr, err)
-			return
-		}
-		if !ok {
-			fmt.Printf("Check failure: %s is corrupted\n", fid)
-			return
-		}
-        err = MoveTree(ctx.HomeDir, fid)
-        if err != nil {
-            fmt.Printf("Failed to move merkle tree to new location: %s", err.Error())
-            return
-        }
-        err = cleanOld(ctx.HomeDir, fid)
-        if err != nil {
-            fmt.Printf("failed to clean blocks: %s", err.Error())
-            return
-        }
-        
+	for _, fid := range fids {
+        fmt.Printf("Migrating %s\n", fid)
+        handleGlueingProcess(ctx, fid)
+        handleFileIntegrityCheckProcess(ctx, fid)
+        handleMerkleTreeProcess(ctx, fid)
+        fmt.Printf("\n")
 	}
+
 	fmt.Printf("\n")
 	fmt.Println("Migration finished")
 }
@@ -108,25 +175,6 @@ func cleanOld(homeDir, fid string) error {
     }
     
     return nil
-}
-
-// postGlueCheck verifies the result of glueing was successful by generating fid
-// of the glued file and check against passed fid
-func postGlueCheck(ctx client.Context, fid string) (pass bool, err error) {
-    pathFactory := archive.NewSingleCellPathFactory(ctx.HomeDir)
-	file, err := os.Open(pathFactory.FilePath(fid))
-	if err != nil {
-		return
-	}
-	defer func() {
-		err = errors.Join(err, file.Close())
-	}()
-
-	resultFid, err := MakeFID(file, file)
-
-	pass = fid == resultFid
-
-	return
 }
 
 // DiscoverFids reads all directory entry of the storage and returns fids
@@ -235,6 +283,13 @@ func getStoragePath(homeDir, fid string) string {
 	configFilePath := filepath.Join(configPath, fid)
 
 	return configFilePath
+}
+
+func oldMerkleTreePath(homeDir, fid string) string {
+	configPath := filepath.Join(homeDir, "storage")
+	configTreePath := filepath.Join(configPath, fid + ".tree")
+
+	return configTreePath
 }
 
 // create file name for a block
