@@ -24,7 +24,7 @@ func GetOldTreePath(homeDir, fid string) string {
 func FindMigratedFile(ctx client.Context, fid string) (bool, error) {
     pathFactory := archive.NewSingleCellPathFactory(ctx.HomeDir)
     
-    _, err := os.Stat(pathFactory.FileDir(fid))
+    _, err := os.Stat(pathFactory.FilePath(fid))
     if err == nil {
         return true, nil
     } else if errors.Is(err, os.ErrNotExist) {
@@ -39,7 +39,7 @@ func FindMigratedFile(ctx client.Context, fid string) (bool, error) {
 func checkFileIntegrity(matchFid string, file *os.File) (bool, error){
 	resultFid, err := MakeFID(file, file)
     if err != nil {
-        return false, fmt.Errorf("CheckFileIntegrity: failed to make FID: %s", err.Error())
+        return false, fmt.Errorf("checkFileIntegrity: failed to make FID: %s", err.Error())
     }
 
     return resultFid == matchFid, nil
@@ -205,8 +205,8 @@ func GlueAllBlocks(homeDir, fid string) error {
 	return err
 }
 
-// glue all blocks starting from 1.jkl to <blocksCount>.jkl
-func glueAllBlocks(homeDir, fid string, blocksCount int) (err error) {
+// glue all blocks starting from 0.jkl to <blocksCount>.jkl
+func glueAllBlocks(homeDir, fid string, blockCount int) (err error) {
     pathFactory := archive.NewSingleCellPathFactory(homeDir)
 
 	f, err := os.Create(pathFactory.FilePath(fid))
@@ -218,7 +218,7 @@ func glueAllBlocks(homeDir, fid string, blocksCount int) (err error) {
 	}()
 
 	// glue files in order
-	for i := 0; i < blocksCount; i++ {
+    for i := 0; i < blockCount; i++ {
 		path := filepath.Join(GetFidDir(homeDir, fid), getBlockFileName(i))
 		if err := combine(f, path); err != nil {
 			return err
