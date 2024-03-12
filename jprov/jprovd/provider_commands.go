@@ -52,7 +52,10 @@ func StartServerCommand() *cobra.Command {
 			if haltStray, err := cmd.Flags().GetBool(types.HaltStraysFlag); err != nil {
 				return err
 			} else if !haltStray {
-				manager := strays.NewStrayManager(cmd, archivedb, downtimedb)
+				manager, err := strays.NewStrayManager(cmd, archivedb, downtimedb)
+                if err != nil {
+                    return err
+                }
 
 				manager.Init()
 				go manager.Start()

@@ -34,14 +34,14 @@ func NewStrayManager(
     cmd *cobra.Command,
     archivedb archive.ArchiveDB, 
     downtimedb *archive.DowntimeDB,
-) *StrayManager {
+) (*StrayManager, error) {
 	clientCtx := client.GetClientContextFromCmd(cmd)
 	ctx := utils.GetServerContextFromCmd(cmd)
 
 	addr, err := crypto.GetAddress(clientCtx) // Getting the address of the provider to compare it to the strays.
 	if err != nil {
 		ctx.Logger.Error(err.Error())
-		return nil
+		return nil, err
 	}
 	qClient := types.NewQueryClient(clientCtx)
 
@@ -52,7 +52,7 @@ func NewStrayManager(
 	provs, err := qClient.Providers(cmd.Context(), &req) // Publish the ask.
 	if err != nil {
 		ctx.Logger.Error(err.Error())
-		return nil
+		return nil, err
 	}
 	ip := provs.Providers.Address // Our IP address
 
@@ -70,7 +70,7 @@ func NewStrayManager(
         Ip:            ip,
         Provider: provs.Providers,
 		Strays:        []*types.Strays{},
-	}
+	}, nil
 }
 
 type LittleHand struct {
