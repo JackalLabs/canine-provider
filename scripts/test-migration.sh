@@ -131,6 +131,12 @@ echo "upgrading provider..."
 install_new
 
 migrate_provider 0
+migrate_provider 1
+migrate_provider 2
+migrate_provider 3
+migrate_provider 4
+migrate_provider 5
+migrate_provider 6
 
 restart_chain
 

@@ -84,6 +84,7 @@ func (f *SingleCellArchive) GetPiece(fid string, index, blockSize int64) (block 
 		return
 	}
 
+    block = block[:n]
 	return block, nil
 }
 

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+    "encoding/hex"
 
 	"github.com/JackalLabs/jackal-provider/jprov/archive"
 
@@ -36,13 +37,26 @@ func FindMigratedFile(ctx client.Context, fid string) (bool, error) {
     return false, fmt.Errorf("Error: FindMigratedFile: file exist and not exist at the same time: %s", err.Error())
 }
 
-func checkFileIntegrity(matchFid string, file *os.File) (bool, error){
-	resultFid, err := MakeFID(file, file)
+func checkFileIntegrity(homeDir, matchFid string, file *os.File) (bool, error){
+    stat, err := file.Stat()
     if err != nil {
-        return false, fmt.Errorf("checkFileIntegrity: failed to make FID: %s", err.Error())
+        err = errors.Join(errors.New("checkFileIntegrity: failed to get file info"), err)
+        return false, err
     }
 
-    return resultFid == matchFid, nil
+    checkTree, err := CreateMerkleTree(10240, stat.Size(), file, file)
+
+    archive := archive.NewSingleCellArchive(homeDir)
+    mtree, err := archive.RetrieveTree(matchFid)
+    if err != nil {
+        err = errors.Join(errors.New("checkFileIntegrity: failed to find merkel tree"), err)
+        return false, err
+    }
+    
+    originalRoot := hex.EncodeToString(mtree.Root())
+    checkRoot := hex.EncodeToString(checkTree.Root())
+
+    return originalRoot == checkRoot, nil
 }
 
 func postGlueCheck(homeDir, fid string) (bool, error){
@@ -55,7 +69,7 @@ func postGlueCheck(homeDir, fid string) (bool, error){
         err = errors.Join(err, file.Close())
     }()
 
-    pass, err := checkFileIntegrity(fid, file)
+    pass, err := checkFileIntegrity(homeDir, fid, file)
     return pass, err
 }
 
@@ -151,8 +165,8 @@ func Migrate(ctx client.Context) {
 	for _, fid := range fids {
         fmt.Printf("Migrating %s\n", fid)
         handleGlueingProcess(ctx, fid)
-        handleFileIntegrityCheckProcess(ctx, fid)
         handleMerkleTreeProcess(ctx, fid)
+        handleFileIntegrityCheckProcess(ctx, fid)
         fmt.Printf("\n")
 	}
 
