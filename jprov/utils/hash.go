@@ -63,7 +63,7 @@ func CreateMerkleTree(blockSize, fileSize int64, file io.Reader, seeker io.Seeke
 	for i := int64(0); i < fileSize; i += blockSize {
 		firstX := make([]byte, blockSize)
 		read, err := file.Read(firstX)
-        firstX = firstX[:read]
+		firstX = firstX[:read]
 
 		if err != nil && err != io.EOF {
 			return nil, err

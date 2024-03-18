@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	apitypes "github.com/JackalLabs/jackal-provider/jprov/api/types"
-	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/JackalLabs/jackal-provider/jprov/archive"
+	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/spf13/cobra"
 )
@@ -22,7 +22,7 @@ func CmdDumpDatabase() *cobra.Command {
 				return err
 			}
 
-            db, err := archive.NewDoubleRefArchiveDB(utils.GetArchiveDBPath(clientCtx))
+			db, err := archive.NewDoubleRefArchiveDB(utils.GetArchiveDBPath(clientCtx))
 			if err != nil {
 				fmt.Println(err)
 				return

@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-    "os"
+	"os"
 	"testing"
 
 	"github.com/JackalLabs/jackal-provider/jprov/server"
@@ -52,17 +52,17 @@ func TestGenerateMerkleProof(t *testing.T) {
 }
 
 func BenchmarkGenerateMerkleProof(b *testing.B) {
-    data := [][]byte{[]byte("hello"), []byte("world")}
-    for i, item := range data {
-        h := sha256.New()
-        _, err := io.WriteString(h, fmt.Sprintf("%d%x", i, item))
-        require.NoError(b, err)
-        data[i] = h.Sum(nil)
-    }
-    tree, err := merkletree.NewUsing(data, sha3.New512(), false)
-    require.NoError(b, err)
+	data := [][]byte{[]byte("hello"), []byte("world")}
+	for i, item := range data {
+		h := sha256.New()
+		_, err := io.WriteString(h, fmt.Sprintf("%d%x", i, item))
+		require.NoError(b, err)
+		data[i] = h.Sum(nil)
+	}
+	tree, err := merkletree.NewUsing(data, sha3.New512(), false)
+	require.NoError(b, err)
 
-    for n := 0; n < b.N; n++ {
-        _, _, _ = server.GenerateMerkleProof(*tree, 1, 5, []byte("hello"))
-    }
+	for n := 0; n < b.N; n++ {
+		_, _, _ = server.GenerateMerkleProof(*tree, 1, 5, []byte("hello"))
+	}
 }

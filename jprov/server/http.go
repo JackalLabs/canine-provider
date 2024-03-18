@@ -120,7 +120,7 @@ func PProfRoutes(router *httprouter.Router) {
 
 // This function returns the filename(to save in database) of the saved file
 // or an error if it occurs
-func (f  *FileServer) fileUpload(w *http.ResponseWriter, r *http.Request) {
+func (f *FileServer) fileUpload(w *http.ResponseWriter, r *http.Request) {
 	// ParseMultipartForm parses a request body as multipart/form-data
 	err := r.ParseMultipartForm(types.MaxFileSize) // MAX file size lives here
 	if err != nil {

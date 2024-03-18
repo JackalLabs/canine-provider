@@ -36,16 +36,16 @@ func DumpDowntimes(w http.ResponseWriter, db *archive.DowntimeDB) {
 	iter := db.NewIterator()
 
 	for iter.Next() {
-        downtime, err := archive.ByteToBlock(iter.Value())
-        if err != nil {
-            fmt.Printf("Error: DumpDowntimes(): %s", err.Error())
-            continue
-        }
-        d := types.DowntimeBlock{
-            CID:    string(iter.Key()),
-            Downtime: int(downtime),
-        }
-        data = append(data, d)
+		downtime, err := archive.ByteToBlock(iter.Value())
+		if err != nil {
+			fmt.Printf("Error: DumpDowntimes(): %s", err.Error())
+			continue
+		}
+		d := types.DowntimeBlock{
+			CID:      string(iter.Key()),
+			Downtime: int(downtime),
+		}
+		data = append(data, d)
 	}
 
 	v := types.DowntimeResponse{
@@ -63,11 +63,11 @@ func DumpFids(w http.ResponseWriter, db archive.ArchiveDB) {
 	iter := db.NewIterator()
 
 	for iter.Next() {
-        d := types.FidBlock{
-            CID: string(iter.Key()),
-            FID: string(iter.Value()),
-        }
-        data = append(data, d)
+		d := types.FidBlock{
+			CID: string(iter.Key()),
+			FID: string(iter.Value()),
+		}
+		data = append(data, d)
 	}
 
 	v := types.FidResponse{

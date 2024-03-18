@@ -39,7 +39,7 @@ func (h *LittleHand) DownloadFileFromURL(url string, fid string, cid string) (er
 		err = errors.Join(err, resp.Body.Close())
 	}()
 
-    fileSize, err := h.Archive.WriteFileToDisk(resp.Body, fid)
+	fileSize, err := h.Archive.WriteFileToDisk(resp.Body, fid)
 	if err != nil {
 		h.Logger.Error("saveFile: Write To Disk Error: ", err)
 		return
@@ -50,7 +50,7 @@ func (h *LittleHand) DownloadFileFromURL(url string, fid string, cid string) (er
 		return
 	}
 
-    file, err := h.Archive.RetrieveFile(fid)
+	file, err := h.Archive.RetrieveFile(fid)
 	if err != nil {
 		return
 	}

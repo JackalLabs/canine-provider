@@ -72,6 +72,7 @@ func GetArchiveDBPath(ctx client.Context) string {
 
 	return dataPath
 }
+
 func GetDowntimeDBPath(ctx client.Context) string {
 	dataPath := filepath.Join(ctx.HomeDir, "downtimedb")
 

@@ -11,8 +11,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
-    "strconv"
 	"sync"
 	"time"
 
@@ -43,9 +43,9 @@ func GetMerkleTree(ctx client.Context, filename string) (*merkletree.MerkleTree,
 func GenerateMerkleProof(tree merkletree.MerkleTree, index, blockSize int64, item []byte) (valid bool, proof *merkletree.Proof, err error) {
 	h := sha256.New()
 
-    var hashBuilder strings.Builder
-    hashBuilder.WriteString(strconv.FormatInt(index, 10))
-    hashBuilder.WriteString(hex.EncodeToString(item))
+	var hashBuilder strings.Builder
+	hashBuilder.WriteString(strconv.FormatInt(index, 10))
+	hashBuilder.WriteString(hex.EncodeToString(item))
 	_, err = io.WriteString(h, hashBuilder.String())
 	if err != nil {
 		return
@@ -229,10 +229,10 @@ func requestAttestation(clientCtx client.Context, cid string, hashList string, i
 }
 
 func (f *FileServer) postProof(cid string, blockSize, block int64) error {
-    fid, err := f.archivedb.GetFid(cid)
-    if err != nil {
-        return err
-    }
+	fid, err := f.archivedb.GetFid(cid)
+	if err != nil {
+		return err
+	}
 
 	item, hashlist, err := f.CreateMerkleForProof(fid, blockSize, block)
 	if err != nil {
@@ -273,167 +273,167 @@ func (f *FileServer) postProof(cid string, blockSize, block int64) error {
 		Response: nil,
 	}
 
-    f.queue.Append(&u)
-    wg.Wait()
+	f.queue.Append(&u)
+	wg.Wait()
 
-    if u.Err != nil {
-        f.logger.Error(fmt.Sprintf("Posting Error: %s", u.Err.Error()))
-        return nil
-    }
+	if u.Err != nil {
+		f.logger.Error(fmt.Sprintf("Posting Error: %s", u.Err.Error()))
+		return nil
+	}
 
-    if u.Response.Code != 0 {
-        f.logger.Error("Contract Response Error: %s", fmt.Errorf(u.Response.RawLog))
-        return nil
-    }
+	if u.Response.Code != 0 {
+		f.logger.Error("Contract Response Error: %s", fmt.Errorf(u.Response.RawLog))
+		return nil
+	}
 
 	return nil
 }
 
 func (f *FileServer) Purge(cid string) error {
-    fid, err := f.archivedb.GetFid(cid)
-    if err != nil {
-        return err
-    }
+	fid, err := f.archivedb.GetFid(cid)
+	if err != nil {
+		return err
+	}
 
-    err = f.downtimedb.Delete(cid)
-    if err != nil {
-        return err
-    }
+	err = f.downtimedb.Delete(cid)
+	if err != nil {
+		return err
+	}
 
-    purge, err := f.archivedb.DeleteContract(cid)
-    if err != nil {
-        return err
-    }
+	purge, err := f.archivedb.DeleteContract(cid)
+	if err != nil {
+		return err
+	}
 
-    if purge {
-        f.archive.Delete(fid)
-    }
+	if purge {
+		f.archive.Delete(fid)
+	}
 
-    return nil
+	return nil
 }
 
 func (f *FileServer) CleanExpired() error {
 	maxMisses, err := f.cmd.Flags().GetInt(types.FlagMaxMisses)
 	if err != nil {
 		f.logger.Error(err.Error())
-        return err
+		return err
 	}
 
-    iter := f.archivedb.NewIterator()
-    defer iter.Release()
+	iter := f.archivedb.NewIterator()
+	defer iter.Release()
 
-    for iter.Next() {
-        cid := string(iter.Key())
-        fid := string(iter.Value())
+	for iter.Next() {
+		cid := string(iter.Key())
+		fid := string(iter.Value())
 
-        downtime, err := f.downtimedb.Get(cid)
-        if err != nil {
-            f.logger.Error("CleanExpired: ", err)
-            continue
-        }
+		downtime, err := f.downtimedb.Get(cid)
+		if err != nil {
+			f.logger.Error("CleanExpired: ", err)
+			continue
+		}
 
-        if downtime > int64(maxMisses) {
-            err := f.Purge(cid)
-            if err != nil {
-                return err
-            }
-            f.logger.Info(fmt.Sprintf("file %s is removed", string(fid)))
-        } else {
-            f.logger.Info(fmt.Sprintf("%s will be removed in %d cycles", 
-            string(fid), int64(maxMisses)-downtime))
-        }
-    }
+		if downtime > int64(maxMisses) {
+			err := f.Purge(cid)
+			if err != nil {
+				return err
+			}
+			f.logger.Info(fmt.Sprintf("file %s is removed", string(fid)))
+		} else {
+			f.logger.Info(fmt.Sprintf("%s will be removed in %d cycles",
+				string(fid), int64(maxMisses)-downtime))
+		}
+	}
 
-    return nil
+	return nil
 }
 
 func (f *FileServer) IncrementDowntime(cid string) error {
-    downtime, err := f.downtimedb.Get(cid)
-    if err != nil {
-        return err
-    }
+	downtime, err := f.downtimedb.Get(cid)
+	if err != nil {
+		return err
+	}
 
-    err = f.downtimedb.Set(cid, downtime+1)
+	err = f.downtimedb.Set(cid, downtime+1)
 
-    return err
+	return err
 }
 
 func (f *FileServer) ContractState(cid string) string {
-    return f.QueryContractState(cid)
+	return f.QueryContractState(cid)
 }
 
 func (f *FileServer) Prove(cid string) error {
-    block, err := queryBlock(&f.cosmosCtx, string(cid))
-    if err != nil {
-        return err
-    }
+	block, err := queryBlock(&f.cosmosCtx, string(cid))
+	if err != nil {
+		return err
+	}
 
-    dex, ok := sdk.NewIntFromString(block)
-    f.logger.Debug(fmt.Sprintf("BlockToProve: %s", block))
-    if !ok {
-        return fmt.Errorf("failed to parse block number: %s", block)
-    }
+	dex, ok := sdk.NewIntFromString(block)
+	f.logger.Debug(fmt.Sprintf("BlockToProve: %s", block))
+	if !ok {
+		return fmt.Errorf("failed to parse block number: %s", block)
+	}
 
-    return f.postProof(string(cid), f.blockSize, dex.Int64())
+	return f.postProof(string(cid), f.blockSize, dex.Int64())
 }
 
 func (f *FileServer) handleContracts() error {
-    iter := f.archivedb.NewIterator()
-    defer iter.Release()
+	iter := f.archivedb.NewIterator()
+	defer iter.Release()
 
-    for iter.Next() {
-        cid := string(iter.Key())
-        fid := string(iter.Value())
+	for iter.Next() {
+		cid := string(iter.Key())
+		fid := string(iter.Value())
 
-        f.logger.Info(fmt.Sprintf("FID: %s", string(fid)))
-        f.logger.Info(fmt.Sprintf("CID: %s", cid))
+		f.logger.Info(fmt.Sprintf("FID: %s", string(fid)))
+		f.logger.Info(fmt.Sprintf("CID: %s", cid))
 
-        switch state := f.QueryContractState(cid); state {
-        case verified:
-            continue
-        case notFound:
-            err := f.IncrementDowntime(cid)
-            if err != nil {
-                return err
-            }
-        case notVerified:
-            err := f.Prove(cid)
-            if err != nil {
-                f.logger.Error("failed to prove ", cid, ": ", err)
-            }
-        default:
-            f.logger.Error("unknown state to handle: ", state)
-        }
-    }
-    return nil
+		switch state := f.QueryContractState(cid); state {
+		case verified:
+			continue
+		case notFound:
+			err := f.IncrementDowntime(cid)
+			if err != nil {
+				return err
+			}
+		case notVerified:
+			err := f.Prove(cid)
+			if err != nil {
+				f.logger.Error("failed to prove ", cid, ": ", err)
+			}
+		default:
+			f.logger.Error("unknown state to handle: ", state)
+		}
+	}
+	return nil
 }
 
 func (f *FileServer) startShift() error {
-    err := f.CleanExpired()
-    if err != nil {
-        return err
-    }
+	err := f.CleanExpired()
+	if err != nil {
+		return err
+	}
 
-    return f.handleContracts()
+	return f.handleContracts()
 }
 
 func (f *FileServer) StartProofServer(interval uint16) {
-    for {
-        start := time.Now()
-        err := f.startShift()
-        if err != nil {
-            f.logger.Error(err.Error())
-        }
+	for {
+		start := time.Now()
+		err := f.startShift()
+		if err != nil {
+			f.logger.Error(err.Error())
+		}
 
-        end := time.Since(start)
-        if end.Seconds() > 120 {
-            f.logger.Error(fmt.Sprintf("proof took %d", end.Nanoseconds()))
-        }
+		end := time.Since(start)
+		if end.Seconds() > 120 {
+			f.logger.Error(fmt.Sprintf("proof took %d", end.Nanoseconds()))
+		}
 
-        tm := time.Duration(interval) * time.Second
+		tm := time.Duration(interval) * time.Second
 
-        if tm.Nanoseconds()-end.Nanoseconds() > 0 {
-            time.Sleep(time.Duration(interval) * time.Second)
-        }
-    }
+		if tm.Nanoseconds()-end.Nanoseconds() > 0 {
+			time.Sleep(time.Duration(interval) * time.Second)
+		}
+	}
 }
