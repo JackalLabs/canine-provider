@@ -9,6 +9,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/JackalLabs/jackal-provider/jprov/archive"
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
@@ -239,10 +240,36 @@ func (f *FileServer) StartFileServer(cmd *cobra.Command) {
 	if err != nil {
 		interval = 0
 	}
+	// Start the reporting system
+	reporter := InitReporter(cmd)
 
 	go f.StartProofServer(interval)
 	go NatCycle(cmd.Context())
 	go f.queue.StartListener(cmd, providerName)
+
+	report, err := cmd.Flags().GetBool(types.FlagDoReport)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	go func() {
+		for {
+			if rand.Int63n(2) == 0 && report {
+				err := reporter.Report(cmd)
+				if err != nil {
+					fmt.Println(err)
+				}
+			} else {
+				err := reporter.AttestReport(&q)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
+
+			time.Sleep(30 * time.Second)
+		}
+	}()
 
 	port, err := cmd.Flags().GetInt(types.FlagPort)
 	if err != nil {

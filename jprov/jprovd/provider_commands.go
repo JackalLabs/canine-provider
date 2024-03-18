@@ -85,6 +85,7 @@ func StartServerCommand() *cobra.Command {
 	cmd.Flags().Int64(types.FlagQueueInterval, 4, "The time, in seconds, between running a queue loop.")
 	cmd.Flags().String(types.FlagProviderName, "A Storage Provider", "The name to identify this provider in block explorers.")
 	cmd.Flags().Int64(types.FlagSleep, 250, "The time, in milliseconds, before adding another proof msg to the queue.")
+	cmd.Flags().Bool(types.FlagDoReport, true, "Should this provider report deals (uses gas).")
 	return cmd
 }
 

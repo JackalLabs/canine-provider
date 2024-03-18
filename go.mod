@@ -8,8 +8,8 @@ require (
 	github.com/JackalLabs/blanket v0.0.0
 	github.com/cosmos/cosmos-sdk v0.45.17
 	github.com/cosmos/go-bip39 v1.0.0
-	github.com/huin/goupnp v1.2.0
-	github.com/jackalLabs/canine-chain v0.0.0-00010101000000-000000000000
+	github.com/huin/goupnp v1.3.0
+	github.com/jackalLabs/canine-chain/v3 v3.0.0
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/rs/cors v1.9.0
 	github.com/rs/zerolog v1.29.1
@@ -82,7 +82,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1-0.20200219035652-afde56e7acac // indirect
 	github.com/dvsekhvalnov/jose2go v1.5.0 // indirect
 	github.com/ecies/go/v2 v2.0.6 // indirect
-	github.com/ethereum/go-ethereum v1.11.5 // indirect
+	github.com/ethereum/go-ethereum v1.12.1 // indirect
 	github.com/felixge/httpsnoop v1.0.2 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/gdamore/encoding v1.0.0 // indirect
@@ -208,8 +208,6 @@ replace (
 
 	// use cosmos-flavored protobufs
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-
-	github.com/jackalLabs/canine-chain => github.com/JackalLabs/canine-chain v1.2.3-0.20230621063218-8fde7f21c65b
 
 	github.com/tendermint/tendermint => github.com/cometbft/cometbft v0.34.27
 

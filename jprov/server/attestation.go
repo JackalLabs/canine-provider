@@ -100,6 +100,11 @@ func (f *FileServer) attest(w *http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if upload.Response == nil {
+		http.Error(*w, "upload: no response", http.StatusBadRequest)
+		return
+	}
+
 	if upload.Response.Code != 0 {
 		http.Error(*w, fmt.Errorf(upload.Response.RawLog).Error(), http.StatusBadRequest)
 		return

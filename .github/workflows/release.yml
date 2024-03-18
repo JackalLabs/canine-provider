@@ -14,8 +14,8 @@ jobs:
       matrix:
         os: [ubuntu-20.04, macos-latest]
     steps:
-      - uses: actions/checkout@v3.5.3
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@v4.1.1
+      - uses: actions/setup-go@v5
         with:
           go-version: 1.18.1 # The Go version to download (if necessary) and use.
       - name: Build CLI
@@ -31,8 +31,8 @@ jobs:
   # MacOS-ARM64-CLI:
   #   runs-on: ubuntu-20.04
   #   steps:
-  #     - uses: actions/checkout@v3.5.3
-  #     - uses: actions/setup-go@v4
+  #     - uses: actions/checkout@v4.1.1
+  #     - uses: actions/setup-go@v5
   #       with:
   #         go-version: 1.19 # The Go version to download (if necessary) and use.
   #     - name: Install xgo
@@ -54,7 +54,7 @@ jobs:
       [native-build-cli]
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3.5.3
+      - uses: actions/checkout@v4.1.1
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
