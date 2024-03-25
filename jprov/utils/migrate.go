@@ -15,6 +15,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 )
 
+const CorruptFileDirPrefix = "corrupted-"
+
 // old version of tree path stores merkle trees at homeDir/storage/fid.tree
 func GetOldTreePath(homeDir, fid string) string {
 	fileName := fmt.Sprintf("%s.tree", fid)
@@ -109,6 +111,11 @@ func handleGlueingProcess(ctx client.Context, fid string) {
 		}
 	}
 	fmt.Printf("done\n")
+}
+
+func markCorruptedFile(homedir, fid string) error {
+    newFidDir := CorruptFileDirPrefix + fid
+    return os.Rename(GetFidDir(homedir, fid),  GetFidDir(homedir, newFidDir)) 
 }
 
 func handleFileIntegrityCheckProcess(ctx client.Context, fid string) {

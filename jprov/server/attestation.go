@@ -12,8 +12,9 @@ import (
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
-	storageKeeper "github.com/jackalLabs/canine-chain/x/storage/keeper"
-	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
+
+	storageKeeper "github.com/jackalLabs/canine-chain/v3/x/storage/keeper"
+	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 )
 
 func verifyAttest(deal storageTypes.ActiveDeals, attest types.AttestRequest) (verified bool, err error) {

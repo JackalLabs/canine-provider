@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"sync"
 	"time"
+    "math/rand"
 
 	"github.com/JackalLabs/jackal-provider/jprov/archive"
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
@@ -19,7 +20,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/rs/cors"
 
-	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
+	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	"github.com/julienschmidt/httprouter"
@@ -257,7 +258,7 @@ func (f *FileServer) StartFileServer(cmd *cobra.Command) {
 					fmt.Println(err)
 				}
 			} else {
-				err := reporter.AttestReport(&q)
+				err := reporter.AttestReport(f.queue)
 				if err != nil {
 					fmt.Println(err)
 				}

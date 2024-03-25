@@ -3,7 +3,7 @@ package server
 import (
 	"strconv"
 
-	storageTypes "github.com/jackalLabs/canine-chain/x/storage/types"
+	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
