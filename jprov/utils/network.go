@@ -1,10 +1,10 @@
 package utils
 
 import (
-    "bytes"
-    "net/http"
-    "fmt"
-    "io"
+	"bytes"
+	"fmt"
+	"io"
+	"net/http"
 )
 
 func TestDownloadFileFromURL(url string, fid string) (int64, error) {

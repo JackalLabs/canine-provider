@@ -114,8 +114,8 @@ func handleGlueingProcess(ctx client.Context, fid string) {
 }
 
 func markCorruptedFile(homedir, fid string) error {
-    newFidDir := CorruptFileDirPrefix + fid
-    return os.Rename(GetFidDir(homedir, fid),  GetFidDir(homedir, newFidDir)) 
+	newFidDir := CorruptFileDirPrefix + fid
+	return os.Rename(GetFidDir(homedir, fid), GetFidDir(homedir, newFidDir))
 }
 
 func handleFileIntegrityCheckProcess(ctx client.Context, fid string) {
