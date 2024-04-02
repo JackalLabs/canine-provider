@@ -120,7 +120,7 @@ upload_file ./scripts/dummy_data/test.txt 0
 
 sleep 10
 
-#read -rsp $'Press any key to shutdown and upgrade provider...\n' -n1 key
+read -rsp $'Press any key to shutdown and upgrade provider...\n' -n1 key
 
 echo "shutting down providers..."
 shut_down

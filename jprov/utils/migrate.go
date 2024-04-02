@@ -39,14 +39,18 @@ func FindMigratedFile(ctx client.Context, fid string) (bool, error) {
 	return false, fmt.Errorf("Error: FindMigratedFile: file exist and not exist at the same time: %s", err.Error())
 }
 
-func checkFileIntegrity(homeDir, matchFid string, file *os.File) (bool, error) {
+func checkFileIntegrity(homeDir, matchFid string, file *os.File, chunkSize int64) (bool, error) {
 	stat, err := file.Stat()
 	if err != nil {
 		err = errors.Join(errors.New("checkFileIntegrity: failed to get file info"), err)
 		return false, err
 	}
 
-	checkTree, err := CreateMerkleTree(10240, stat.Size(), file, file)
+	checkTree, err := CreateMerkleTree(chunkSize, stat.Size(), file, file)
+	if err != nil {
+		err = errors.Join(errors.New("checkFileIntegrity: failed to create merkel tree"), err)
+		return false, err
+	}
 
 	archive := archive.NewSingleCellArchive(homeDir)
 	mtree, err := archive.RetrieveTree(matchFid)
@@ -61,7 +65,7 @@ func checkFileIntegrity(homeDir, matchFid string, file *os.File) (bool, error) {
 	return originalRoot == checkRoot, nil
 }
 
-func postGlueCheck(homeDir, fid string) (bool, error) {
+func postGlueCheck(homeDir, fid string, chunkSize int64) (bool, error) {
 	pathFactory := archive.NewSingleCellPathFactory(homeDir)
 	file, err := os.Open(pathFactory.FilePath(fid))
 	if err != nil {
@@ -71,7 +75,7 @@ func postGlueCheck(homeDir, fid string) (bool, error) {
 		err = errors.Join(err, file.Close())
 	}()
 
-	pass, err := checkFileIntegrity(homeDir, fid, file)
+	pass, err := checkFileIntegrity(homeDir, fid, file, chunkSize)
 	return pass, err
 }
 
@@ -118,15 +122,19 @@ func markCorruptedFile(homedir, fid string) error {
 	return os.Rename(GetFidDir(homedir, fid), GetFidDir(homedir, newFidDir))
 }
 
-func handleFileIntegrityCheckProcess(ctx client.Context, fid string) {
+func handleFileIntegrityCheckProcess(ctx client.Context, fid string, chunkSize int64) {
 	fmt.Printf("File integrity check... ")
-	pass, err := postGlueCheck(ctx.HomeDir, fid)
+	pass, err := postGlueCheck(ctx.HomeDir, fid, chunkSize)
 	if err != nil {
 		fmt.Printf("Error: Migrate: error during file integrity check: %s", err)
 	}
 
 	if !pass {
 		fmt.Printf("File integrity check for %s failed! Delete the file or get it from other providers\n", fid)
+        err := markCorruptedFile(ctx.HomeDir, fid)
+        if err != nil {
+            fmt.Printf("failed to mark corrupted file: %v", err)
+        }
 	} else {
 		fmt.Printf("passed\n")
 
@@ -161,7 +169,7 @@ func handleMerkleTreeProcess(ctx client.Context, fid string) {
 	}
 }
 
-func Migrate(ctx client.Context) {
+func Migrate(ctx client.Context, chunkSize int64) {
 	fids, err := DiscoverFids(ctx.HomeDir)
 	if err != nil {
 		fmt.Fprint(os.Stderr, err)
@@ -172,7 +180,7 @@ func Migrate(ctx client.Context) {
 		fmt.Printf("Migrating %s\n", fid)
 		handleGlueingProcess(ctx, fid)
 		handleMerkleTreeProcess(ctx, fid)
-		handleFileIntegrityCheckProcess(ctx, fid)
+		handleFileIntegrityCheckProcess(ctx, fid, chunkSize)
 		fmt.Printf("\n")
 	}
 
