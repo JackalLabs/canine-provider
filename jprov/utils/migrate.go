@@ -131,10 +131,10 @@ func handleFileIntegrityCheckProcess(ctx client.Context, fid string, chunkSize i
 
 	if !pass {
 		fmt.Printf("File integrity check for %s failed! Delete the file or get it from other providers\n", fid)
-        err := markCorruptedFile(ctx.HomeDir, fid)
-        if err != nil {
-            fmt.Printf("failed to mark corrupted file: %v", err)
-        }
+		err := markCorruptedFile(ctx.HomeDir, fid)
+		if err != nil {
+			fmt.Printf("failed to mark corrupted file: %v", err)
+		}
 	} else {
 		fmt.Printf("passed\n")
 

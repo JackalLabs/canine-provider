@@ -243,11 +243,11 @@ func MigrateCommand() *cobra.Command {
 				return nil
 			}
 
-            chunkSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
-            if err != nil {
-                err = errors.Join(errors.New("Migrate: cannot migrate without chunk size"), err)
-                return err
-            }
+			chunkSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
+			if err != nil {
+				err = errors.Join(errors.New("Migrate: cannot migrate without chunk size"), err)
+				return err
+			}
 
 			utils.Migrate(clientCtx, chunkSize)
 

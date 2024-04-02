@@ -17,7 +17,7 @@ const (
 )
 
 const (
-	DefaultThreads       = 3 
+	DefaultThreads       = 3
 	DefaultInterval      = 32
 	DefaultMaxMisses     = 16
 	DefaultChunkSize     = 10240
