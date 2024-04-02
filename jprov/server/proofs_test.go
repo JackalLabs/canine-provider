@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"os"
 	"testing"
 
 	"github.com/JackalLabs/jackal-provider/jprov/server"

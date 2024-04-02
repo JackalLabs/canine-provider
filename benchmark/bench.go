@@ -7,7 +7,7 @@ import (
 
 	"github.com/wealdtech/go-merkletree/sha3"
 
-	"github.com/wealdtech/go-merkletree"
+	merkletree "github.com/wealdtech/go-merkletree"
 )
 
 func main() {

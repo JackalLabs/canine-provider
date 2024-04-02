@@ -9,7 +9,7 @@ import (
 
 	storagetypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 
-	"github.com/wealdtech/go-merkletree"
+	merkletree "github.com/wealdtech/go-merkletree"
 	"github.com/wealdtech/go-merkletree/sha3"
 )
 

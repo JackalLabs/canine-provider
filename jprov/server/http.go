@@ -102,7 +102,10 @@ func (f *FileServer) PostRoutes(router *httprouter.Router) {
 	router.POST("/u", upfil)
 
 	router.POST("/attest", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		f.attest(&w, r)
+		err := f.handleAttestRequest(&w, r)
+		if err != nil {
+			f.logger.Error(err.Error())
+		}
 	})
 }
 

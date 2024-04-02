@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/wealdtech/go-merkletree"
+	merkletree "github.com/wealdtech/go-merkletree"
 	"github.com/wealdtech/go-merkletree/sha3"
 )
 
