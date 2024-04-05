@@ -6,10 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math/rand"
 	"mime/multipart"
 	"net/http"
+	"os"
+    "os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/JackalLabs/jackal-provider/jprov/archive"
@@ -221,6 +225,14 @@ func (f *FileServer) Init() (router *httprouter.Router, err error) {
 }
 
 func (f *FileServer) StartFileServer(cmd *cobra.Command) {
+    defer func() {
+        log.Printf("Closing database...\n")
+        err := f.archivedb.Close()
+        errors.Join(err, f.downtimedb.Close())
+        if err != nil {
+            log.Fatalf("Failed to close db: %s", err)
+        }
+    }()
 	router, err := f.Init()
 	if err != nil {
 		fmt.Println(err)
@@ -274,18 +286,30 @@ func (f *FileServer) StartFileServer(cmd *cobra.Command) {
 		return
 	}
 
-	fmt.Printf("🌍 Started Provider: http://0.0.0.0:%d\n", port)
-	err = http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", port), handler)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+    server := http.Server {
+        Addr: fmt.Sprintf("0.0.0.0:%d", port),
+        Handler: handler,
+    }
 
-	if errors.Is(err, http.ErrServerClosed) {
-		fmt.Printf("Storage Provider Closed\n")
-		return
-	} else if err != nil {
-		fmt.Printf("error starting server: %s\n", err)
-		return
-	}
+    go func() {
+        fmt.Printf("🌍 Started Provider: http://0.0.0.0:%d\n", port)
+        err = server.ListenAndServe()
+
+        if errors.Is(err, http.ErrServerClosed) {
+            fmt.Printf("Storage Provider Closed\n")
+            return
+        } else if err != nil {
+            fmt.Printf("error starting server: %s\n", err)
+            return
+        }    
+    }()
+
+    sigChan := make(chan os.Signal, 1)
+    signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+    <-sigChan
+
+    fmt.Printf("Signal captured, shutting down server...")
+    if err := server.Shutdown(context.Background()); err != nil && !errors.Is(err, http.ErrServerClosed) {
+        log.Fatalf("HTTP server error: %v", err)
+    }
 }

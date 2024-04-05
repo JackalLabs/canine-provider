@@ -15,7 +15,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+    "errors"
 
+	"github.com/JackalLabs/jackal-provider/jprov/archive"
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
@@ -319,17 +321,14 @@ func (f *FileServer) CleanExpired() error {
 		return err
 	}
 
-	iter := f.archivedb.NewIterator()
+	iter := f.downtimedb.NewIterator()
 	defer iter.Release()
 
 	for iter.Next() {
 		cid := string(iter.Key())
-		fid := string(iter.Value())
-
-		downtime, err := f.downtimedb.Get(cid)
+        downtime, err := archive.ByteToBlock(iter.Value())
 		if err != nil {
-			f.logger.Error("CleanExpired: ", err)
-			continue
+            return err
 		}
 
 		if downtime > int64(maxMisses) {
@@ -337,10 +336,10 @@ func (f *FileServer) CleanExpired() error {
 			if err != nil {
 				return err
 			}
-			f.logger.Info(fmt.Sprintf("file %s is removed", string(fid)))
+            f.logger.Info(fmt.Sprintf("Purged CID: %s", string(cid)))
 		} else {
 			f.logger.Info(fmt.Sprintf("%s will be removed in %d cycles",
-				string(fid), int64(maxMisses)-downtime))
+				string(cid), int64(maxMisses)-downtime))
 		}
 	}
 
@@ -349,13 +348,25 @@ func (f *FileServer) CleanExpired() error {
 
 func (f *FileServer) IncrementDowntime(cid string) error {
 	downtime, err := f.downtimedb.Get(cid)
-	if err != nil {
+	if err != nil && !errors.Is(err, archive.ErrContractNotFound) {
 		return err
 	}
 
 	err = f.downtimedb.Set(cid, downtime+1)
 
 	return err
+}
+
+func (f *FileServer) DeleteDowntime(cid string) error {
+    _, err := f.downtimedb.Get(cid)
+    if errors.Is(err, archive.ErrContractNotFound) {
+        return nil
+    }
+    if err != nil {
+        return err
+    }
+
+    return f.downtimedb.Delete(cid)
 }
 
 func (f *FileServer) ContractState(cid string) string {
@@ -384,12 +395,19 @@ func (f *FileServer) handleContracts() error {
 	for iter.Next() {
 		cid := string(iter.Key())
 		fid := string(iter.Value())
+        if strings.HasPrefix(cid, "jklf") {//skip cid reference
+            continue
+        }
 
 		f.logger.Info(fmt.Sprintf("FID: %s", string(fid)))
 		f.logger.Info(fmt.Sprintf("CID: %s", cid))
 
 		switch state := f.QueryContractState(cid); state {
 		case verified:
+            err := f.DeleteDowntime(cid)
+            if err != nil {
+                f.logger.Error("error when unmarking downtime cid: ", cid, ": ", err)
+            }
 			continue
 		case notFound:
 			err := f.IncrementDowntime(cid)
@@ -397,7 +415,12 @@ func (f *FileServer) handleContracts() error {
 				return err
 			}
 		case notVerified:
-			err := f.Prove(cid)
+            err := f.DeleteDowntime(cid)
+            if err != nil {
+                f.logger.Error("error when unmarking downtime cid: ", cid, ": ", err)
+            }
+
+			err = f.Prove(cid)
 			if err != nil {
 				f.logger.Error("failed to prove ", cid, ": ", err)
 			}

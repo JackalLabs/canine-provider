@@ -38,6 +38,9 @@ func NewDoubleRefArchiveDB(filepath string) (*DoubleRefArchiveDB, error) {
 
 func (d *DoubleRefArchiveDB) GetFid(cid string) (string, error) {
 	value, err := d.db.Get(d.key(cid), nil)
+    if errors.Is(err, leveldb.ErrNotFound) {
+        return "", ErrFidNotFound
+    }
 	if err != nil {
 		return "", err
 	}
@@ -49,22 +52,17 @@ func (d *DoubleRefArchiveDB) GetContracts(fid string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	var cid []string
-	cids := strings.Split(string(value), cidSeparator)
-	for _, c := range cids {
-		cid = append(cid, string(c))
-	}
-	return cid, nil
+    return strings.Split(string(value), cidSeparator), nil
 }
 
 func (d *DoubleRefArchiveDB) SetContract(cid string, fid string) error {
-	value, err := d.db.Get([]byte(cid), nil)
-	if err != nil && err != leveldb.ErrNotFound {
-		return err
-	}
-	if value != nil {
-		return errors.New("already exist")
-	}
+    value, err := d.db.Get([]byte(cid), nil)//check if it already exists
+    if err != nil && !errors.Is(err, leveldb.ErrNotFound) {
+        return err
+    }
+    if value != nil {
+        return ErrContractAlreadyExists
+    }
 
 	batch := new(leveldb.Batch)
 	batch.Put([]byte(cid), []byte(fid))
@@ -79,7 +77,7 @@ func (d *DoubleRefArchiveDB) SetContract(cid string, fid string) error {
 
 func (d *DoubleRefArchiveDB) addReference(batch *leveldb.Batch, cid string, fid string) error {
 	value, err := d.db.Get([]byte(fid), nil)
-	if err == leveldb.ErrNotFound {
+	if errors.Is(err, leveldb.ErrNotFound) {
 		value = nil
 	} else if err != nil {
 		return err
@@ -172,14 +170,14 @@ func (d *DowntimeDB) NewIterator() iterator.Iterator {
 
 func (d *DowntimeDB) Get(cid string) (block int64, err error) {
 	b, err := d.db.Get([]byte(cid), nil)
-	if err == leveldb.ErrNotFound {
-		return 0, nil
+	if errors.Is(err, leveldb.ErrNotFound) {
+		return 0, ErrContractNotFound
 	}
 	if err != nil {
 		return
 	}
-	block, err = ByteToBlock(b)
-	return
+
+	return ByteToBlock(b)
 }
 
 func (d *DowntimeDB) Set(cid string, block int64) error {

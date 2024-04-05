@@ -80,7 +80,9 @@ upload_file () {
 }
 
 shut_down () {
-    killall screen canined jprovd
+    killall canined jprovd
+    sleep 3 #let logs get flushed out
+    killall screen
 }
 
 install_old
@@ -113,14 +115,14 @@ sleep 5
 upload_file ./scripts/dummy_data/1.png 0
 upload_file ./scripts/dummy_data/2.png 1
 upload_file ./scripts/dummy_data/3.png 2
-upload_file ./scripts/dummy_data/4.png 0
-upload_file ./scripts/dummy_data/5.svg 0
-upload_file ./scripts/dummy_data/6.wav 0
-upload_file ./scripts/dummy_data/test.txt 0
+#upload_file ./scripts/dummy_data/4.png 0
+#upload_file ./scripts/dummy_data/5.svg 0
+#upload_file ./scripts/dummy_data/6.wav 0
+#upload_file ./scripts/dummy_data/test.txt 0
 
 sleep 10
 
-read -rsp $'Press any key to shutdown and upgrade provider...\n' -n1 key
+#read -rsp $'Press any key to shutdown and upgrade provider...\n' -n1 key
 
 echo "shutting down providers..."
 shut_down
@@ -149,6 +151,24 @@ restart_provider 3
 restart_provider 4
 restart_provider 5
 restart_provider 6
+
+read -rsp $'Press any key to shutdown...\n' -n1 key
+
+shut_down
+
+read -rsp $'Press any key to restart...\n' -n1 key
+
+restart_chain
+
+sleep 20
+
+restart_provider 0
+restart_provider 1
+restart_provider 2
+restart_provider 3
+restart_provider 4
+restart_provider 5
+#restart_provider 6
 
 read -rsp $'Press any key to shutdown...\n' -n1 key
 
