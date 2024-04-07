@@ -3,6 +3,8 @@ package server
 import (
 	"strconv"
 
+    query "github.com/cosmos/cosmos-sdk/types/query"
+
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -40,4 +42,58 @@ func (f *FileServer) QueryContractState(cid string) string {
 	}
 
 	return notVerified
+}
+
+func (f *FileServer) QueryAllActiveDeals() ([]storageTypes.ActiveDeals, error) {
+    req := storageTypes.QueryAllActiveDealsRequest{
+        Pagination: &query.PageRequest{CountTotal: true},
+    }
+
+    activeDeals := make([]storageTypes.ActiveDeals, 0)
+
+    resp, err := f.queryClient.ActiveDealsAll(f.cmd.Context(), &req)
+    if err != nil {
+        return nil, err
+    }
+
+    activeDeals = append(activeDeals, resp.ActiveDeals...)
+
+    for len(resp.Pagination.GetNextKey()) != 0 {
+        req = storageTypes.QueryAllActiveDealsRequest{
+            Pagination: &query.PageRequest{Key: resp.Pagination.GetNextKey()},
+        }
+
+        resp, err = f.queryClient.ActiveDealsAll(f.cmd.Context(), &req)
+        if err != nil {
+            return activeDeals, err
+        }
+        activeDeals = append(activeDeals, resp.ActiveDeals...)
+    }
+
+    return activeDeals, nil
+}
+
+
+func filterMyActiveDeals(activeDeals []storageTypes.ActiveDeals, provider string) []storageTypes.ActiveDeals {
+    if activeDeals == nil {
+        return nil
+    }
+
+    res := make([]storageTypes.ActiveDeals, 0)
+
+    for _, a := range(activeDeals) {
+        if a.Provider == provider {
+            res = append(res, a)
+        }
+    }
+    return res
+}
+
+func (f *FileServer) QueryMyActiveDeals() ([]storageTypes.ActiveDeals, error) {
+    activeDeals, err := f.QueryAllActiveDeals()
+    if err != nil {
+        return nil, err
+    }
+
+    return filterMyActiveDeals(activeDeals, f.provider.Address), nil
 }

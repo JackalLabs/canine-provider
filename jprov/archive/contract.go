@@ -39,7 +39,7 @@ func NewDoubleRefArchiveDB(filepath string) (*DoubleRefArchiveDB, error) {
 func (d *DoubleRefArchiveDB) GetFid(cid string) (string, error) {
 	value, err := d.db.Get(d.key(cid), nil)
     if errors.Is(err, leveldb.ErrNotFound) {
-        return "", ErrFidNotFound
+        return "", ErrContractNotFound
     }
 	if err != nil {
 		return "", err

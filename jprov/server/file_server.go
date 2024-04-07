@@ -224,6 +224,30 @@ func (f *FileServer) Init() (router *httprouter.Router, err error) {
 	return
 }
 
+
+func (f *FileServer) RecollectActiveDeals() error {
+    queryActiveDeals, err := f.QueryMyActiveDeals()
+    if err != nil {
+        return err
+    }
+
+    count := 0
+
+    for _, q := range(queryActiveDeals) {
+        _, err := f.archivedb.GetFid(q.Cid)
+        if errors.Is(err, archive.ErrContractNotFound) {
+            err = f.archivedb.SetContract(q.Cid, q.Fid)
+            count++;
+            if err != nil {
+                return err
+            }
+        }
+    }
+    
+    f.logger.Info("recollected deals: ", count)
+    return nil
+}
+
 func (f *FileServer) StartFileServer(cmd *cobra.Command) {
     defer func() {
         log.Printf("Closing database...\n")
@@ -252,6 +276,11 @@ func (f *FileServer) StartFileServer(cmd *cobra.Command) {
 	// Start the reporting system
 	reporter := InitReporter(cmd)
 
+    f.logger.Info("recollecting active deals...")
+    err = f.RecollectActiveDeals()
+    if err != nil {
+        f.logger.Error("failed to recollect lost active deals to database :", err.Error())
+    }
 	go f.StartProofServer(interval)
 	go NatCycle(cmd.Context())
 	go f.queue.StartListener(cmd, providerName)
