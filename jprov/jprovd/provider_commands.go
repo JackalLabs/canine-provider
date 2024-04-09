@@ -59,7 +59,10 @@ func StartServerCommand() *cobra.Command {
 					return err
 				}
 
-				manager.Init()
+                err = manager.Init()
+                if err != nil {
+                    return err
+                }
 				go manager.Start()
 			}
 

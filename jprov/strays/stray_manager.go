@@ -15,23 +15,85 @@ import (
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 )
 
-func (m *StrayManager) AddHand(index uint) *LittleHand {
+func (m *StrayManager) addClaimer(littleHand LittleHand) error {
+    addClaimerMsg := storageTypes.NewMsgAddClaimer(m.Address, littleHand.Address)
+
+    resp, err := utils.SendTx(m.ClientContext, m.Cmd.Flags(), "", addClaimerMsg)
+    if err != nil {
+        return fmt.Errorf("failed to add claimer: %w", err)
+    }
+
+    if resp.Code != 0 {
+        return fmt.Errorf("failed to add claimer: %w", resp.RawLog)
+    }
+
+    return nil
+}
+
+func (m *StrayManager) grantAllowance(littleHand LittleHand) error {
+    managerAddr, err := sdk.AccAddressFromBech32(m.Address)
+    if err != nil {
+        return fmt.Errorf("failed to grant allowance: %w", err)
+    }
+
+    littleHandAddr, err := sdk.AccAddressFromBech32(littleHand.Address)
+    if err != nil {
+        return fmt.Errorf("failed to grant allowance: %w", err)
+    }
+
+    allowance := feegrant.BasicAllowance{
+        SpendLimit: nil,
+        Expiration: nil,
+    }
+
+    grantMsg, err := feegrant.NewMsgGrantAllowance(&allowance, managerAddr, littleHandAddr)
+     if err != nil {
+        return fmt.Errorf("failed to grant allowance: %w", err)
+    }
+
+    resp, err := utils.SendTx(m.ClientContext, m.Cmd.Flags(), "", grantMsg)
+    if err != nil {
+        return fmt.Errorf("failed to grant allowance: %w", err)
+    }
+
+    if resp.Code != 0 {
+        return fmt.Errorf("failed to grant allowance: %w", err)
+    }
+
+    return nil
+}
+
+func (m *StrayManager) authorizeHand(littleHand LittleHand) error {
+    err := m.addClaimer(littleHand)
+    if err != nil {
+        return fmt.Errorf("failed to authorize hand: %w", err)
+    }
+
+    err = m.grantAllowance(littleHand)
+    if err != nil {
+        return fmt.Errorf("failed to authorize hand: %w", err)
+    }
+
+    return nil
+}
+
+func (m *StrayManager) AddHand(index uint) error {
 	pkeyStruct, err := crypto.ReadKey(m.ClientContext)
 	if err != nil {
-		return nil
+        return fmt.Errorf("failed to add hand: %w", err)
 	}
 
 	key, err := indexPrivKey(pkeyStruct.Key, byte(index))
 	if err != nil {
-		return nil
+        return fmt.Errorf("failed to add hand: %w", err)
 	}
 
 	address, err := bech32.ConvertAndEncode(storageTypes.AddressPrefix, key.PubKey().Address().Bytes())
 	if err != nil {
-		return nil
+        return fmt.Errorf("failed to add hand: %w", err)
 	}
 
-	hand := LittleHand{
+    hand := LittleHand{
 		Waiter:        &m.Waiter,
 		Stray:         nil,
 		Database:      m.archivedb,
@@ -44,8 +106,22 @@ func (m *StrayManager) AddHand(index uint) *LittleHand {
 		Logger:        m.Context.Logger,
 	}
 
-	m.hands = append(m.hands, &hand)
-	return &hand
+    found := false
+    for _, claimer := range m.Provider.AuthClaimers {
+        if claimer == address {
+            found = true
+        }
+    }
+
+    if !found {
+        err = m.authorizeHand(hand)
+        if err != nil {
+            return fmt.Errorf("failed to add hand: %w", err)
+        }
+    }
+
+    m.hands = append(m.hands, &hand)
+	return nil
 }
 
 func (m *StrayManager) Distribute() { // Hand out every available stray to an idle hand
@@ -70,88 +146,33 @@ func (m *StrayManager) Distribute() { // Hand out every available stray to an id
 	}
 }
 
-func (m *StrayManager) Init() { // create all the hands for the manager
-	fmt.Println("Starting initialization...")
+func (m *StrayManager) Init() error { // create all the hands for the manager
+	fmt.Println("Starting stray manager initialization...")
 
 	threads, err := m.Cmd.Flags().GetUint(types.FlagThreads)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
 
 	var i uint
 	for i = 1; i < threads+1; i++ {
-		fmt.Printf("Processing stray thread %d.\n", i)
-		h := m.AddHand(i)
+        fmt.Printf("Initializing little hand no. %d\n", i)
+		err := m.AddHand(i)
+        if err != nil {
+            fmt.Printf("failed to initialize little hand no. %d: %s\n", i, err.Error())
+            fmt.Printf("proceeding without little hand no. %d\n", i)
+            continue
+        }
 
-		found := false
-		for _, claimer := range m.Provider.AuthClaimers {
-			if claimer == h.Address {
-				found = true
-				break
-			}
-		}
-		if found {
-			continue
-		}
-
-		fmt.Println("Adding hand to my claim whitelist...")
-
-		msg := storageTypes.NewMsgAddClaimer(m.Address, h.Address)
-
-		res, err := utils.SendTx(m.ClientContext, m.Cmd.Flags(), "", msg)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-
-		if res.Code != 0 {
-			fmt.Println(res.RawLog)
-			continue
-		}
-		fmt.Println("Done!")
-
-		fmt.Println("Authorizing hand to transact on my behalf...")
-
-		adr, nerr := sdk.AccAddressFromBech32(m.Address)
-		if nerr != nil {
-			fmt.Println(nerr)
-			continue
-		}
-
-		hadr, nerr := sdk.AccAddressFromBech32(h.Address)
-		if nerr != nil {
-			fmt.Println(nerr)
-			continue
-		}
-
-		allowance := feegrant.BasicAllowance{
-			SpendLimit: nil,
-			Expiration: nil,
-		}
-
-		grantMsg, nerr := feegrant.NewMsgGrantAllowance(&allowance, adr, hadr)
-		if nerr != nil {
-			fmt.Println(nerr)
-			continue
-		}
-
-		grantRes, nerr := utils.SendTx(m.ClientContext, m.Cmd.Flags(), "", grantMsg)
-		if nerr != nil {
-			fmt.Println(nerr)
-			continue
-		}
-
-		if grantRes.Code != 0 {
-			fmt.Println(grantRes.RawLog)
-			continue
-		}
-
-		fmt.Println("Done!")
-
+		fmt.Printf("Successfully initialized little hand no. %d\n", i)
 	}
 
+    if len(m.hands) == 0 {
+        return fmt.Errorf("failed to initialize any hands")
+    }
+
 	fmt.Println("Finished Initialization...")
+    return nil
 }
 
 func (m *StrayManager) CollectStrays(lastCount uint64) uint64 {
