@@ -50,7 +50,7 @@ func (d *DoubleRefArchiveDB) GetFid(cid string) (string, error) {
 func (d *DoubleRefArchiveDB) GetContracts(fid string) ([]string, error) {
 	value, err := d.db.Get([]byte(fid), nil)
 	if err != nil {
-		return nil, err
+		return nil, ErrFidNotFound
 	}
     return strings.Split(string(value), cidSeparator), nil
 }

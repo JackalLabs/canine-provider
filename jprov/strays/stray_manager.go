@@ -215,8 +215,8 @@ func (m *StrayManager) CollectStrays(lastCount uint64) uint64 {
 	for _, newStray := range s { // Only add new strays to the queue
 
 		k := newStray
-        _, err := m.archivedb.GetFid(newStray.Cid)
-        if errors.Is(err, archive.ErrContractNotFound) {
+        _, err := m.archivedb.GetContracts(newStray.Fid)
+        if errors.Is(err, archive.ErrFidNotFound) {
             m.Strays = append(m.Strays, &k)
         }
 	}
