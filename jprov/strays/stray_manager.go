@@ -3,8 +3,10 @@ package strays
 import (
 	"fmt"
 	"math/rand"
+    "errors"
 	"time"
 
+	"github.com/JackalLabs/jackal-provider/jprov/archive"
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
@@ -24,7 +26,7 @@ func (m *StrayManager) addClaimer(littleHand LittleHand) error {
     }
 
     if resp.Code != 0 {
-        return fmt.Errorf("failed to add claimer: %w", resp.RawLog)
+        return fmt.Errorf("failed to add claimer: %s", resp.RawLog)
     }
 
     return nil
@@ -213,8 +215,10 @@ func (m *StrayManager) CollectStrays(lastCount uint64) uint64 {
 	for _, newStray := range s { // Only add new strays to the queue
 
 		k := newStray
-		m.Strays = append(m.Strays, &k)
-
+        _, err := m.archivedb.GetFid(newStray.Cid)
+        if errors.Is(err, archive.ErrContractNotFound) {
+            m.Strays = append(m.Strays, &k)
+        }
 	}
 
 	return res.Pagination.Total
