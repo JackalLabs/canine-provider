@@ -22,8 +22,6 @@ import (
 	tmcli "github.com/tendermint/tendermint/libs/cli"
 )
 
-const defaultChunkSize = 10240
-
 func StartServerCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "start",

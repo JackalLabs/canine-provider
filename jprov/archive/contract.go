@@ -148,10 +148,6 @@ func (d *DoubleRefArchiveDB) key(cid string) (key []byte) {
 	return []byte(cid)
 }
 
-func (d *DoubleRefArchiveDB) refKey(fid string) []byte {
-	return []byte(fid)
-}
-
 type DowntimeDB struct {
 	db *leveldb.DB
 }

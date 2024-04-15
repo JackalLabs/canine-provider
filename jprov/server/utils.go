@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 
 	"github.com/JackalLabs/jackal-provider/jprov/types"
@@ -94,32 +93,6 @@ func queryBlock(clientCtx *client.Context, cid string) (string, error) {
 	}
 
 	return res.ActiveDeals.Blocktoprove, nil
-}
-
-func checkVerified(clientCtx *client.Context, cid string, self string) (bool, error) {
-	queryClient := storageTypes.NewQueryClient(clientCtx)
-
-	argCid := cid
-
-	params := &storageTypes.QueryActiveDealRequest{
-		Cid: argCid,
-	}
-
-	res, err := queryClient.ActiveDeals(context.Background(), params)
-	if err != nil {
-		return false, err
-	}
-
-	ver, err := strconv.ParseBool(res.ActiveDeals.Proofverified)
-	if err != nil {
-		return false, err
-	}
-
-	if res.ActiveDeals.Provider != self {
-		return false, fmt.Errorf(ErrNotYours)
-	}
-
-	return ver, nil
 }
 
 func buildCid(address, sender, fid string) (string, error) {

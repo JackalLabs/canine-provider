@@ -8,14 +8,6 @@ import (
 	"github.com/JackalLabs/jackal-provider/jprov/archive"
 )
 
-func newFile(name string, t *testing.T) (f *os.File) {
-	f, err := os.CreateTemp("", "_GO_"+name)
-	if err != nil {
-		t.Fatalf("TempFile %s: %s", name, err)
-	}
-	return
-}
-
 func TestGetPiece(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
 	_, err := buf.WriteString("hello, world\n")
@@ -58,7 +50,7 @@ func TestGetPiece(t *testing.T) {
 	if err != nil {
 		t.Errorf("GetPiece 1, 8: %s", resErr)
 	}
-    if string(resData) != "orld\n" {
+	if string(resData) != "orld\n" {
 		t.Errorf("GetPiece 1, 8: have %q, want %q", string(resData), "orld\n")
 	}
 }
