@@ -1,9 +1,9 @@
 package strays
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
-    "errors"
 	"time"
 
 	"github.com/JackalLabs/jackal-provider/jprov/archive"
@@ -18,84 +18,84 @@ import (
 )
 
 func (m *StrayManager) addClaimer(littleHand LittleHand) error {
-    addClaimerMsg := storageTypes.NewMsgAddClaimer(m.Address, littleHand.Address)
+	addClaimerMsg := storageTypes.NewMsgAddClaimer(m.Address, littleHand.Address)
 
-    resp, err := utils.SendTx(m.ClientContext, m.Cmd.Flags(), "", addClaimerMsg)
-    if err != nil {
-        return fmt.Errorf("failed to add claimer: %w", err)
-    }
+	resp, err := utils.SendTx(m.ClientContext, m.Cmd.Flags(), "", addClaimerMsg)
+	if err != nil {
+		return fmt.Errorf("failed to add claimer: %w", err)
+	}
 
-    if resp.Code != 0 {
-        return fmt.Errorf("failed to add claimer: %s", resp.RawLog)
-    }
+	if resp.Code != 0 {
+		return fmt.Errorf("failed to add claimer: %s", resp.RawLog)
+	}
 
-    return nil
+	return nil
 }
 
 func (m *StrayManager) grantAllowance(littleHand LittleHand) error {
-    managerAddr, err := sdk.AccAddressFromBech32(m.Address)
-    if err != nil {
-        return fmt.Errorf("failed to grant allowance: %w", err)
-    }
+	managerAddr, err := sdk.AccAddressFromBech32(m.Address)
+	if err != nil {
+		return fmt.Errorf("failed to grant allowance: %w", err)
+	}
 
-    littleHandAddr, err := sdk.AccAddressFromBech32(littleHand.Address)
-    if err != nil {
-        return fmt.Errorf("failed to grant allowance: %w", err)
-    }
+	littleHandAddr, err := sdk.AccAddressFromBech32(littleHand.Address)
+	if err != nil {
+		return fmt.Errorf("failed to grant allowance: %w", err)
+	}
 
-    allowance := feegrant.BasicAllowance{
-        SpendLimit: nil,
-        Expiration: nil,
-    }
+	allowance := feegrant.BasicAllowance{
+		SpendLimit: nil,
+		Expiration: nil,
+	}
 
-    grantMsg, err := feegrant.NewMsgGrantAllowance(&allowance, managerAddr, littleHandAddr)
-     if err != nil {
-        return fmt.Errorf("failed to grant allowance: %w", err)
-    }
+	grantMsg, err := feegrant.NewMsgGrantAllowance(&allowance, managerAddr, littleHandAddr)
+	if err != nil {
+		return fmt.Errorf("failed to grant allowance: %w", err)
+	}
 
-    resp, err := utils.SendTx(m.ClientContext, m.Cmd.Flags(), "", grantMsg)
-    if err != nil {
-        return fmt.Errorf("failed to grant allowance: %w", err)
-    }
+	resp, err := utils.SendTx(m.ClientContext, m.Cmd.Flags(), "", grantMsg)
+	if err != nil {
+		return fmt.Errorf("failed to grant allowance: %w", err)
+	}
 
-    if resp.Code != 0 {
-        return fmt.Errorf("failed to grant allowance: %w", err)
-    }
+	if resp.Code != 0 {
+		return fmt.Errorf("failed to grant allowance: %w", err)
+	}
 
-    return nil
+	return nil
 }
 
 func (m *StrayManager) authorizeHand(littleHand LittleHand) error {
-    err := m.addClaimer(littleHand)
-    if err != nil {
-        return fmt.Errorf("failed to authorize hand: %w", err)
-    }
+	err := m.addClaimer(littleHand)
+	if err != nil {
+		return fmt.Errorf("failed to authorize hand: %w", err)
+	}
 
-    err = m.grantAllowance(littleHand)
-    if err != nil {
-        return fmt.Errorf("failed to authorize hand: %w", err)
-    }
+	err = m.grantAllowance(littleHand)
+	if err != nil {
+		return fmt.Errorf("failed to authorize hand: %w", err)
+	}
 
-    return nil
+	return nil
 }
 
 func (m *StrayManager) AddHand(index uint) error {
 	pkeyStruct, err := crypto.ReadKey(m.ClientContext)
 	if err != nil {
-        return fmt.Errorf("failed to add hand: %w", err)
+		return fmt.Errorf("failed to add hand: %w", err)
 	}
 
 	key, err := indexPrivKey(pkeyStruct.Key, byte(index))
 	if err != nil {
-        return fmt.Errorf("failed to add hand: %w", err)
+		return fmt.Errorf("failed to add hand: %w", err)
 	}
 
 	address, err := bech32.ConvertAndEncode(storageTypes.AddressPrefix, key.PubKey().Address().Bytes())
 	if err != nil {
-        return fmt.Errorf("failed to add hand: %w", err)
+		return fmt.Errorf("failed to add hand: %w", err)
 	}
 
-    hand := LittleHand{
+	hand := LittleHand{
 		Waiter:        &m.Waiter,
 		Stray:         nil,
 		Database:      m.archivedb,
@@ -108,21 +108,21 @@ func (m *StrayManager) AddHand(index uint) error {
 		Logger:        m.Context.Logger,
 	}
 
-    found := false
-    for _, claimer := range m.Provider.AuthClaimers {
-        if claimer == address {
-            found = true
-        }
-    }
+	found := false
+	for _, claimer := range m.Provider.AuthClaimers {
+		if claimer == address {
+			found = true
+		}
+	}
 
-    if !found {
-        err = m.authorizeHand(hand)
-        if err != nil {
-            return fmt.Errorf("failed to add hand: %w", err)
-        }
-    }
+	if !found {
+		err = m.authorizeHand(hand)
+		if err != nil {
+			return fmt.Errorf("failed to add hand: %w", err)
+		}
+	}
 
-    m.hands = append(m.hands, &hand)
+	m.hands = append(m.hands, &hand)
 	return nil
 }
 
@@ -158,23 +158,23 @@ func (m *StrayManager) Init() error { // create all the hands for the manager
 
 	var i uint
 	for i = 1; i < threads+1; i++ {
-        fmt.Printf("Initializing little hand no. %d\n", i)
+		fmt.Printf("Initializing little hand no. %d\n", i)
 		err := m.AddHand(i)
-        if err != nil {
-            fmt.Printf("failed to initialize little hand no. %d: %s\n", i, err.Error())
-            fmt.Printf("proceeding without little hand no. %d\n", i)
-            continue
-        }
+		if err != nil {
+			fmt.Printf("failed to initialize little hand no. %d: %s\n", i, err.Error())
+			fmt.Printf("proceeding without little hand no. %d\n", i)
+			continue
+		}
 
 		fmt.Printf("Successfully initialized little hand no. %d\n", i)
 	}
 
-    if len(m.hands) == 0 {
-        return fmt.Errorf("failed to initialize any hands")
-    }
+	if len(m.hands) == 0 {
+		return fmt.Errorf("failed to initialize any hands")
+	}
 
 	fmt.Println("Finished Initialization...")
-    return nil
+	return nil
 }
 
 func (m *StrayManager) CollectStrays(lastCount uint64) uint64 {
@@ -215,10 +215,10 @@ func (m *StrayManager) CollectStrays(lastCount uint64) uint64 {
 	for _, newStray := range s { // Only add new strays to the queue
 
 		k := newStray
-        _, err := m.archivedb.GetContracts(newStray.Fid)
-        if errors.Is(err, archive.ErrFidNotFound) {
-            m.Strays = append(m.Strays, &k)
-        }
+		_, err := m.archivedb.GetContracts(newStray.Fid)
+		if errors.Is(err, archive.ErrFidNotFound) {
+			m.Strays = append(m.Strays, &k)
+		}
 	}
 
 	return res.Pagination.Total

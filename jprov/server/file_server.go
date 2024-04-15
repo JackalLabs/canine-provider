@@ -11,7 +11,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
-    "os/signal"
+	"os/signal"
 	"sync"
 	"syscall"
 	"time"
@@ -240,39 +240,38 @@ func (f *FileServer) Init() (router *httprouter.Router, err error) {
 	return
 }
 
-
 func (f *FileServer) RecollectActiveDeals() error {
-    queryActiveDeals, err := f.QueryMyActiveDeals()
-    if err != nil {
-        return err
-    }
+	queryActiveDeals, err := f.QueryMyActiveDeals()
+	if err != nil {
+		return err
+	}
 
-    count := 0
+	count := 0
 
-    for _, q := range(queryActiveDeals) {
-        _, err := f.archivedb.GetFid(q.Cid)
-        if errors.Is(err, archive.ErrContractNotFound) {
-            err = f.archivedb.SetContract(q.Cid, q.Fid)
-            count++;
-            if err != nil {
-                return err
-            }
-        }
-    }
-    
-    f.logger.Info("recollected deals: ", count)
-    return nil
+	for _, q := range queryActiveDeals {
+		_, err := f.archivedb.GetFid(q.Cid)
+		if errors.Is(err, archive.ErrContractNotFound) {
+			err = f.archivedb.SetContract(q.Cid, q.Fid)
+			count++
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	f.logger.Info("recollected deals: ", count)
+	return nil
 }
 
 func (f *FileServer) StartFileServer(cmd *cobra.Command) {
-    defer func() {
-        log.Printf("Closing database...\n")
-        err := f.archivedb.Close()
-        errors.Join(err, f.downtimedb.Close())
-        if err != nil {
-            log.Fatalf("Failed to close db: %s", err)
-        }
-    }()
+	defer func() {
+		log.Printf("Closing database...\n")
+		err := f.archivedb.Close()
+		err = errors.Join(err, f.downtimedb.Close())
+		if err != nil {
+			log.Fatalf("Failed to close db: %s", err)
+		}
+	}()
 	router, err := f.Init()
 	if err != nil {
 		fmt.Println(err)
@@ -292,11 +291,11 @@ func (f *FileServer) StartFileServer(cmd *cobra.Command) {
 	// Start the reporting system
 	reporter := InitReporter(cmd)
 
-    f.logger.Info("recollecting active deals...")
-    err = f.RecollectActiveDeals()
-    if err != nil {
-        f.logger.Error("failed to recollect lost active deals to database :", err.Error())
-    }
+	f.logger.Info("recollecting active deals...")
+	err = f.RecollectActiveDeals()
+	if err != nil {
+		f.logger.Error("failed to recollect lost active deals to database :", err.Error())
+	}
 	go f.StartProofServer(interval)
 	go NatCycle(cmd.Context())
 	go f.queue.StartListener(cmd, providerName)
@@ -331,30 +330,30 @@ func (f *FileServer) StartFileServer(cmd *cobra.Command) {
 		return
 	}
 
-    server := http.Server {
-        Addr: fmt.Sprintf("0.0.0.0:%d", port),
-        Handler: handler,
-    }
+	server := http.Server{
+		Addr:    fmt.Sprintf("0.0.0.0:%d", port),
+		Handler: handler,
+	}
 
-    go func() {
-        fmt.Printf("🌍 Started Provider: http://0.0.0.0:%d\n", port)
-        err = server.ListenAndServe()
+	go func() {
+		fmt.Printf("🌍 Started Provider: http://0.0.0.0:%d\n", port)
+		err = server.ListenAndServe()
 
-        if errors.Is(err, http.ErrServerClosed) {
-            fmt.Printf("Storage Provider Closed\n")
-            return
-        } else if err != nil {
-            fmt.Printf("error starting server: %s\n", err)
-            return
-        }    
-    }()
+		if errors.Is(err, http.ErrServerClosed) {
+			fmt.Printf("Storage Provider Closed\n")
+			return
+		} else if err != nil {
+			fmt.Printf("error starting server: %s\n", err)
+			return
+		}
+	}()
 
-    sigChan := make(chan os.Signal, 1)
-    signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-    <-sigChan
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
 
-    fmt.Printf("Signal captured, shutting down server...")
-    if err := server.Shutdown(context.Background()); err != nil && !errors.Is(err, http.ErrServerClosed) {
-        log.Fatalf("HTTP server error: %v", err)
-    }
+	fmt.Printf("Signal captured, shutting down server...")
+	if err := server.Shutdown(context.Background()); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Fatalf("HTTP server error: %v", err)
+	}
 }

@@ -62,14 +62,14 @@ func (f *FileServer) downfil(w http.ResponseWriter, ps httprouter.Params) {
 	}
 	defer func() {
 		if err := file.Close(); err != nil {
-            f.serverCtx.Logger.Error(fmt.Sprintf("downfil: %s", err.Error()))
+			f.serverCtx.Logger.Error(fmt.Sprintf("downfil: %s", err.Error()))
 		}
 	}()
 
 	written, err := io.Copy(w, file)
 	if err != nil {
-        f.serverCtx.Logger.Error(fmt.Sprintf("downfil: %s", err.Error()))
-    }
+		f.serverCtx.Logger.Error(fmt.Sprintf("downfil: %s", err.Error()))
+	}
 
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", written))
 }

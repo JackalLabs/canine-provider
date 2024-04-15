@@ -38,9 +38,9 @@ func NewDoubleRefArchiveDB(filepath string) (*DoubleRefArchiveDB, error) {
 
 func (d *DoubleRefArchiveDB) GetFid(cid string) (string, error) {
 	value, err := d.db.Get(d.key(cid), nil)
-    if errors.Is(err, leveldb.ErrNotFound) {
-        return "", ErrContractNotFound
-    }
+	if errors.Is(err, leveldb.ErrNotFound) {
+		return "", ErrContractNotFound
+	}
 	if err != nil {
 		return "", err
 	}
@@ -52,17 +52,17 @@ func (d *DoubleRefArchiveDB) GetContracts(fid string) ([]string, error) {
 	if err != nil {
 		return nil, ErrFidNotFound
 	}
-    return strings.Split(string(value), cidSeparator), nil
+	return strings.Split(string(value), cidSeparator), nil
 }
 
 func (d *DoubleRefArchiveDB) SetContract(cid string, fid string) error {
-    value, err := d.db.Get([]byte(cid), nil)//check if it already exists
-    if err != nil && !errors.Is(err, leveldb.ErrNotFound) {
-        return err
-    }
-    if value != nil {
-        return ErrContractAlreadyExists
-    }
+	value, err := d.db.Get([]byte(cid), nil) // check if it already exists
+	if err != nil && !errors.Is(err, leveldb.ErrNotFound) {
+		return err
+	}
+	if value != nil {
+		return ErrContractAlreadyExists
+	}
 
 	batch := new(leveldb.Batch)
 	batch.Put([]byte(cid), []byte(fid))

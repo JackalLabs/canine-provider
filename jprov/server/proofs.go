@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,7 +16,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-    "errors"
 
 	"github.com/JackalLabs/jackal-provider/jprov/archive"
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
@@ -326,9 +326,9 @@ func (f *FileServer) CleanExpired() error {
 
 	for iter.Next() {
 		cid := string(iter.Key())
-        downtime, err := archive.ByteToBlock(iter.Value())
+		downtime, err := archive.ByteToBlock(iter.Value())
 		if err != nil {
-            return err
+			return err
 		}
 
 		if downtime > int64(maxMisses) {
@@ -336,7 +336,7 @@ func (f *FileServer) CleanExpired() error {
 			if err != nil {
 				return err
 			}
-            f.logger.Info(fmt.Sprintf("Purged CID: %s", string(cid)))
+			f.logger.Info(fmt.Sprintf("Purged CID: %s", string(cid)))
 		} else {
 			f.logger.Info(fmt.Sprintf("%s will be removed in %d cycles",
 				string(cid), int64(maxMisses)-downtime))
@@ -358,15 +358,15 @@ func (f *FileServer) IncrementDowntime(cid string) error {
 }
 
 func (f *FileServer) DeleteDowntime(cid string) error {
-    _, err := f.downtimedb.Get(cid)
-    if errors.Is(err, archive.ErrContractNotFound) {
-        return nil
-    }
-    if err != nil {
-        return err
-    }
+	_, err := f.downtimedb.Get(cid)
+	if errors.Is(err, archive.ErrContractNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
 
-    return f.downtimedb.Delete(cid)
+	return f.downtimedb.Delete(cid)
 }
 
 func (f *FileServer) ContractState(cid string) string {
@@ -395,19 +395,19 @@ func (f *FileServer) handleContracts() error {
 	for iter.Next() {
 		cid := string(iter.Key())
 		fid := string(iter.Value())
-        if strings.HasPrefix(cid, "jklf") {//skip cid reference
-            continue
-        }
+		if strings.HasPrefix(cid, "jklf") { // skip cid reference
+			continue
+		}
 
 		f.logger.Info(fmt.Sprintf("FID: %s", string(fid)))
 		f.logger.Info(fmt.Sprintf("CID: %s", cid))
 
 		switch state := f.QueryContractState(cid); state {
 		case verified:
-            err := f.DeleteDowntime(cid)
-            if err != nil {
-                f.logger.Error("error when unmarking downtime cid: ", cid, ": ", err)
-            }
+			err := f.DeleteDowntime(cid)
+			if err != nil {
+				f.logger.Error("error when unmarking downtime cid: ", cid, ": ", err)
+			}
 			continue
 		case notFound:
 			err := f.IncrementDowntime(cid)
@@ -415,10 +415,10 @@ func (f *FileServer) handleContracts() error {
 				return err
 			}
 		case notVerified:
-            err := f.DeleteDowntime(cid)
-            if err != nil {
-                f.logger.Error("error when unmarking downtime cid: ", cid, ": ", err)
-            }
+			err := f.DeleteDowntime(cid)
+			if err != nil {
+				f.logger.Error("error when unmarking downtime cid: ", cid, ": ", err)
+			}
 
 			err = f.Prove(cid)
 			if err != nil {
