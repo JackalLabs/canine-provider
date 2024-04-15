@@ -153,6 +153,22 @@ func writeResponse(w http.ResponseWriter, upload types.Upload, fid, cid string) 
 		return json.NewEncoder(w).Encode(resp)
 	}
 
+	if len(cid) == 0 {
+		e := fmt.Errorf("cid: '%s' is empty", cid)
+		resp := types.ErrorResponse{
+			Error: e.Error(),
+		}
+		return json.NewEncoder(w).Encode(resp)
+	}
+
+	if len(fid) == 0 {
+		e := fmt.Errorf("file with cid '%s' has empty fid: '%s'", cid, fid)
+		resp := types.ErrorResponse{
+			Error: e.Error(),
+		}
+		return json.NewEncoder(w).Encode(resp)
+	}
+
 	resp := types.UploadResponse{
 		CID: cid,
 		FID: fid,

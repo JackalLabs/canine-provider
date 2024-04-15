@@ -10,7 +10,7 @@ jobs:
       matrix:
         os: [ubuntu-20.04, macos-latest]
     steps:
-      - uses: actions/checkout@v4.1.1
+      - uses: actions/checkout@v4.1.2
       - uses: actions/setup-go@v5
         with:
           go-version: 1.18.1 # The Go version to download (if necessary) and use.
@@ -19,7 +19,7 @@ jobs:
         run: |
           make build
           cp "build/jprovd" "jprovd-$RUNNER_OS"
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: jprovd-${{runner.os}}
           path: jprovd-${{runner.os}}
@@ -29,15 +29,15 @@ jobs:
       [native-build-cli]
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v4.1.1
-      - uses: actions/download-artifact@v3
+      - uses: actions/checkout@v4.1.2
+      - uses: actions/download-artifact@v4
         with:
           name: jprovd-Linux
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: jprovd-macOS
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           prerelease: true
           name: nightly
