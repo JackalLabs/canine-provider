@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"syscall"
 
 	"github.com/JackalLabs/blanket/blanket"
 	"github.com/cosmos/cosmos-sdk/version"
@@ -221,6 +222,58 @@ func ResetCommand() *cobra.Command {
 	return cmd
 }
 
+func PruneCommand() *cobra.Command {
+    cmd := &cobra.Command{
+        Use: "prune",
+        Short: "Prune files that are no longer on contract according to chain data",
+        Long: "Prune files that are no longer on contract according to chain data",
+        Args: cobra.ExactArgs(0),
+        RunE: func(cmd *cobra.Command, args []string) error {
+			buf := bufio.NewReader(cmd.InOrStdin())
+			yes, err := input.GetConfirmation("Are you sure you want to prune expired files?", buf, cmd.ErrOrStderr())
+			if err != nil {
+				return err
+			}
+
+			if !yes {
+				return nil
+			}
+
+			clientCtx := client.GetClientContextFromCmd(cmd)
+
+			dbPath := utils.GetArchiveDBPath(clientCtx)
+			archivedb, err := archive.NewDoubleRefArchiveDB(dbPath)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				err = errors.Join(err, archivedb.Close())
+			}()
+
+			downtimedbPath := utils.GetDowntimeDBPath(clientCtx)
+			downtimedb, err := archive.NewDowntimeDB(downtimedbPath)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				err = errors.Join(err, downtimedb.Close())
+			}()
+
+   			fs, err := server.NewFileServer(cmd, archivedb, downtimedb)
+			if err != nil {
+				return err
+			}
+            err = fs.RecollectActiveDeals()
+            if err != nil {
+                return err
+            }
+
+            return fs.PruneExpiredFiles()
+        },
+    }
+    return cmd
+}
+
 func MigrateCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "migrate",
@@ -228,13 +281,7 @@ func MigrateCommand() *cobra.Command {
 		Long:  `Migrate old file system. This will glue all blocks together into one file per fids stored in your machine`,
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
-			if err != nil {
-				return err
-			}
-
 			buf := bufio.NewReader(cmd.InOrStdin())
-
 			yes, err := input.GetConfirmation("Are you sure you want to migrate from old file system?", buf, cmd.ErrOrStderr())
 			if err != nil {
 				return err
@@ -244,6 +291,48 @@ func MigrateCommand() *cobra.Command {
 				return nil
 			}
 
+            defer func() {
+                //required to stop proof server
+                err = errors.Join(err, syscall.Kill(os.Getpid(), syscall.SIGTERM))
+            }()
+
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			dbPath := utils.GetArchiveDBPath(clientCtx)
+			archivedb, err := archive.NewDoubleRefArchiveDB(dbPath)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				err = errors.Join(err, archivedb.Close())
+			}()
+
+			downtimedbPath := utils.GetDowntimeDBPath(clientCtx)
+			downtimedb, err := archive.NewDowntimeDB(downtimedbPath)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				err = errors.Join(err, downtimedb.Close())
+			}()
+
+   			fs, err := server.NewFileServer(cmd, archivedb, downtimedb)
+			if err != nil {
+				return err
+			}
+            err = fs.RecollectActiveDeals()
+            if err != nil {
+                return err
+            }
+
+
+            interval, err := cmd.Flags().GetUint16(types.FlagInterval)
+            if err != nil {
+                interval = 0
+            }
+
+            fmt.Println("starting proof server")
+            go fs.StartProofServer(interval)
+
 			chunkSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
 			if err != nil {
 				err = errors.Join(errors.New("Migrate: cannot migrate without chunk size"), err)
@@ -251,8 +340,7 @@ func MigrateCommand() *cobra.Command {
 			}
 
 			utils.Migrate(clientCtx, chunkSize)
-
-			return nil
+            return err
 		},
 	}
 

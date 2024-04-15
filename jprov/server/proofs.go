@@ -15,6 +15,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+    "os/signal"
+	"syscall"
 	"time"
 
 	"github.com/JackalLabs/jackal-provider/jprov/archive"
@@ -399,8 +401,7 @@ func (f *FileServer) handleContracts() error {
 			continue
 		}
 
-		f.logger.Info(fmt.Sprintf("FID: %s", string(fid)))
-		f.logger.Info(fmt.Sprintf("CID: %s", cid))
+        f.logger.Info(fmt.Sprintf("CID: %s FID: %s", cid, fid))
 
 		switch state := f.QueryContractState(cid); state {
 		case verified:
@@ -441,22 +442,31 @@ func (f *FileServer) startShift() error {
 }
 
 func (f *FileServer) StartProofServer(interval uint16) {
+    // catch interrupt or termination sig and stop proving
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
 	for {
-		start := time.Now()
-		err := f.startShift()
-		if err != nil {
-			f.logger.Error(err.Error())
-		}
+        select {
+            case <-sigChan:
+                return
+            default:
+                start := time.Now()
+                err := f.startShift()
+                if err != nil {
+                    f.logger.Error(err.Error())
+                }
 
-		end := time.Since(start)
-		if end.Seconds() > 120 {
-			f.logger.Error(fmt.Sprintf("proof took %d", end.Nanoseconds()))
-		}
+                end := time.Since(start)
+                if end.Seconds() > 120 {
+                    f.logger.Error(fmt.Sprintf("proof took %d", end.Nanoseconds()))
+                }
 
-		tm := time.Duration(interval) * time.Second
+                tm := time.Duration(interval) * time.Second
 
-		if tm.Nanoseconds()-end.Nanoseconds() > 0 {
-			time.Sleep(time.Duration(interval) * time.Second)
-		}
+                if tm.Nanoseconds()-end.Nanoseconds() > 0 {
+                    time.Sleep(time.Duration(interval) * time.Second)
+                } 
+        }
 	}
 }

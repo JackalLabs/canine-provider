@@ -259,7 +259,7 @@ func (f *FileServer) RecollectActiveDeals() error {
 		}
 	}
 
-	f.logger.Info("recollected deals: ", count)
+	f.logger.Info(fmt.Sprintf("recollected deals: %d\n", count))
 	return nil
 }
 
