@@ -58,7 +58,7 @@ func TestGetPiece(t *testing.T) {
 	if err != nil {
 		t.Errorf("GetPiece 1, 8: %s", resErr)
 	}
-	if string(resData) != "orld\n\x00\x00\x00" {
+    if string(resData) != "orld\n" {
 		t.Errorf("GetPiece 1, 8: have %q, want %q", string(resData), "orld\n")
 	}
 }
