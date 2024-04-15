@@ -36,7 +36,7 @@ func ListQueue(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps ht
 func ListFiles(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	clientCtx := client.GetClientContextFromCmd(cmd)
 
-	files, err := os.ReadDir(utils.GetStoragePath(clientCtx, ps.ByName("file")))
+	files, err := os.ReadDir(utils.GetFidDir(clientCtx.HomeDir, ps.ByName("file")))
 	if err != nil {
 		fmt.Println(err)
 	}

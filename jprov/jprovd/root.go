@@ -73,6 +73,7 @@ func NewRootCmd() *cobra.Command {
 	rootCmd.AddCommand(
 		StartServerCommand(),
 		ResetCommand(),
+		MigrateCommand(),
 		init,
 		DataCmd(),
 		ClientCmd(),

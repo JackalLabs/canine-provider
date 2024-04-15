@@ -9,14 +9,15 @@ import (
 	"strconv"
 	"sync"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
-	"github.com/cosmos/cosmos-sdk/client"
+
 	storageKeeper "github.com/jackalLabs/canine-chain/v3/x/storage/keeper"
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
-
-	"github.com/spf13/cobra"
 )
 
 func verifyAttest(deal storageTypes.ActiveDeals, attest types.AttestRequest) (verified bool, err error) {
@@ -53,80 +54,80 @@ func addMsgAttest(address string, cid string, q *queue.UploadQueue) (upload type
 	return
 }
 
-func attest(w *http.ResponseWriter, r *http.Request, cmd *cobra.Command, q *queue.UploadQueue) {
-	clientCtx, qerr := client.GetClientTxContext(cmd)
-	if qerr != nil {
-		fmt.Println(qerr)
-		return
-	}
+func (f *FileServer) handleAttestRequest(w *http.ResponseWriter, r *http.Request) error {
+	var attestReq types.AttestRequest
 
-	var attest types.AttestRequest
-
-	err := json.NewDecoder(r.Body).Decode(&attest)
+	err := json.NewDecoder(r.Body).Decode(&attestReq)
 	if err != nil {
 		fmt.Println("Attest request was malformed.")
 		http.Error(*w, err.Error(), http.StatusBadRequest)
-		return
+		return nil
 	}
 
-	queryClient := storageTypes.NewQueryClient(clientCtx)
-
-	dealReq := &storageTypes.QueryActiveDealRequest{
-		Cid: attest.Cid,
-	}
-
-	fmt.Printf("Attesting for: %s\n", attest.Cid)
-
-	deal, err := queryClient.ActiveDeals(context.Background(), dealReq)
 	if err != nil {
-		http.Error(*w, err.Error(), http.StatusBadRequest)
-	}
-
-	verified, err := verifyAttest(deal.ActiveDeals, attest)
-	if err != nil {
-		http.Error(*w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if !verified {
-		http.Error(*w, errors.New("failed to verify attest").Error(), http.StatusBadRequest)
-	}
-
-	address, err := crypto.GetAddress(clientCtx)
-	if err != nil {
-		http.Error(*w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	upload, err := addMsgAttest(address, attest.Cid, q)
-	if err != nil {
-		http.Error(*w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	upload.Callback.Wait()
-
-	if upload.Err != nil {
-		http.Error(*w, upload.Err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if upload.Response == nil {
-		http.Error(*w, "upload: no response", http.StatusBadRequest)
-		return
-	}
-
-	if upload.Response.Code != 0 {
-		http.Error(*w, fmt.Errorf(upload.Response.RawLog).Error(), http.StatusBadRequest)
-		return
+		switch err = f.attest(attestReq); {
+		case errors.Is(err, errors.New("failed to verify attest")):
+			http.Error(*w, err.Error(), http.StatusBadRequest)
+		case errors.Is(err, status.Error(codes.NotFound, "not found")):
+			http.Error(*w, errors.New("active deal not found").Error(), http.StatusBadRequest)
+		case errors.Is(err, errors.New("tx error response")):
+			http.Error(*w, err.Error(), http.StatusBadRequest)
+		default:
+			http.Error(*w, "internal server error", http.StatusInternalServerError)
+			return err
+		}
 	}
 
 	v := types.ProxyResponse{
 		Ok: true,
 	}
 
-	err = json.NewEncoder(*w).Encode(v)
-	if err != nil {
-		fmt.Println(err)
+	return json.NewEncoder(*w).Encode(v)
+}
+
+func (f *FileServer) attest(attestReq types.AttestRequest) error {
+	fmt.Printf("Attesting for: %s\n", attestReq.Cid)
+	dealReq := &storageTypes.QueryActiveDealRequest{
+		Cid: attestReq.Cid,
 	}
+
+	deal, err := f.queryClient.ActiveDeals(context.Background(), dealReq)
+	if err != nil {
+		return err
+	}
+
+	verified, err := verifyAttest(deal.ActiveDeals, attestReq)
+	if err != nil {
+		return err
+	}
+
+	if !verified {
+		return errors.New("failed to verify attest")
+	}
+
+	address, err := crypto.GetAddress(f.cosmosCtx)
+	if err != nil {
+		return err
+	}
+
+	upload, err := addMsgAttest(address, attestReq.Cid, f.queue)
+	if err != nil {
+		return err
+	}
+
+	upload.Callback.Wait()
+
+	if upload.Err != nil {
+		return errors.Join(errors.New("tx error response"), err)
+	}
+
+	if upload.Response == nil {
+		return errors.New("upload: no response")
+	}
+
+	if upload.Response.Code != 0 {
+		return fmt.Errorf(upload.Response.RawLog)
+	}
+
+	return nil
 }

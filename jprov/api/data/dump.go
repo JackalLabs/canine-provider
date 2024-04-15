@@ -4,21 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/JackalLabs/jackal-provider/jprov/api/types"
-	"github.com/JackalLabs/jackal-provider/jprov/utils"
-	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/JackalLabs/jackal-provider/jprov/archive"
 )
 
-func DumpDB(w http.ResponseWriter, db *leveldb.DB) {
+func DumpDB(w http.ResponseWriter, db archive.ArchiveDB) {
 	data := make([]types.DataBlock, 0)
-	iter := db.NewIterator(nil, nil)
+	iter := db.NewIterator()
 
 	for iter.Next() {
-		if string(iter.Key())[:4] == "TREE" {
-			continue
-		}
 		d := types.DataBlock{
 			Key:   string(iter.Key()),
 			Value: string(iter.Value()),
@@ -36,23 +31,21 @@ func DumpDB(w http.ResponseWriter, db *leveldb.DB) {
 	}
 }
 
-func DumpDowntimes(w http.ResponseWriter, db *leveldb.DB) {
+func DumpDowntimes(w http.ResponseWriter, db *archive.DowntimeDB) {
 	data := make([]types.DowntimeBlock, 0)
-	iter := db.NewIterator(nil, nil)
+	iter := db.NewIterator()
 
 	for iter.Next() {
-		if string(iter.Key())[:5] == utils.DowntimeKey {
-			i, err := strconv.Atoi(string(iter.Value()))
-			if err != nil {
-				continue
-			}
-			d := types.DowntimeBlock{
-				CID:      string(iter.Key())[5:],
-				Downtime: i,
-			}
-			data = append(data, d)
-
+		downtime, err := archive.ByteToBlock(iter.Value())
+		if err != nil {
+			fmt.Printf("Error: DumpDowntimes(): %s", err.Error())
+			continue
 		}
+		d := types.DowntimeBlock{
+			CID:      string(iter.Key()),
+			Downtime: int(downtime),
+		}
+		data = append(data, d)
 	}
 
 	v := types.DowntimeResponse{
@@ -65,20 +58,16 @@ func DumpDowntimes(w http.ResponseWriter, db *leveldb.DB) {
 	}
 }
 
-func DumpFids(w http.ResponseWriter, db *leveldb.DB) {
+func DumpFids(w http.ResponseWriter, db archive.ArchiveDB) {
 	data := make([]types.FidBlock, 0)
-	iter := db.NewIterator(nil, nil)
+	iter := db.NewIterator()
 
 	for iter.Next() {
-		if string(iter.Key())[:5] == utils.FileKey {
-
-			d := types.FidBlock{
-				CID: string(iter.Key())[5:],
-				FID: string(iter.Value()),
-			}
-			data = append(data, d)
-
+		d := types.FidBlock{
+			CID: string(iter.Key()),
+			FID: string(iter.Value()),
 		}
+		data = append(data, d)
 	}
 
 	v := types.FidResponse{

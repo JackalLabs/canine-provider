@@ -6,14 +6,14 @@ import (
 	"github.com/JackalLabs/jackal-provider/jprov/api/client"
 	"github.com/JackalLabs/jackal-provider/jprov/api/data"
 	"github.com/JackalLabs/jackal-provider/jprov/api/network"
+	"github.com/JackalLabs/jackal-provider/jprov/archive"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/cobra"
-	"github.com/syndtr/goleveldb/leveldb"
 )
 
-func BuildApi(cmd *cobra.Command, q *queue.UploadQueue, router *httprouter.Router, db *leveldb.DB) {
+func BuildApi(cmd *cobra.Command, q *queue.UploadQueue, router *httprouter.Router, archivedb archive.ArchiveDB, downtimedb *archive.DowntimeDB) {
 	// CLIENT
 	router.GET("/api/client/list", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		client.ListFiles(cmd, w, r, ps)
@@ -30,23 +30,23 @@ func BuildApi(cmd *cobra.Command, q *queue.UploadQueue, router *httprouter.Route
 
 	// DATA
 	router.GET("/api/data/dump", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		data.DumpDB(w, db)
+		data.DumpDB(w, archivedb)
 	})
 
 	router.GET("/api/data/downtime", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		data.DumpDowntimes(w, db)
+		data.DumpDowntimes(w, downtimedb)
 	})
 
 	router.GET("/api/data/fids", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		data.DumpFids(w, db)
+		data.DumpFids(w, archivedb)
 	})
 
 	// NETWORK
 	router.GET("/api/network/deals", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		network.ShowDeals(cmd, w, r, ps, db)
+		network.ShowDeals(cmd, w, r, ps)
 	})
 	router.GET("/api/network/strays", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		network.ShowStrays(cmd, w, r, ps, db)
+		network.ShowStrays(cmd, w, r, ps)
 	})
 	router.GET("/api/network/balance", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		network.GetBalance(cmd, w, r, ps)

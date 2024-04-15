@@ -2,29 +2,30 @@ package server
 
 import (
 	"context"
-	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
+	"log"
 	"math/rand"
 	"mime/multipart"
 	"net/http"
 	"os"
-	"strings"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
+	"github.com/JackalLabs/jackal-provider/jprov/archive"
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
-	"github.com/JackalLabs/jackal-provider/jprov/strays"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/rs/cors"
-	"github.com/syndtr/goleveldb/leveldb"
 
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
+	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/cobra"
@@ -32,23 +33,74 @@ import (
 	_ "net/http/pprof"
 )
 
-func saveFile(file multipart.File, handler *multipart.FileHeader, sender string, cmd *cobra.Command, db *leveldb.DB, w *http.ResponseWriter, q *queue.UploadQueue) error {
-	size := handler.Size
-	ctx := utils.GetServerContextFromCmd(cmd)
-	fid, merkle, _, err := utils.WriteFileToDisk(cmd, file, file, file, size, db, ctx.Logger)
+type FileServer struct {
+	cmd         *cobra.Command
+	cosmosCtx   client.Context
+	serverCtx   *utils.Context
+	queryClient storageTypes.QueryClient
+	archive     archive.Archive
+	archivedb   archive.ArchiveDB
+	downtimedb  *archive.DowntimeDB
+	provider    storageTypes.Providers
+	blockSize   int64
+	queue       *queue.UploadQueue
+	logger      tmlog.Logger
+}
+
+func NewFileServer(
+	cmd *cobra.Command,
+	archivedb archive.ArchiveDB,
+	downtimedb *archive.DowntimeDB,
+) (fs *FileServer, err error) {
+	sCtx := utils.GetServerContextFromCmd(cmd)
+	clientCtx := client.GetClientContextFromCmd(cmd)
+
+	blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
 	if err != nil {
-		ctx.Logger.Error("Write To Disk Error: %v", err)
+		return nil, err
+	}
+
+	queue := queue.New()
+
+	return &FileServer{
+		cmd:         cmd,
+		cosmosCtx:   clientCtx,
+		serverCtx:   sCtx,
+		archive:     archive.NewSingleCellArchive(sCtx.Config.RootDir),
+		archivedb:   archivedb,
+		downtimedb:  downtimedb,
+		blockSize:   blockSize,
+		queryClient: storageTypes.NewQueryClient(clientCtx),
+		queue:       &queue,
+		logger:      sCtx.Logger,
+	}, nil
+}
+
+func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader, sender string, w *http.ResponseWriter) error {
+	fid, err := utils.MakeFID(file, file)
+	if err != nil {
 		return err
 	}
 
-	clientCtx, qerr := client.GetClientTxContext(cmd)
-	if qerr != nil {
-		return qerr
+	tree, err := utils.CreateMerkleTree(f.blockSize, handler.Size, file, file)
+	if err != nil {
+		return err
 	}
 
-	address, err := crypto.GetAddress(clientCtx)
+	err = f.archive.WriteTreeToDisk(fid, tree)
 	if err != nil {
-		ctx.Logger.Error(err.Error())
+		return err
+	}
+
+	_, err = f.archive.WriteFileToDisk(file, fid)
+	if err != nil {
+		f.serverCtx.Logger.Error("saveFile: Write To Disk Error: ", err)
+		return err
+	}
+
+	address, err := crypto.GetAddress(f.cosmosCtx)
+	if err != nil {
+		f.serverCtx.Logger.Error(err.Error())
 		return err
 	}
 
@@ -60,29 +112,37 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	msg, ctrErr := MakeContract(cmd, fid, sender, &wg, q, merkle, fmt.Sprintf("%d", size))
+	msg, ctrErr := f.MakeContract(fid, sender, &wg, string(tree.Root()), fmt.Sprintf("%d", handler.Size))
 	if ctrErr != nil {
-		ctx.Logger.Error("CONTRACT ERROR: %v", ctrErr)
+		f.serverCtx.Logger.Error("saveFile: CONTRACT ERROR: ", ctrErr)
 		return ctrErr
 	}
 	wg.Wait()
 
 	if msg.Err != nil {
-		ctx.Logger.Error(msg.Err.Error())
-		return err
+		f.serverCtx.Logger.Error(msg.Err.Error())
 	}
 
 	if err = writeResponse(*w, *msg, fid, cid); err != nil {
-		ctx.Logger.Error("Json Encode Error: %v", err)
+		f.serverCtx.Logger.Error("Json Encode Error: ", err)
 		return err
 	}
 
-	err = utils.SaveToDatabase(fid, cid, db, ctx.Logger)
+	err = f.saveToDatabase(fid, cid)
 	if err != nil {
 		return err
 	}
+	f.logger.Info(fmt.Sprintf("%s %s", fid, "Added to database"))
 
 	return nil
+}
+
+func (f *FileServer) saveToDatabase(fid string, cid string) error {
+	err := f.downtimedb.Set(cid, 0)
+	if err != nil {
+		return err
+	}
+	return f.archivedb.SetContract(cid, fid)
 }
 
 func writeResponse(w http.ResponseWriter, upload types.Upload, fid, cid string) error {
@@ -117,47 +177,27 @@ func writeResponse(w http.ResponseWriter, upload types.Upload, fid, cid string) 
 	return json.NewEncoder(w).Encode(resp)
 }
 
-func buildCid(address, sender, fid string) (string, error) {
-	h := sha256.New()
-
-	var footprint strings.Builder // building FID
-	footprint.WriteString(sender)
-	footprint.WriteString(address)
-	footprint.WriteString(fid)
-
-	_, err := io.WriteString(h, footprint.String())
+func (f *FileServer) MakeContract(fid string, sender string, wg *sync.WaitGroup, merkleroot string, filesize string) (*types.Upload, error) {
+	address, err := crypto.GetAddress(f.cosmosCtx)
 	if err != nil {
-		return "", err
-	}
-
-	return utils.MakeCid(h.Sum(nil))
-}
-
-func MakeContract(cmd *cobra.Command, fid string, sender string, wg *sync.WaitGroup, q *queue.UploadQueue, merkleroot string, filesize string) (*types.Upload, error) {
-	ctx := utils.GetServerContextFromCmd(cmd)
-	clientCtx, err := client.GetClientTxContext(cmd)
-	if err != nil {
+		f.serverCtx.Logger.Error(err.Error())
 		return nil, err
 	}
 
-	address, err := crypto.GetAddress(clientCtx)
-	if err != nil {
-		ctx.Logger.Error(err.Error())
-		return nil, err
-	}
+	xRoot := hex.EncodeToString([]byte(merkleroot))
 
 	msg := storageTypes.NewMsgPostContract(
 		address,
 		sender,
 		filesize,
 		fid,
-		merkleroot,
+		xRoot,
 	)
 	if err := msg.ValidateBasic(); err != nil {
 		return nil, err
 	}
 
-	ctx.Logger.Info(fmt.Sprintf("Contract being pushed: %s", msg.String()))
+	f.serverCtx.Logger.Info(fmt.Sprintf("Contract being pushed: %s", msg.String()))
 
 	u := types.Upload{
 		Message:  msg,
@@ -168,101 +208,97 @@ func MakeContract(cmd *cobra.Command, fid string, sender string, wg *sync.WaitGr
 
 	k := &u
 
-	q.Queue = append(q.Queue, k)
+	f.queue.Queue = append(f.queue.Queue, k)
 
 	return k, nil
 }
 
-func StartFileServer(cmd *cobra.Command) {
-	clientCtx, qerr := client.GetClientTxContext(cmd)
-	if qerr != nil {
-		fmt.Println(qerr)
-		return
-	}
-
-	queryClient := storageTypes.NewQueryClient(clientCtx)
-
-	address, err := crypto.GetAddress(clientCtx)
+func (f *FileServer) Init() (router *httprouter.Router, err error) {
+	address, err := crypto.GetAddress(f.cosmosCtx)
 	if err != nil {
-		fmt.Println(err)
 		return
 	}
 
-	params := &storageTypes.QueryProviderRequest{
+	request := &storageTypes.QueryProviderRequest{
 		Address: address,
 	}
 
-	me, err := queryClient.Providers(context.Background(), params)
+	response, err := f.queryClient.Providers(context.Background(), request)
 	if err != nil {
-		fmt.Println("Provider not initialized on the blockchain, or connection to the RPC node has been lost. Please make sure your RPC node is available then run `jprovd init` to fix this.")
+		err = fmt.Errorf("Provider not initialized on the blockchain, or connection to the RPC node has been lost. Please make sure your RPC node is available then run `jprovd init` to fix this.")
 		return
 	}
 
-	providers, err := queryClient.ProvidersAll(context.Background(), &storageTypes.QueryAllProvidersRequest{})
-	if err != nil {
-		fmt.Println("Cannot connect to jackal blockchain.")
-		return
-	}
+	f.provider = response.Providers
 
-	path := utils.GetDataPath(clientCtx)
+	router = httprouter.New()
 
-	db, dberr := leveldb.OpenFile(path, nil)
-	if dberr != nil {
-		fmt.Println(dberr)
-		return
-	}
-	router := httprouter.New()
-
-	q := queue.New()
-
-	GetRoutes(cmd, router, db, &q)
-	PostRoutes(cmd, router, db, &q)
+	f.GetRoutes(router)
+	f.PostRoutes(router)
 	PProfRoutes(router)
 
+	return
+}
+
+func (f *FileServer) RecollectActiveDeals() error {
+	queryActiveDeals, err := f.QueryMyActiveDeals()
+	if err != nil {
+		return err
+	}
+
+	count := 0
+
+	for _, q := range queryActiveDeals {
+		_, err := f.archivedb.GetFid(q.Cid)
+		if errors.Is(err, archive.ErrContractNotFound) {
+			err = f.archivedb.SetContract(q.Cid, q.Fid)
+			count++
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	f.logger.Info("recollected deals: ", count)
+	return nil
+}
+
+func (f *FileServer) StartFileServer(cmd *cobra.Command) {
+	defer func() {
+		log.Printf("Closing database...\n")
+		err := f.archivedb.Close()
+		err = errors.Join(err, f.downtimedb.Close())
+		if err != nil {
+			log.Fatalf("Failed to close db: %s", err)
+		}
+	}()
+	router, err := f.Init()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	handler := cors.Default().Handler(router)
-
-	ctx := utils.GetServerContextFromCmd(cmd)
-
-	threads, err := cmd.Flags().GetUint(types.FlagThreads)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	strs, err := cmd.Flags().GetBool(types.HaltStraysFlag)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
 
 	providerName, err := cmd.Flags().GetString(types.FlagProviderName)
 	if err != nil {
 		providerName = "A Storage Provider"
 	}
 
-	//fmt.Println("Testing connection...")
-	//connected := testConnection(providers.Providers, me.Providers.Ip)
-	//if !connected {
-	//	fmt.Println("Domain not configured correctly, make sure your domain points to your provider.")
-	//	return
-	//}
-	_ = providers
-	_ = me
-
-	manager := strays.NewStrayManager(cmd) // creating and starting the stray management system
-	if !strs {
-		manager.Init(cmd, threads, db)
+	interval, err := cmd.Flags().GetUint16(types.FlagInterval)
+	if err != nil {
+		interval = 0
 	}
 	// Start the reporting system
 	reporter := InitReporter(cmd)
 
-	go postProofs(cmd, db, &q, ctx)
-	go NatCycle(cmd.Context())
-	go q.StartListener(cmd, providerName)
-
-	if !strs {
-		go manager.Start(cmd)
+	f.logger.Info("recollecting active deals...")
+	err = f.RecollectActiveDeals()
+	if err != nil {
+		f.logger.Error("failed to recollect lost active deals to database :", err.Error())
 	}
+	go f.StartProofServer(interval)
+	go NatCycle(cmd.Context())
+	go f.queue.StartListener(cmd, providerName)
 
 	report, err := cmd.Flags().GetBool(types.FlagDoReport)
 	if err != nil {
@@ -278,7 +314,7 @@ func StartFileServer(cmd *cobra.Command) {
 					fmt.Println(err)
 				}
 			} else {
-				err := reporter.AttestReport(&q)
+				err := reporter.AttestReport(f.queue)
 				if err != nil {
 					fmt.Println(err)
 				}
@@ -294,18 +330,30 @@ func StartFileServer(cmd *cobra.Command) {
 		return
 	}
 
-	fmt.Printf("🌍 Started Provider: http://0.0.0.0:%d\n", port)
-	err = http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", port), handler)
-	if err != nil {
-		fmt.Println(err)
-		return
+	server := http.Server{
+		Addr:    fmt.Sprintf("0.0.0.0:%d", port),
+		Handler: handler,
 	}
 
-	if errors.Is(err, http.ErrServerClosed) {
-		fmt.Printf("Storage Provider Closed\n")
-		return
-	} else if err != nil {
-		fmt.Printf("error starting server: %s\n", err)
-		os.Exit(1)
+	go func() {
+		fmt.Printf("🌍 Started Provider: http://0.0.0.0:%d\n", port)
+		err = server.ListenAndServe()
+
+		if errors.Is(err, http.ErrServerClosed) {
+			fmt.Printf("Storage Provider Closed\n")
+			return
+		} else if err != nil {
+			fmt.Printf("error starting server: %s\n", err)
+			return
+		}
+	}()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
+
+	fmt.Printf("Signal captured, shutting down server...")
+	if err := server.Shutdown(context.Background()); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Fatalf("HTTP server error: %v", err)
 	}
 }

@@ -3,127 +3,123 @@ package utils
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"io"
 	"os"
 	"strconv"
 	"strings"
 
-	"github.com/tendermint/tendermint/libs/log"
-	"github.com/wealdtech/go-merkletree"
+	merkletree "github.com/wealdtech/go-merkletree"
 	"github.com/wealdtech/go-merkletree/sha3"
-
-	"github.com/JackalLabs/jackal-provider/jprov/types"
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/spf13/cobra"
 )
 
-func MakeFID(reader io.Reader) (string, error) {
-	h := sha256.New()
-	_, err := io.Copy(h, reader)
+// MakeFID generates fid from the data it reads from reader
+func MakeFID(reader io.Reader, seeker io.Seeker) (fid string, err error) {
+	current, err := seeker.Seek(0, io.SeekCurrent)
 	if err != nil {
-		return "", err
+		return
 	}
-	hashName := h.Sum(nil)
-	fid, err := MakeFid(hashName)
+	_, err = seeker.Seek(0, io.SeekStart)
+	if err != nil {
+		return
+	}
+
+	h := sha256.New()
+	_, err = io.Copy(h, reader)
 	if err != nil {
 		return "", err
 	}
 
+	hashName := h.Sum(nil)
+	fid, err = MakeFid(hashName)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = seeker.Seek(current, io.SeekStart)
+	if err != nil {
+		return
+	}
 	return fid, nil
 }
 
-func SaveFileToDisk(cmd *cobra.Command, fid string, file io.Reader) error {
-	clientCtx := client.GetClientContextFromCmd(cmd)
-
-	// creating file path
-	path := GetStoragePathV2(clientCtx, fid)
-	f, dirErr := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0o666)
-	if dirErr != nil {
-		return dirErr
-	}
-	defer f.Close()
-
-	_, err := io.Copy(f, file) // writing file to disk
+// This function generates merkletree from file.
+// The stream of bytes read from file is divided into blocks by blockSize.
+// Thus, smaller blockSize will increase the size of the tree but decrease the size of proof
+// and vice versa.
+func CreateMerkleTree(blockSize, fileSize int64, file io.Reader, seeker io.Seeker) (t *merkletree.MerkleTree, err error) {
+	current, err := seeker.Seek(0, io.SeekCurrent)
 	if err != nil {
-		return err
+		return
 	}
-
-	return nil
-}
-
-func WriteTreeToDisk(cmd *cobra.Command, fid string, tree *merkletree.MerkleTree) error {
-	clientCtx := client.GetClientContextFromCmd(cmd)
-
-	exportedTree, err := tree.Export()
+	_, err = seeker.Seek(0, io.SeekStart)
 	if err != nil {
-		return err
+		return
 	}
 
-	f, err := os.OpenFile(GetStoragePathForTree(clientCtx, fid), os.O_WRONLY|os.O_CREATE, 0o666)
-	if err != nil {
-		return err
-	}
-	_, err = f.Write(exportedTree)
-	if err != nil {
-		return err
-	}
-	err = f.Close()
-	if err != nil {
-		return err
-	}
+	data := make([][]byte, fileSize/blockSize+1)
 
-	return nil
-}
-
-func CreateMerkleTree(cmd *cobra.Command, fid string, file io.Reader, closer io.Closer, size int64, logger log.Logger) (*merkletree.MerkleTree, error) {
-	blockSize, err := cmd.Flags().GetInt64(types.FlagChunkSize)
-	if err != nil {
-		return nil, err
-	}
-
-	data := make([][]byte, size/blockSize+1)
-
-	for i := int64(0); i < size; i += blockSize {
+	// Divide files into blocks
+	for i := int64(0); i < fileSize; i += blockSize {
 		firstX := make([]byte, blockSize)
 		read, err := file.Read(firstX)
-
-		var loggerBuilder strings.Builder
-		loggerBuilder.WriteString("Bytes read:")
-		loggerBuilder.WriteString(strconv.Itoa(read))
-
-		logger.Debug(loggerBuilder.String())
+		firstX = firstX[:read]
 
 		if err != nil && err != io.EOF {
 			return nil, err
 		}
 
-		firstX = firstX[:read]
-
+		// Building a block
 		var hashBuilder strings.Builder
 		hashBuilder.WriteString(strconv.FormatInt(i/blockSize, 10))
 		hashBuilder.WriteString(hex.EncodeToString(firstX))
 
+		// Encrypt & reduce size of data
 		hash := sha256.New()
 		_, err = io.WriteString(hash, hashBuilder.String())
 		if err != nil {
 			return nil, err
 		}
 		hashName := hash.Sum(nil)
+
 		data[i/blockSize] = hashName
 	}
-	if closer != nil {
-		err := closer.Close()
-		if err != nil {
-			return nil, err
-		}
-	}
 
-	GetServerContextFromCmd(cmd).Logger.Info("Starting merkle tree construction...")
-
-	tree, err := merkletree.NewUsing(data, sha3.New512(), false)
+	_, err = seeker.Seek(current, io.SeekStart)
 	if err != nil {
-		return tree, err
+		return
 	}
 
-	return tree, nil
+	t, err = merkletree.NewUsing(data, sha3.New512(), false)
+	return
+}
+
+// GetBlock returns the block at index of file.
+// The blockSize must be the same as when the file's merkle tree was created.
+func GetBlock(index, blockSize int, file *os.File) (block []byte, err error) {
+	offset := blockSize * index
+	if offset < 0 {
+		err = errors.New("index and blockSize can't be negative int")
+		return
+	}
+
+	current, err := file.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return
+	}
+
+	_, err = file.Seek(0, io.SeekStart)
+	if err != nil {
+		return
+	}
+
+	buf := make([]byte, blockSize)
+
+	_, err = file.ReadAt(buf, int64(offset))
+	if err != nil {
+		return
+	}
+
+	_, err = file.Seek(current, io.SeekStart)
+	return
 }

@@ -5,10 +5,10 @@ import (
 	"fmt"
 
 	apitypes "github.com/JackalLabs/jackal-provider/jprov/api/types"
+	"github.com/JackalLabs/jackal-provider/jprov/archive"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/spf13/cobra"
-	"github.com/syndtr/goleveldb/leveldb"
 )
 
 func CmdDumpDatabase() *cobra.Command {
@@ -22,16 +22,14 @@ func CmdDumpDatabase() *cobra.Command {
 				return err
 			}
 
-			path := utils.GetDataPath(clientCtx)
-
-			db, dberr := leveldb.OpenFile(path, nil)
-			if dberr != nil {
-				fmt.Println(dberr)
+			db, err := archive.NewDoubleRefArchiveDB(utils.GetArchiveDBPath(clientCtx))
+			if err != nil {
+				fmt.Println(err)
 				return
 			}
 
 			data := make([]apitypes.DataBlock, 0)
-			iter := db.NewIterator(nil, nil)
+			iter := db.NewIterator()
 
 			for iter.Next() {
 				d := apitypes.DataBlock{

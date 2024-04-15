@@ -6,9 +6,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/JackalLabs/jackal-provider/jprov/archive"
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
@@ -24,19 +25,16 @@ import (
 	"github.com/wealdtech/go-merkletree/sha3"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/syndtr/goleveldb/leveldb"
 
 	"github.com/cosmos/cosmos-sdk/client"
 
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 
 	merkletree "github.com/wealdtech/go-merkletree"
-
-	"github.com/spf13/cobra"
 )
 
 func GetMerkleTree(ctx client.Context, filename string) (*merkletree.MerkleTree, error) {
-	rawTree, err := os.ReadFile(utils.GetStoragePathForTree(ctx, filename))
+	rawTree, err := os.ReadFile(utils.GetStoragePathForTree(ctx.HomeDir, filename))
 	if err != nil {
 		return &merkletree.MerkleTree{}, fmt.Errorf("unable to find merkle tree for: %s", filename)
 	}
@@ -44,9 +42,13 @@ func GetMerkleTree(ctx client.Context, filename string) (*merkletree.MerkleTree,
 	return merkletree.ImportMerkleTree(rawTree, sha3.New512())
 }
 
-func GenerateMerkleProof(tree merkletree.MerkleTree, index int, item []byte) (valid bool, proof *merkletree.Proof, err error) {
+func GenerateMerkleProof(tree merkletree.MerkleTree, index, blockSize int64, item []byte) (valid bool, proof *merkletree.Proof, err error) {
 	h := sha256.New()
-	_, err = io.WriteString(h, fmt.Sprintf("%d%x", index, item))
+
+	var hashBuilder strings.Builder
+	hashBuilder.WriteString(strconv.FormatInt(index, 10))
+	hashBuilder.WriteString(hex.EncodeToString(item))
+	_, err = io.WriteString(h, hashBuilder.String())
 	if err != nil {
 		return
 	}
@@ -60,23 +62,20 @@ func GenerateMerkleProof(tree merkletree.MerkleTree, index int, item []byte) (va
 	return
 }
 
-func CreateMerkleForProof(clientCtx client.Context, filename string, index int, ctx *utils.Context) (string, string, error) {
-	files := utils.GetStoragePathForPiece(clientCtx, filename, index)
-
-	item, err := os.ReadFile(files) // read only the chunk we need
-	if err != nil {
-		ctx.Logger.Error("Error can't open file!")
-		return "", "", err
-	}
-
-	mTree, err := GetMerkleTree(clientCtx, filename)
+func (f *FileServer) CreateMerkleForProof(filename string, blockSize, index int64) (string, string, error) {
+	data, err := f.archive.GetPiece(filename, index, blockSize)
 	if err != nil {
 		return "", "", err
 	}
 
-	verified, proof, err := GenerateMerkleProof(*mTree, index, item)
+	mTree, err := f.archive.RetrieveTree(filename)
 	if err != nil {
-		ctx.Logger.Error(err.Error())
+		return "", "", err
+	}
+
+	verified, proof, err := GenerateMerkleProof(*mTree, index, blockSize, data)
+	if err != nil {
+		f.logger.Error(err.Error())
 		return "", "", err
 	}
 
@@ -86,10 +85,10 @@ func CreateMerkleForProof(clientCtx client.Context, filename string, index int, 
 	}
 
 	if !verified {
-		ctx.Logger.Info("unable to generate valid proof")
+		f.logger.Info("unable to generate valid proof")
 	}
 
-	return fmt.Sprintf("%x", item), string(jproof), nil
+	return fmt.Sprintf("%x", data), string(jproof), nil
 }
 
 func requestAttestation(clientCtx client.Context, cid string, hashList string, item string, q *queue.UploadQueue) error {
@@ -231,32 +230,26 @@ func requestAttestation(clientCtx client.Context, cid string, hashList string, i
 	return nil
 }
 
-func postProof(clientCtx client.Context, cid string, block string, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) error {
-	dex, ok := sdk.NewIntFromString(block)
-	ctx.Logger.Debug(fmt.Sprintf("BlockToProve: %s", block))
-	if !ok {
-		return fmt.Errorf("cannot parse block number")
-	}
-
-	data, err := db.Get(utils.MakeFileKey(cid), nil)
+func (f *FileServer) postProof(cid string, blockSize, block int64) error {
+	fid, err := f.archivedb.GetFid(cid)
 	if err != nil {
 		return err
 	}
 
-	item, hashlist, err := CreateMerkleForProof(clientCtx, string(data), int(dex.Int64()), ctx)
+	item, hashlist, err := f.CreateMerkleForProof(fid, blockSize, block)
 	if err != nil {
 		return err
 	}
 
-	address, err := crypto.GetAddress(clientCtx)
+	address, err := crypto.GetAddress(f.cosmosCtx)
 	if err != nil {
-		ctx.Logger.Error(err.Error())
+		f.logger.Error(err.Error())
 		return err
 	}
 
 	fmt.Printf("Requesting attestion for: %s\n", cid)
 
-	err = requestAttestation(clientCtx, cid, hashlist, item, q) // request attestation, if we get it, skip all the posting
+	err = requestAttestation(f.cosmosCtx, cid, hashlist, item, f.queue) // request attestation, if we get it, skip all the posting
 	if err == nil {
 		fmt.Println("successfully got attestation.")
 		return nil
@@ -282,211 +275,182 @@ func postProof(clientCtx client.Context, cid string, block string, db *leveldb.D
 		Response: nil,
 	}
 
-	go func() {
-		q.Append(&u)
-		wg.Wait()
+	f.queue.Append(&u)
+	wg.Wait()
 
-		if u.Err != nil {
+	if u.Err != nil {
+		f.logger.Error(fmt.Sprintf("Posting Error: %s", u.Err.Error()))
+		return nil
+	}
 
-			ctx.Logger.Error(fmt.Sprintf("Posting Error: %s", u.Err.Error()))
-			return
-		}
-
-		if u.Response.Code != 0 {
-			ctx.Logger.Error("Contract Response Error: %s", fmt.Errorf(u.Response.RawLog))
-			return
-		}
-	}()
+	if u.Response.Code != 0 {
+		f.logger.Error("Contract Response Error: %s", fmt.Errorf(u.Response.RawLog))
+		return nil
+	}
 
 	return nil
 }
 
-func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *utils.Context) {
-	intervalFromCMD, err := cmd.Flags().GetUint16(types.FlagInterval)
+func (f *FileServer) Purge(cid string) error {
+	fid, err := f.archivedb.GetFid(cid)
 	if err != nil {
-		ctx.Logger.Error(err.Error())
-		return
+		return err
 	}
 
-	clientCtx, err := client.GetClientTxContext(cmd)
+	err = f.downtimedb.Delete(cid)
 	if err != nil {
-		ctx.Logger.Error(err.Error())
-		return
+		return err
 	}
 
-	maxMisses, err := cmd.Flags().GetInt(types.FlagMaxMisses)
+	purge, err := f.archivedb.DeleteContract(cid)
 	if err != nil {
-		ctx.Logger.Error(err.Error())
-		return
+		return err
 	}
 
-	address, err := crypto.GetAddress(clientCtx)
-	if err != nil {
-		fmt.Println(err)
-		return
+	if purge {
+		f.archive.Delete(fid)
 	}
 
-	for {
-		interval := intervalFromCMD
+	return nil
+}
 
-		if interval == 0 { // If the provider picked an interval that's less than 30 minutes, we generate a random interval for them anyways
+func (f *FileServer) CleanExpired() error {
+	maxMisses, err := f.cmd.Flags().GetInt(types.FlagMaxMisses)
+	if err != nil {
+		f.logger.Error(err.Error())
+		return err
+	}
 
-			r := rand.New(rand.NewSource(time.Now().UnixNano()))
-			interval = uint16(r.Intn(3601) + 60) // Generate interval between 1-60 minutes
+	iter := f.downtimedb.NewIterator()
+	defer iter.Release()
 
-		}
-		ctx.Logger.Debug(fmt.Sprintf("The interval between proofs is now %d", interval))
-		start := time.Now()
-
-		iter := db.NewIterator(nil, nil)
-
-		for iter.Next() {
-			cid := string(iter.Key())
-			value := string(iter.Value())
-
-			if cid[:len(utils.FileKey)] != utils.FileKey {
-				continue
-			}
-
-			cid = cid[len(utils.FileKey):]
-
-			ctx.Logger.Debug(fmt.Sprintf("filename: %s", value))
-
-			ctx.Logger.Debug(fmt.Sprintf("CID: %s", cid))
-
-			ver, verr := checkVerified(&clientCtx, cid, address)
-			if verr != nil {
-				ctx.Logger.Error(verr.Error())
-				rr := strings.Contains(verr.Error(), "key not found")
-				ny := strings.Contains(verr.Error(), ErrNotYours)
-				if !rr && !ny {
-					continue
-				}
-				val, err := db.Get(utils.MakeDowntimeKey(cid), nil)
-				newval := 0
-				if err == nil {
-					newval, err = strconv.Atoi(string(val))
-					if err != nil {
-						continue
-					}
-				}
-
-				newval += 1
-
-				if newval > maxMisses {
-
-					duplicate := false
-					iter := db.NewIterator(nil, nil)
-					for iter.Next() {
-						c := string(iter.Key())
-						v := string(iter.Value())
-
-						if c[:len(utils.FileKey)] != utils.FileKey {
-							continue
-						}
-
-						c = c[len(utils.FileKey):]
-
-						if c != cid && v == value {
-							ctx.Logger.Info(fmt.Sprintf("%s != %s but it is also %s, so we must keep the file on disk.", c, cid, v))
-							duplicate = true
-							break
-						}
-					}
-					ctx.Logger.Info(fmt.Sprintf("%s is being removed", cid))
-
-					if !duplicate {
-						ctx.Logger.Info("And we are removing the file on disk.")
-
-						err := os.RemoveAll(utils.GetStoragePath(clientCtx, value))
-						if err != nil {
-							ctx.Logger.Error(err.Error())
-						}
-
-						err = os.Remove(utils.GetStoragePathForTree(clientCtx, value))
-						if err != nil {
-							ctx.Logger.Error(err.Error())
-							continue
-						}
-					}
-					err = db.Delete(utils.MakeFileKey(cid), nil)
-					if err != nil {
-						ctx.Logger.Error(err.Error())
-						continue
-					}
-
-					err = db.Delete(utils.MakeDowntimeKey(cid), nil)
-					if err != nil {
-						ctx.Logger.Error(err.Error())
-						continue
-					}
-					continue
-				}
-
-				ctx.Logger.Info(fmt.Sprintf("%s will be removed in %d cycles", value, (maxMisses+1)-newval))
-
-				err = db.Put(utils.MakeDowntimeKey(cid), []byte(fmt.Sprintf("%d", newval)), nil)
-				if err != nil {
-					continue
-				}
-				continue
-			}
-
-			val, err := db.Get(utils.MakeDowntimeKey(cid), nil)
-			newval := 0
-			if err == nil {
-				newval, err = strconv.Atoi(string(val))
-				if err != nil {
-					continue
-				}
-			}
-
-			newval -= 1 // lower the downtime counter to only account for consecutive misses.
-			if newval < 0 {
-				newval = 0
-			}
-
-			err = db.Put(utils.MakeDowntimeKey(cid), []byte(fmt.Sprintf("%d", newval)), nil)
-			if err != nil {
-				continue
-			}
-
-			if ver {
-				ctx.Logger.Debug("Skipping file as it's already verified.")
-				continue
-			}
-
-			block, berr := queryBlock(&clientCtx, cid)
-			if berr != nil {
-				ctx.Logger.Error(fmt.Sprintf("Query Error: %v", berr))
-				continue
-			}
-
-			go func() {
-				err = postProof(clientCtx, cid, block, db, q, ctx)
-				if err != nil {
-					ctx.Logger.Error(fmt.Sprintf("Posting Proof Error: %v", err))
-				}
-			}()
-
-			sleep, err := cmd.Flags().GetInt64(types.FlagSleep)
-			if err != nil {
-				ctx.Logger.Error(err.Error())
-				continue
-			}
-			time.Sleep(time.Duration(sleep) * time.Millisecond)
-
-		}
-
-		iter.Release()
-		err = iter.Error()
+	for iter.Next() {
+		cid := string(iter.Key())
+		downtime, err := archive.ByteToBlock(iter.Value())
 		if err != nil {
-			ctx.Logger.Error("Iterator Error: %s", err.Error())
+			return err
+		}
+
+		if downtime > int64(maxMisses) {
+			err := f.Purge(cid)
+			if err != nil {
+				return err
+			}
+			f.logger.Info(fmt.Sprintf("Purged CID: %s", string(cid)))
+		} else {
+			f.logger.Info(fmt.Sprintf("%s will be removed in %d cycles",
+				string(cid), int64(maxMisses)-downtime))
+		}
+	}
+
+	return nil
+}
+
+func (f *FileServer) IncrementDowntime(cid string) error {
+	downtime, err := f.downtimedb.Get(cid)
+	if err != nil && !errors.Is(err, archive.ErrContractNotFound) {
+		return err
+	}
+
+	err = f.downtimedb.Set(cid, downtime+1)
+
+	return err
+}
+
+func (f *FileServer) DeleteDowntime(cid string) error {
+	_, err := f.downtimedb.Get(cid)
+	if errors.Is(err, archive.ErrContractNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	return f.downtimedb.Delete(cid)
+}
+
+func (f *FileServer) ContractState(cid string) string {
+	return f.QueryContractState(cid)
+}
+
+func (f *FileServer) Prove(cid string) error {
+	block, err := queryBlock(&f.cosmosCtx, string(cid))
+	if err != nil {
+		return err
+	}
+
+	dex, ok := sdk.NewIntFromString(block)
+	f.logger.Debug(fmt.Sprintf("BlockToProve: %s", block))
+	if !ok {
+		return fmt.Errorf("failed to parse block number: %s", block)
+	}
+
+	return f.postProof(string(cid), f.blockSize, dex.Int64())
+}
+
+func (f *FileServer) handleContracts() error {
+	iter := f.archivedb.NewIterator()
+	defer iter.Release()
+
+	for iter.Next() {
+		cid := string(iter.Key())
+		fid := string(iter.Value())
+		if strings.HasPrefix(cid, "jklf") { // skip cid reference
+			continue
+		}
+
+		f.logger.Info(fmt.Sprintf("FID: %s", string(fid)))
+		f.logger.Info(fmt.Sprintf("CID: %s", cid))
+
+		switch state := f.QueryContractState(cid); state {
+		case verified:
+			err := f.DeleteDowntime(cid)
+			if err != nil {
+				f.logger.Error("error when unmarking downtime cid: ", cid, ": ", err)
+			}
+			continue
+		case notFound:
+			err := f.IncrementDowntime(cid)
+			if err != nil {
+				return err
+			}
+		case notVerified:
+			err := f.DeleteDowntime(cid)
+			if err != nil {
+				f.logger.Error("error when unmarking downtime cid: ", cid, ": ", err)
+			}
+
+			err = f.Prove(cid)
+			if err != nil {
+				f.logger.Error("failed to prove ", cid, ": ", err)
+			}
+		default:
+			f.logger.Error("unknown state to handle: ", state)
+		}
+	}
+	return nil
+}
+
+func (f *FileServer) startShift() error {
+	err := f.CleanExpired()
+	if err != nil {
+		return err
+	}
+
+	return f.handleContracts()
+}
+
+func (f *FileServer) StartProofServer(interval uint16) {
+	for {
+		start := time.Now()
+		err := f.startShift()
+		if err != nil {
+			f.logger.Error(err.Error())
 		}
 
 		end := time.Since(start)
 		if end.Seconds() > 120 {
-			ctx.Logger.Error(fmt.Sprintf("proof took %d", end.Nanoseconds()))
+			f.logger.Error(fmt.Sprintf("proof took %d", end.Nanoseconds()))
 		}
 
 		tm := time.Duration(interval) * time.Second
@@ -494,6 +458,5 @@ func postProofs(cmd *cobra.Command, db *leveldb.DB, q *queue.UploadQueue, ctx *u
 		if tm.Nanoseconds()-end.Nanoseconds() > 0 {
 			time.Sleep(time.Duration(interval) * time.Second)
 		}
-
 	}
 }

@@ -12,10 +12,9 @@ import (
 	storagetypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/cobra"
-	"github.com/syndtr/goleveldb/leveldb"
 )
 
-func ShowStrays(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps httprouter.Params, db *leveldb.DB) {
+func ShowStrays(cmd *cobra.Command, w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	clientCtx, err := sdkclient.GetClientTxContext(cmd)
 	if err != nil {
 		fmt.Println(err)

@@ -2,13 +2,16 @@ package server
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
-	"strconv"
+	"strings"
 
 	"github.com/JackalLabs/jackal-provider/jprov/types"
+	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/cosmos/cosmos-sdk/client"
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 )
@@ -92,28 +95,18 @@ func queryBlock(clientCtx *client.Context, cid string) (string, error) {
 	return res.ActiveDeals.Blocktoprove, nil
 }
 
-func checkVerified(clientCtx *client.Context, cid string, self string) (bool, error) {
-	queryClient := storageTypes.NewQueryClient(clientCtx)
+func buildCid(address, sender, fid string) (string, error) {
+	h := sha256.New()
 
-	argCid := cid
+	var footprint strings.Builder // building FID
+	footprint.WriteString(sender)
+	footprint.WriteString(address)
+	footprint.WriteString(fid)
 
-	params := &storageTypes.QueryActiveDealRequest{
-		Cid: argCid,
-	}
-
-	res, err := queryClient.ActiveDeals(context.Background(), params)
+	_, err := io.WriteString(h, footprint.String())
 	if err != nil {
-		return false, err
+		return "", err
 	}
 
-	ver, err := strconv.ParseBool(res.ActiveDeals.Proofverified)
-	if err != nil {
-		return false, err
-	}
-
-	if res.ActiveDeals.Provider != self {
-		return false, fmt.Errorf(ErrNotYours)
-	}
-
-	return ver, nil
+	return utils.MakeCid(h.Sum(nil))
 }

@@ -1,53 +1,129 @@
 package strays
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"time"
 
+	"github.com/JackalLabs/jackal-provider/jprov/archive"
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
-	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/bech32"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/cosmos/cosmos-sdk/x/feegrant"
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
-	"github.com/spf13/cobra"
-	"github.com/syndtr/goleveldb/leveldb"
 )
 
-func (m *StrayManager) AddHand(db *leveldb.DB, cmd *cobra.Command, index uint) *LittleHand {
-	clientCtx := client.GetClientContextFromCmd(cmd)
-	pkeyStruct, err := crypto.ReadKey(clientCtx)
+func (m *StrayManager) addClaimer(littleHand LittleHand) error {
+	addClaimerMsg := storageTypes.NewMsgAddClaimer(m.Address, littleHand.Address)
+
+	resp, err := utils.SendTx(m.ClientContext, m.Cmd.Flags(), "", addClaimerMsg)
 	if err != nil {
-		return nil
+		return fmt.Errorf("failed to add claimer: %w", err)
+	}
+
+	if resp.Code != 0 {
+		return fmt.Errorf("failed to add claimer: %s", resp.RawLog)
+	}
+
+	return nil
+}
+
+func (m *StrayManager) grantAllowance(littleHand LittleHand) error {
+	managerAddr, err := sdk.AccAddressFromBech32(m.Address)
+	if err != nil {
+		return fmt.Errorf("failed to grant allowance: %w", err)
+	}
+
+	littleHandAddr, err := sdk.AccAddressFromBech32(littleHand.Address)
+	if err != nil {
+		return fmt.Errorf("failed to grant allowance: %w", err)
+	}
+
+	allowance := feegrant.BasicAllowance{
+		SpendLimit: nil,
+		Expiration: nil,
+	}
+
+	grantMsg, err := feegrant.NewMsgGrantAllowance(&allowance, managerAddr, littleHandAddr)
+	if err != nil {
+		return fmt.Errorf("failed to grant allowance: %w", err)
+	}
+
+	resp, err := utils.SendTx(m.ClientContext, m.Cmd.Flags(), "", grantMsg)
+	if err != nil {
+		return fmt.Errorf("failed to grant allowance: %w", err)
+	}
+
+	if resp.Code != 0 {
+		return fmt.Errorf("failed to grant allowance: %w", err)
+	}
+
+	return nil
+}
+
+func (m *StrayManager) authorizeHand(littleHand LittleHand) error {
+	err := m.addClaimer(littleHand)
+	if err != nil {
+		return fmt.Errorf("failed to authorize hand: %w", err)
+	}
+
+	err = m.grantAllowance(littleHand)
+	if err != nil {
+		return fmt.Errorf("failed to authorize hand: %w", err)
+	}
+
+	return nil
+}
+
+func (m *StrayManager) AddHand(index uint) error {
+	pkeyStruct, err := crypto.ReadKey(m.ClientContext)
+	if err != nil {
+		return fmt.Errorf("failed to add hand: %w", err)
 	}
 
 	key, err := indexPrivKey(pkeyStruct.Key, byte(index))
 	if err != nil {
-		return nil
+		return fmt.Errorf("failed to add hand: %w", err)
 	}
 
 	address, err := bech32.ConvertAndEncode(storageTypes.AddressPrefix, key.PubKey().Address().Bytes())
 	if err != nil {
-		return nil
+		return fmt.Errorf("failed to add hand: %w", err)
 	}
 
 	hand := LittleHand{
 		Waiter:        &m.Waiter,
 		Stray:         nil,
-		Database:      db,
+		Database:      m.archivedb,
 		Busy:          false,
-		Cmd:           cmd,
-		ClientContext: clientCtx,
+		Cmd:           m.Cmd,
+		ClientContext: m.ClientContext,
 		Id:            index,
 		Address:       address,
+		Archive:       m.Archive,
+		Logger:        m.Context.Logger,
+	}
+
+	found := false
+	for _, claimer := range m.Provider.AuthClaimers {
+		if claimer == address {
+			found = true
+		}
+	}
+
+	if !found {
+		err = m.authorizeHand(hand)
+		if err != nil {
+			return fmt.Errorf("failed to add hand: %w", err)
+		}
 	}
 
 	m.hands = append(m.hands, &hand)
-	return &hand
+	return nil
 }
 
 func (m *StrayManager) Distribute() { // Hand out every available stray to an idle hand
@@ -72,101 +148,36 @@ func (m *StrayManager) Distribute() { // Hand out every available stray to an id
 	}
 }
 
-func (m *StrayManager) Init(cmd *cobra.Command, count uint, db *leveldb.DB) { // create all the hands for the manager
-	fmt.Println("Starting initialization...")
+func (m *StrayManager) Init() error { // create all the hands for the manager
+	fmt.Println("Starting stray manager initialization...")
+
+	threads, err := m.Cmd.Flags().GetUint(types.FlagThreads)
+	if err != nil {
+		return err
+	}
+
 	var i uint
-	clientCtx := client.GetClientContextFromCmd(cmd)
-
-	address, err := crypto.GetAddress(clientCtx)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	qClient := storageTypes.NewQueryClient(clientCtx) // get my address from the chain
-	pres, err := qClient.Providers(cmd.Context(), &storageTypes.QueryProviderRequest{Address: address})
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	currentClaimers := pres.Providers.AuthClaimers
-
-	for i = 1; i < count+1; i++ {
-		fmt.Printf("Processing stray thread %d.\n", i)
-		h := m.AddHand(db, m.Cmd, i)
-
-		found := false
-		for _, claimer := range currentClaimers {
-			if claimer == h.Address {
-				found = true
-				break
-			}
-		}
-		if found {
-			continue
-		}
-
-		fmt.Println("Adding hand to my claim whitelist...")
-
-		msg := storageTypes.NewMsgAddClaimer(address, h.Address)
-
-		res, err := utils.SendTx(clientCtx, cmd.Flags(), "", msg)
+	for i = 1; i < threads+1; i++ {
+		fmt.Printf("Initializing little hand no. %d\n", i)
+		err := m.AddHand(i)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("failed to initialize little hand no. %d: %s\n", i, err.Error())
+			fmt.Printf("proceeding without little hand no. %d\n", i)
 			continue
 		}
 
-		if res.Code != 0 {
-			fmt.Println(res.RawLog)
-			continue
-		}
-		fmt.Println("Done!")
+		fmt.Printf("Successfully initialized little hand no. %d\n", i)
+	}
 
-		fmt.Println("Authorizing hand to transact on my behalf...")
-
-		adr, nerr := sdk.AccAddressFromBech32(address)
-		if nerr != nil {
-			fmt.Println(nerr)
-			continue
-		}
-
-		hadr, nerr := sdk.AccAddressFromBech32(h.Address)
-		if nerr != nil {
-			fmt.Println(nerr)
-			continue
-		}
-
-		allowance := feegrant.BasicAllowance{
-			SpendLimit: nil,
-			Expiration: nil,
-		}
-
-		grantMsg, nerr := feegrant.NewMsgGrantAllowance(&allowance, adr, hadr)
-		if nerr != nil {
-			fmt.Println(nerr)
-			continue
-		}
-
-		grantRes, nerr := utils.SendTx(clientCtx, cmd.Flags(), "", grantMsg)
-		if nerr != nil {
-			fmt.Println(nerr)
-			continue
-		}
-
-		if grantRes.Code != 0 {
-			fmt.Println(grantRes.RawLog)
-			continue
-		}
-
-		fmt.Println("Done!")
-
+	if len(m.hands) == 0 {
+		return fmt.Errorf("failed to initialize any hands")
 	}
 
 	fmt.Println("Finished Initialization...")
+	return nil
 }
 
-func (m *StrayManager) CollectStrays(cmd *cobra.Command, lastCount uint64) uint64 {
+func (m *StrayManager) CollectStrays(lastCount uint64) uint64 {
 	m.Context.Logger.Info(fmt.Sprintf("Collecting strays from chain... ~ %d", lastCount))
 	qClient := storageTypes.NewQueryClient(m.ClientContext)
 
@@ -182,7 +193,7 @@ func (m *StrayManager) CollectStrays(cmd *cobra.Command, lastCount uint64) uint6
 		CountTotal: true,
 	}
 
-	res, err := qClient.StraysAll(cmd.Context(), &storageTypes.QueryAllStraysRequest{
+	res, err := qClient.StraysAll(m.Cmd.Context(), &storageTypes.QueryAllStraysRequest{
 		Pagination: page,
 	})
 	if err != nil {
@@ -204,15 +215,17 @@ func (m *StrayManager) CollectStrays(cmd *cobra.Command, lastCount uint64) uint6
 	for _, newStray := range s { // Only add new strays to the queue
 
 		k := newStray
-		m.Strays = append(m.Strays, &k)
-
+		_, err := m.archivedb.GetContracts(newStray.Fid)
+		if errors.Is(err, archive.ErrFidNotFound) {
+			m.Strays = append(m.Strays, &k)
+		}
 	}
 
 	return res.Pagination.Total
 }
 
-func (m *StrayManager) Start(cmd *cobra.Command) { // loop through stray system
-	tm, err := cmd.Flags().GetInt64(types.FlagStrayInterval)
+func (m *StrayManager) Start() { // loop through stray system
+	tm, err := m.Cmd.Flags().GetInt64(types.FlagStrayInterval)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	m.Rand = r
 	if err != nil {
@@ -221,7 +234,7 @@ func (m *StrayManager) Start(cmd *cobra.Command) { // loop through stray system
 
 	var s uint64
 	for {
-		s = m.CollectStrays(cmd, s)    // query strays from the chain
+		s = m.CollectStrays(s)         // query strays from the chain
 		m.Distribute()                 // hands strays out to hands
 		for _, hand := range m.hands { // process every stray in parallel
 			go hand.Process(m.Context, m)
