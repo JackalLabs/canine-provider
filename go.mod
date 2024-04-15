@@ -18,7 +18,7 @@ require (
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/tendermint/tendermint v0.34.27
 	github.com/wealdtech/go-merkletree v1.0.0
-	golang.org/x/sync v0.5.0
+	golang.org/x/sync v0.7.0
 )
 
 require (
