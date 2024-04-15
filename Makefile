@@ -119,7 +119,7 @@ benchmark:
 ###############################################################################
 
 format-tools:
-	go install mvdan.cc/gofumpt@v0.3.1
+	go install mvdan.cc/gofumpt@v0.6.0
 	gofumpt -l -w .
 
 lint: format-tools
