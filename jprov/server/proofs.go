@@ -310,7 +310,10 @@ func (f *FileServer) Purge(cid string) error {
 	}
 
 	if purge {
-		f.archive.Delete(fid)
+        err := f.archive.Delete(fid)
+        if err != nil {
+            return err
+        }
 	}
 
 	return nil
