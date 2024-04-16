@@ -9,16 +9,16 @@ require (
 	github.com/huin/goupnp v1.3.0
 	github.com/jackalLabs/canine-chain/v3 v3.0.0
 	github.com/julienschmidt/httprouter v1.3.0
-	github.com/rs/cors v1.9.0
-	github.com/rs/zerolog v1.29.1
+	github.com/rs/cors v1.10.1
+	github.com/rs/zerolog v1.32.0
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.16.0
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/tendermint/tendermint v0.34.27
 	github.com/wealdtech/go-merkletree v1.0.0
-	golang.org/x/sync v0.6.0
+	golang.org/x/sync v0.7.0
 	google.golang.org/grpc v1.57.0
 )
 
