@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -84,14 +83,14 @@ func (h *HybridCellArchive) getLegacyPiece(file *os.File, blockSize int64) ([]by
 }
 
 func (h *HybridCellArchive) GetPiece(fid string, index, blockSize int64) (block []byte, err error) {
-	file, err := os.Open(filepath.Join(h.rootDir, fid, fmt.Sprintf("%d.jkl", index)))
+	file, err := os.Open(filepath.Join(h.rootDir, "storage", fid, fmt.Sprintf("%d.jkl", index)))
 	if err == nil {
 		// legacy file system
 		defer func() {
 			err = errors.Join(err, file.Close())
 		}()
 		return h.getLegacyPiece(file, blockSize)
-	} else if !errors.Is(err, fs.ErrNotExist) { // unkown error
+	} else if !os.IsNotExist(err) { // unkown error
 		return nil, err
 	}
 
@@ -148,6 +147,9 @@ func (h *HybridCellArchive) WriteTreeToDisk(fid string, tree *merkletree.MerkleT
 	return
 }
 
+func (h *HybridCellArchive) retrieveLegacyTree(fid string) (*merkletree.MerkleTree, error) {
+    return nil, nil
+}
 func (h *HybridCellArchive) RetrieveTree(fid string) (tree *merkletree.MerkleTree, err error) {
 	rawTree, err := os.ReadFile(h.pathFactory.TreePath(fid))
 	if err != nil {
