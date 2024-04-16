@@ -81,7 +81,7 @@ func NewRootCmd() *cobra.Command {
 		NetworkCmd(),
 		BlanketCmd(),
 		CmdShutdownProvider(),
-        PruneCommand(),
+		PruneCommand(),
 	)
 
 	return rootCmd

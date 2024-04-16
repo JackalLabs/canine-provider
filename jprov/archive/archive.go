@@ -2,10 +2,10 @@ package archive
 
 import (
 	"errors"
+	"fmt"
 	"io"
+	"io/fs"
 	"os"
-    "io/fs"
-    "fmt"
 	"path/filepath"
 
 	merkletree "github.com/wealdtech/go-merkletree"
@@ -42,8 +42,8 @@ var _ Archive = &SingleCellArchive{}
 var _ Archive = &HybridCellArchive{}
 
 type HybridCellArchive struct {
-    rootDir string
-    pathFactory *SingleCellPathFactory
+	rootDir     string
+	pathFactory *SingleCellPathFactory
 }
 
 func NewHybridCellArchive(rootDir string) *HybridCellArchive {
@@ -73,32 +73,32 @@ func (f *HybridCellArchive) WriteFileToDisk(data io.Reader, fid string) (written
 }
 
 func (h *HybridCellArchive) getLegacyPiece(file *os.File, blockSize int64) ([]byte, error) {
-    block := make([]byte, blockSize)
+	block := make([]byte, blockSize)
 
-    _, err := file.Read(block)
-    if err != nil {
-        return nil, err
-    }
+	_, err := file.Read(block)
+	if err != nil {
+		return nil, err
+	}
 
-    return block, nil
+	return block, nil
 }
 
 func (h *HybridCellArchive) GetPiece(fid string, index, blockSize int64) (block []byte, err error) {
 	file, err := os.Open(filepath.Join(h.rootDir, fid, fmt.Sprintf("%d.jkl", index)))
-    if err == nil {
-        // legacy file system
-        defer func() {
-            err = errors.Join(err, file.Close())
-        }()
-        return h.getLegacyPiece(file, blockSize)
-    } else if !errors.Is(err, fs.ErrNotExist){// unkown error
-        return nil, err
-    }
+	if err == nil {
+		// legacy file system
+		defer func() {
+			err = errors.Join(err, file.Close())
+		}()
+		return h.getLegacyPiece(file, blockSize)
+	} else if !errors.Is(err, fs.ErrNotExist) { // unkown error
+		return nil, err
+	}
 
-    file, err = os.Open(h.pathFactory.FilePath(fid))
-    if err != nil {
-        return nil, err
-    }
+	file, err = os.Open(h.pathFactory.FilePath(fid))
+	if err != nil {
+		return nil, err
+	}
 	defer func() {
 		err = errors.Join(err, file.Close())
 	}()
@@ -165,9 +165,9 @@ func (h *HybridCellArchive) Delete(fid string) error {
 	if err != nil {
 		// filePath factory might be broken
 		// read os.RemoveAll error conditions at std doc
-        return err
+		return err
 	}
-    return nil
+	return nil
 }
 
 type SingleCellArchive struct {

@@ -60,8 +60,6 @@ func NewFileServer(
 		return nil, err
 	}
 
-
-
 	queue := queue.New()
 
 	return &FileServer{
@@ -268,7 +266,7 @@ func (f *FileServer) StartFileServer(cmd *cobra.Command) {
 			log.Fatalf("Failed to close db: %s", err)
 		}
 	}()
-    router := httprouter.New()
+	router := httprouter.New()
 
 	f.GetRoutes(router)
 	f.PostRoutes(router)
