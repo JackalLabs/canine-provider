@@ -59,45 +59,45 @@ func (s *SingleCellPathFactory) treeName(fid string) (name string) {
 }
 
 type MultiCellPathFactory struct {
-    rootDir string
-    fileExt string
-    treeExt string
+	rootDir string
+	fileExt string
+	treeExt string
 }
 
 func NewMultiCellPathFactory(rootDir string) *MultiCellPathFactory {
-    return &MultiCellPathFactory{rootDir: rootDir, fileExt: ".jkl", treeExt: ".tree"}
+	return &MultiCellPathFactory{rootDir: rootDir, fileExt: ".jkl", treeExt: ".tree"}
 }
 
 func (m *MultiCellPathFactory) PiecePath(fid string, index int) (path string) {
-    return filepath.Join(m.rootDir, "storage", fmt.Sprintf("%d.jkl", index))
+	return filepath.Join(m.rootDir, "storage", fmt.Sprintf("%d.jkl", index))
 }
 
 // Reads directory that stores fid, returns the last piece of fid.
 // It only accounts for file names with <index>.jkl format where index is an int.
 // It returns os.NotExists error when there are no files with such format.
 func (m *MultiCellPathFactory) LastPiece(fid string) (int, error) {
-    entries, err := os.ReadDir(m.FileDir(fid))
-    if err != nil {
-        return 0, err
-    }
-    // work backwards since the entries are in sorted order
-    i := len(entries) - 1
-    for ; i > 0; i++ {
-        if entries[i].IsDir() {
-            continue
-        }
-        ext := filepath.Ext(entries[i].Name())
-        if ext != m.fileExt {
-            continue
-        }
-        subStr, _ := strings.CutSuffix(entries[i].Name(), m.fileExt)
-        index, err := strconv.ParseInt(subStr, 10, 0)
-        if err != nil {
-            continue
-        }
-        return int(index), nil
-    }
-    return 0, os.ErrNotExist
+	entries, err := os.ReadDir(m.FileDir(fid))
+	if err != nil {
+		return 0, err
+	}
+	// work backwards since the entries are in sorted order
+	i := len(entries) - 1
+	for ; i > 0; i++ {
+		if entries[i].IsDir() {
+			continue
+		}
+		ext := filepath.Ext(entries[i].Name())
+		if ext != m.fileExt {
+			continue
+		}
+		subStr, _ := strings.CutSuffix(entries[i].Name(), m.fileExt)
+		index, err := strconv.ParseInt(subStr, 10, 0)
+		if err != nil {
+			continue
+		}
+		return int(index), nil
+	}
+	return 0, os.ErrNotExist
 }
 
 // returns the last piece of the file
@@ -119,11 +119,11 @@ func (m *MultiCellPathFactory) fileName(fid string) (name string) {
 }
 
 func (m *MultiCellPathFactory) TreePath(fid string) (path string) {
-    return filepath.Join(m.rootDir, "storage", m.treeName(fid))
+	return filepath.Join(m.rootDir, "storage", m.treeName(fid))
 }
 
 func (m *MultiCellPathFactory) TreeDir(fid string) (dir string) {
-    return filepath.Join(m.rootDir, "storage")
+	return filepath.Join(m.rootDir, "storage")
 }
 
 func (m *MultiCellPathFactory) treeName(fid string) (name string) {

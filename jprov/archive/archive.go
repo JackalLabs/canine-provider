@@ -41,16 +41,16 @@ var _ Archive = &SingleCellArchive{}
 var _ Archive = &HybridCellArchive{}
 
 type HybridCellArchive struct {
-	rootDir     string
-	pathFactory *SingleCellPathFactory
-    legacyPathFactory *MultiCellPathFactory
+	rootDir           string
+	pathFactory       *SingleCellPathFactory
+	legacyPathFactory *MultiCellPathFactory
 }
 
 func NewHybridCellArchive(rootDir string) *HybridCellArchive {
 	return &HybridCellArchive{
-		rootDir:     rootDir,
-		pathFactory: NewSingleCellPathFactory(rootDir),
-        legacyPathFactory: NewMultiCellPathFactory(rootDir),
+		rootDir:           rootDir,
+		pathFactory:       NewSingleCellPathFactory(rootDir),
+		legacyPathFactory: NewMultiCellPathFactory(rootDir),
 	}
 }
 
@@ -150,23 +150,24 @@ func (h *HybridCellArchive) WriteTreeToDisk(fid string, tree *merkletree.MerkleT
 }
 
 func (h *HybridCellArchive) retrieveLegacyTree(fid string) (*merkletree.MerkleTree, error) {
-    rawTree, err := os.ReadFile(h.legacyPathFactory.TreePath(fid))
-    if err != nil {
-        return nil, err
-    }
+	rawTree, err := os.ReadFile(h.legacyPathFactory.TreePath(fid))
+	if err != nil {
+		return nil, err
+	}
 
-    tree, err := merkletree.ImportMerkleTree(rawTree, sha3.New512())
-    return tree, err
+	tree, err := merkletree.ImportMerkleTree(rawTree, sha3.New512())
+	return tree, err
 }
-func (h *HybridCellArchive) RetrieveTree(fid string) (tree *merkletree.MerkleTree, err error) {
-    tree, err = h.retrieveLegacyTree(fid)// attempt to get legacy
-    if err == nil {
-        return tree, nil
-    } else if !os.IsNotExist(err) {
-        return nil, err
-    }
 
-    rawTree, err := os.ReadFile(h.pathFactory.TreePath(fid))
+func (h *HybridCellArchive) RetrieveTree(fid string) (tree *merkletree.MerkleTree, err error) {
+	tree, err = h.retrieveLegacyTree(fid) // attempt to get legacy
+	if err == nil {
+		return tree, nil
+	} else if !os.IsNotExist(err) {
+		return nil, err
+	}
+
+	rawTree, err := os.ReadFile(h.pathFactory.TreePath(fid))
 	if err != nil {
 		return
 	}

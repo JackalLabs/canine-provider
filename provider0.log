@@ -1,0 +1,106 @@
+Your new address is jkl1n9pfaydcqcufmnv6y438pxfj5qd3ndsftx259h
+Balance: 1100000000000ujkl
+Initializing account: jkl1xclg3utp4yuvaxa54r39xzrudc988s82ykve3f
+gas estimate: 162713
+[{"events":[{"type":"coin_received","attributes":[{"key":"receiver","value":"jkl1xh5m6ppfrt5gfk6negytvhaqyksvu9zxy3gw5x"},{"key":"amount","value":"10000000000ujkl"}]},{"type":"coin_spent","attributes":[{"key":"spender","value":"jkl1xclg3utp4yuvaxa54r39xzrudc988s82ykve3f"},{"key":"amount","value":"10000000000ujkl"}]},{"type":"message","attributes":[{"key":"action","value":"init_provider"},{"key":"sender","value":"jkl1xclg3utp4yuvaxa54r39xzrudc988s82ykve3f"}]},{"type":"transfer","attributes":[{"key":"recipient","value":"jkl1xh5m6ppfrt5gfk6negytvhaqyksvu9zxy3gw5x"},{"key":"sender","value":"jkl1xclg3utp4yuvaxa54r39xzrudc988s82ykve3f"},{"key":"amount","value":"10000000000ujkl"}]}]}]
+Starting initialization...
+Processing stray thread 1.
+Adding hand to my claim whitelist...
+gas estimate: 91827
+Done!
+Authorizing hand to transact on my behalf...
+gas estimate: 106335
+Done!
+Finished Initialization...
+Initializing report system...
+Creating a fee allowance for jkl139qt96ga0yqy8zaf6782059xjjsx8ugheylj6x from jkl1xclg3utp4yuvaxa54r39xzrudc988s82ykve3fgas estimate: 106335
+Done!
+🌍 Started Provider: http://0.0.0.0:3330
+Attempting to attest to reports...
+I[2024-04-15|19:46:36.271] Collecting strays from chain... ~ 0          
+no reports to attest to.
+Done attesting to reports!
+I[2024-04-15|19:46:36.272] No strays found.                             
+I[2024-04-15|19:46:36.272] Processing hand #1                           
+I[2024-04-15|19:46:36.272] Hand #1 is busy.                             
+I[2024-04-15|19:46:41.279] Starting merkle tree construction...         
+I[2024-04-15|19:46:41.280] Contract being pushed: creator:"jkl1xclg3utp4yuvaxa54r39xzrudc988s82ykve3f" merkle:"c1163c5cf49eb6eead82b459df78f802984519b424f04c92aeaac6372f962fbf9e4657863fdaca6a7acb234e5d834d835a94eb254204ce4013ea1a3344dcb338" signee:"jkl10k05lmc88q5ft3lm00q30qkd9x6654h3lejnct" filesize:"124970" fid:"jklf1pcpnewgy5rynhet3r2y8smdvllrajpj24sw62f07cdntj8td2d5qljf5av"  
+gas estimate: 108946
+I[2024-04-15|19:46:46.308] jklf1pcpnewgy5rynhet3r2y8smdvllrajpj24sw62f07cdntj8td2d5qljf5av Added to database 
+[31;1mE[2024-04-15|19:46:51.274] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+[39;49;22mI[2024-04-15|19:46:51.274] jklf1pcpnewgy5rynhet3r2y8smdvllrajpj24sw62f07cdntj8td2d5qljf5av will be removed in 16 cycles 
+I[2024-04-15|19:46:56.273] Collecting strays from chain... ~ 0          
+I[2024-04-15|19:46:56.274] No strays found.                             
+I[2024-04-15|19:46:56.274] Processing hand #1                           
+I[2024-04-15|19:46:56.274] Hand #1 is busy.                             
+[31;1mE[2024-04-15|19:46:56.275] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+[39;49;22mI[2024-04-15|19:46:56.275] jklf1pcpnewgy5rynhet3r2y8smdvllrajpj24sw62f07cdntj8td2d5qljf5av will be removed in 15 cycles 
+Requesting attestion for: jklc107a4hj35fg4jlcapl9h3y7rhw4p24pjtunv8hwwg2hp9dcwatgwsw229ql
+I[2024-04-15|19:47:01.360] Starting merkle tree construction...         
+I[2024-04-15|19:47:01.362] Contract being pushed: creator:"jkl1xclg3utp4yuvaxa54r39xzrudc988s82ykve3f" merkle:"6181055324df009e4893b06d64f04519e1e732fd40257eccc80f3a219881f0f07c140087cd0648005833e49d338c28d76dcabc1312d417cc5b31b7863d607c3a" signee:"jkl10k05lmc88q5ft3lm00q30qkd9x6654h3lejnct" filesize:"1366" fid:"jklf1vtpe2hqv55hwu2u830a947dg5e5xeqtlgzcznh6k5y6zu0lp3hastjryl9"  
+gas estimate: 145733
+Attempting to report bad actors...
+Done report!
+I[2024-04-15|19:47:06.391] jklf1vtpe2hqv55hwu2u830a947dg5e5xeqtlgzcznh6k5y6zu0lp3hastjryl9 Added to database 
+cid: jklc107a4hj35fg4jlcapl9h3y7rhw4p24pjtunv8hwwg2hp9dcwatgwsw229ql
+error: 'not enough providers online: proto: negative length found during unmarshaling'
+providers: []
+success: false
+request form failed
+not enough providers online: proto: negative length found during unmarshaling
+I[2024-04-15|19:47:06.397] Starting merkle tree construction...         
+I[2024-04-15|19:47:06.398] Contract being pushed: creator:"jkl1xclg3utp4yuvaxa54r39xzrudc988s82ykve3f" merkle:"33e58739f1ae7319e429618e40f3a7f54c732392c6ec70fab08f420f6f416b3d5fda9878865700576cb2a18723f43de9dcff45bfed0956d284815752223ccfc4" signee:"jkl10k05lmc88q5ft3lm00q30qkd9x6654h3lejnct" filesize:"3271" fid:"jklf12zf4q5ka6y8jj2ya7suhlskmr3dswjsxesty805gkwqr72tx0tfqw0rg8w"  
+Requesting attestion for: jklc107a4hj35fg4jlcapl9h3y7rhw4p24pjtunv8hwwg2hp9dcwatgwsw229ql
+[31;1mE[2024-04-15|19:47:06.780] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+[39;49;22mI[2024-04-15|19:47:06.780] jklf1vtpe2hqv55hwu2u830a947dg5e5xeqtlgzcznh6k5y6zu0lp3hastjryl9 will be removed in 16 cycles 
+gas estimate: 513707
+cid: jklc107a4hj35fg4jlcapl9h3y7rhw4p24pjtunv8hwwg2hp9dcwatgwsw229ql
+error: 'not enough providers online: proto: negative length found during unmarshaling'
+providers: []
+success: false
+request form failed
+not enough providers online: proto: negative length found during unmarshaling
+I[2024-04-15|19:47:11.410] jklf12zf4q5ka6y8jj2ya7suhlskmr3dswjsxesty805gkwqr72tx0tfqw0rg8w Added to database 
+I[2024-04-15|19:47:11.766] Starting merkle tree construction...         
+I[2024-04-15|19:47:11.780] Contract being pushed: creator:"jkl1xclg3utp4yuvaxa54r39xzrudc988s82ykve3f" merkle:"37809f1068587be57f9e6b318722483ac987f3be5ebf66d9a2c7087d6227752d75815f195c88fd554bfd8ae88d2ec04e97589f30d63dc85f2beda875263dd003" signee:"jkl10k05lmc88q5ft3lm00q30qkd9x6654h3lejnct" filesize:"44933676" fid:"jklf1qwutpaveg2yrc7d2qcwzn5e3cf2chavyrpz8nxh34q0szxanxh0sq0fp0h"  
+[31;1mE[2024-04-15|19:47:11.783] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+[39;49;22mI[2024-04-15|19:47:11.783] jklf12zf4q5ka6y8jj2ya7suhlskmr3dswjsxesty805gkwqr72tx0tfqw0rg8w will be removed in 16 cycles 
+[31;1mE[2024-04-15|19:47:11.784] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+[39;49;22mI[2024-04-15|19:47:11.784] jklf1vtpe2hqv55hwu2u830a947dg5e5xeqtlgzcznh6k5y6zu0lp3hastjryl9 will be removed in 15 cycles 
+gas estimate: 482410
+I[2024-04-15|19:47:16.274] Collecting strays from chain... ~ 0          
+I[2024-04-15|19:47:16.276] Processing hand #1                           
+I[2024-04-15|19:47:16.276] Getting info for jklc1awx6cwfxyx9d0hdkuy9lslyenr5fk9rjgwqw89lgprktushhvj8sd7zf5k 
+I[2024-04-15|19:47:16.276] Getting jklf1pcpnewgy5rynhet3r2y8smdvllrajpj24sw62f07cdntj8td2d5qljf5av from http://127.0.0.1:3330 
+I[2024-04-15|19:47:16.277] Starting merkle tree construction...         
+I[2024-04-15|19:47:16.278] Attempting to claim jklc1awx6cwfxyx9d0hdkuy9lslyenr5fk9rjgwqw89lgprktushhvj8sd7zf5k on chain 
+[31;1mE[2024-04-15|19:47:16.280] rpc error: code = Unknown desc = rpc error: code = Unknown desc = failed to execute message; message index: 0: cannot claim a stray you own.: invalid request [jackalLabs/canine-chain/v3/x/storage/keeper/msg_server_claim_stray.go:29] With gas wanted: '100000000' and gas used: '55429' : unknown request 
+[39;49;22mI[2024-04-15|19:47:16.280] Done processing hand #1.                     
+I[2024-04-15|19:47:16.436] jklf1qwutpaveg2yrc7d2qcwzn5e3cf2chavyrpz8nxh34q0szxanxh0sq0fp0h Added to database 
+I[2024-04-15|19:47:16.442] Starting merkle tree construction...         
+I[2024-04-15|19:47:16.443] Contract being pushed: creator:"jkl1xclg3utp4yuvaxa54r39xzrudc988s82ykve3f" merkle:"8d3be799ec02c2f317a05f4921529aae4acedd47e714fef5942f690fe70f9ad62e32b3ea2bfc863fd3bb7b5807222b44d6b565d832ea6a42c60598adf962f3da" signee:"jkl10k05lmc88q5ft3lm00q30qkd9x6654h3lejnct" filesize:"12836" fid:"jklf1d8wg7w3vckfsvy3zdmf3zmxgq35y5f3dmv7fcywmxduxzta0fryqm4qnvq"  
+[31;1mE[2024-04-15|19:47:16.786] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+[39;49;22mI[2024-04-15|19:47:16.786] jklf12zf4q5ka6y8jj2ya7suhlskmr3dswjsxesty805gkwqr72tx0tfqw0rg8w will be removed in 15 cycles 
+[31;1mE[2024-04-15|19:47:16.786] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+[39;49;22mI[2024-04-15|19:47:16.786] jklf1vtpe2hqv55hwu2u830a947dg5e5xeqtlgzcznh6k5y6zu0lp3hastjryl9 will be removed in 14 cycles 
+[31;1mE[2024-04-15|19:47:16.786] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+[39;49;22mI[2024-04-15|19:47:16.786] jklf1qwutpaveg2yrc7d2qcwzn5e3cf2chavyrpz8nxh34q0szxanxh0sq0fp0h will be removed in 16 cycles 
+gas estimate: 114210
+I[2024-04-15|19:47:21.454] jklf1d8wg7w3vckfsvy3zdmf3zmxgq35y5f3dmv7fcywmxduxzta0fryqm4qnvq Added to database 
+[31;1mE[2024-04-15|19:47:21.788] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+[39;49;22mI[2024-04-15|19:47:21.788] jklf12zf4q5ka6y8jj2ya7suhlskmr3dswjsxesty805gkwqr72tx0tfqw0rg8w will be removed in 14 cycles 
+[31;1mE[2024-04-15|19:47:21.789] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+[39;49;22mI[2024-04-15|19:47:21.789] jklf1vtpe2hqv55hwu2u830a947dg5e5xeqtlgzcznh6k5y6zu0lp3hastjryl9 will be removed in 13 cycles 
+[31;1mE[2024-04-15|19:47:21.789] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+[39;49;22mI[2024-04-15|19:47:21.789] jklf1d8wg7w3vckfsvy3zdmf3zmxgq35y5f3dmv7fcywmxduxzta0fryqm4qnvq will be removed in 16 cycles 
+[31;1mE[2024-04-15|19:47:21.789] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+[39;49;22mI[2024-04-15|19:47:21.789] jklf1qwutpaveg2yrc7d2qcwzn5e3cf2chavyrpz8nxh34q0szxanxh0sq0fp0h will be removed in 15 cycles 
+[31;1mE[2024-04-15|19:47:26.792] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+[39;49;22mI[2024-04-15|19:47:26.792] jklf12zf4q5ka6y8jj2ya7suhlskmr3dswjsxesty805gkwqr72tx0tfqw0rg8w will be removed in 13 cycles 
+[31;1mE[2024-04-15|19:47:26.793] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+[39;49;22mI[2024-04-15|19:47:26.793] jklf1vtpe2hqv55hwu2u830a947dg5e5xeqtlgzcznh6k5y6zu0lp3hastjryl9 will be removed in 12 cycles 
+[31;1mE[2024-04-15|19:47:26.793] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+[39;49;22mI[2024-04-15|19:47:26.793] jklf1d8wg7w3vckfsvy3zdmf3zmxgq35y5f3dmv7fcywmxduxzta0fryqm4qnvq will be removed in 15 cycles 
+[31;1mE[2024-04-15|19:47:26.793] rpc error: code = NotFound desc = rpc error: code = NotFound desc = not found: key not found 
+[39;49;22mI[2024-04-15|19:47:26.793] jklf1qwutpaveg2yrc7d2qcwzn5e3cf2chavyrpz8nxh34q0szxanxh0sq0fp0h will be removed in 14 cycles 
+Terminated
