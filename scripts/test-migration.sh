@@ -91,18 +91,18 @@ sleep 5
 
 start_provider 54f86a701648e8324e920f9592c21cc591b244ae46eac935d45fe962bba1102c \
     jkl1xclg3utp4yuvaxa54r39xzrudc988s82ykve3f 0
-start_provider a29c5f0033606d1ac47db6a3327bc13a6b0c426dbfe5c15b2fcd7334b4165033 \
-    jkl1tcveayn80pe3d5wallj9kev3rfefctsmrqf6ks 1
-start_provider a490cb438024cddca16470771fb9a21938c4cf61176a46005c6a7b25ee25a649 \
-    jkl1eg3gm3e3k4dypvvme26ejmajnyvtgwwlaaeu2y 2
-start_provider 6c8a948c347079706e404ab48afc5f03203556e34ea921f3b132f2b2e9bcc87d \
-    jkl1ga0348r8zhn8k4xy3fagwvkwzvyh5lynxr5kak 3
-start_provider 8144389a23c6535e276068ff9043b2b6ff95aa3c103c35486c8f2d2363606fd5 \
-    jkl18encuf0esmxv3pxqjqvn0u4tgd6yzuc8urzlp0 4
-start_provider 0e019088a0fafa8f77cb5c0d0f6cb6b63a0015f20d2450480cbcdee44d170aab \
-    jkl1sqt9v0zwwx362szrek7pr3lpq29aygw06hgyza 5
-start_provider adf5a86ac54146b172c20b865c548e900c51439c3723af14aeab668ccd2b8ecf \
-    jkl1yu099xns2qpslvyrymxq3hwrqhevs7qxksvu8p 6
+#start_provider a29c5f0033606d1ac47db6a3327bc13a6b0c426dbfe5c15b2fcd7334b4165033 \
+#    jkl1tcveayn80pe3d5wallj9kev3rfefctsmrqf6ks 1
+#start_provider a490cb438024cddca16470771fb9a21938c4cf61176a46005c6a7b25ee25a649 \
+#    jkl1eg3gm3e3k4dypvvme26ejmajnyvtgwwlaaeu2y 2
+#start_provider 6c8a948c347079706e404ab48afc5f03203556e34ea921f3b132f2b2e9bcc87d \
+#    jkl1ga0348r8zhn8k4xy3fagwvkwzvyh5lynxr5kak 3
+#start_provider 8144389a23c6535e276068ff9043b2b6ff95aa3c103c35486c8f2d2363606fd5 \
+#    jkl18encuf0esmxv3pxqjqvn0u4tgd6yzuc8urzlp0 4
+#start_provider 0e019088a0fafa8f77cb5c0d0f6cb6b63a0015f20d2450480cbcdee44d170aab \
+#    jkl1sqt9v0zwwx362szrek7pr3lpq29aygw06hgyza 5
+#start_provider adf5a86ac54146b172c20b865c548e900c51439c3723af14aeab668ccd2b8ecf \
+#    jkl1yu099xns2qpslvyrymxq3hwrqhevs7qxksvu8p 6
 echo "provider started!!!"
 sleep 30
 
@@ -111,16 +111,15 @@ canined tx storage buy-storage jkl10k05lmc88q5ft3lm00q30qkd9x6654h3lejnct 720h 3
 sleep 5
 
 upload_file ./scripts/dummy_data/1.png 0
-upload_file ./scripts/dummy_data/2.png 1
-upload_file ./scripts/dummy_data/3.png 6
-#upload_file ./scripts/dummy_data/4.png 0
-#upload_file ./scripts/dummy_data/5.svg 0
-#upload_file ./scripts/dummy_data/6.wav 0
-#upload_file ./scripts/dummy_data/test.txt 0
+#upload_file ./scripts/dummy_data/2.png 1
+#upload_file ./scripts/dummy_data/3.png 6
+upload_file ./scripts/dummy_data/4.png 0
+upload_file ./scripts/dummy_data/5.svg 0
+upload_file ./scripts/dummy_data/6.wav 0
+upload_file ./scripts/dummy_data/test.txt 0
 
 sleep 10
 
-#read -rsp $'Press any key to shutdown and upgrade provider...\n' -n1 key
 
 echo "shutting down providers..."
 killall jprovd
@@ -130,23 +129,24 @@ sleep 4
 echo "upgrading provider..."
 install_new
 
-migrate_provider 0
-migrate_provider 1
-migrate_provider 2
-migrate_provider 3
-migrate_provider 4
-migrate_provider 5
-migrate_provider 6
-
-
-sleep 5
-
-restart_provider 0
-restart_provider 1
-restart_provider 2
-restart_provider 3
-restart_provider 4
-restart_provider 5
+read -rsp $'Press any key to shutdown and upgrade provider...\n' -n1 key
+#migrate_provider 0
+#migrate_provider 1
+#migrate_provider 2
+#migrate_provider 3
+#migrate_provider 4
+#migrate_provider 5
+#migrate_provider 6
+#
+#
+#sleep 5
+#
+#restart_provider 0
+#restart_provider 1
+#restart_provider 2
+#restart_provider 3
+#restart_provider 4
+#restart_provider 5
 #restart_provider 6
 
 

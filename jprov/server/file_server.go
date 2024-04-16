@@ -60,6 +60,8 @@ func NewFileServer(
 		return nil, err
 	}
 
+
+
 	queue := queue.New()
 
 	return &FileServer{
@@ -213,10 +215,10 @@ func (f *FileServer) MakeContract(fid string, sender string, wg *sync.WaitGroup,
 	return k, nil
 }
 
-func (f *FileServer) Init() (router *httprouter.Router, err error) {
+func (f *FileServer) Init() error {
 	address, err := crypto.GetAddress(f.cosmosCtx)
 	if err != nil {
-		return
+		return err
 	}
 
 	request := &storageTypes.QueryProviderRequest{
@@ -226,18 +228,12 @@ func (f *FileServer) Init() (router *httprouter.Router, err error) {
 	response, err := f.queryClient.Providers(context.Background(), request)
 	if err != nil {
 		err = fmt.Errorf("Provider not initialized on the blockchain, or connection to the RPC node has been lost. Please make sure your RPC node is available then run `jprovd init` to fix this.")
-		return
+		return err
 	}
 
 	f.provider = response.Providers
 
-	router = httprouter.New()
-
-	f.GetRoutes(router)
-	f.PostRoutes(router)
-	PProfRoutes(router)
-
-	return
+	return err
 }
 
 func (f *FileServer) RecollectActiveDeals() error {
@@ -272,11 +268,11 @@ func (f *FileServer) StartFileServer(cmd *cobra.Command) {
 			log.Fatalf("Failed to close db: %s", err)
 		}
 	}()
-	router, err := f.Init()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+    router := httprouter.New()
+
+	f.GetRoutes(router)
+	f.PostRoutes(router)
+	PProfRoutes(router)
 	handler := cors.Default().Handler(router)
 
 	providerName, err := cmd.Flags().GetString(types.FlagProviderName)
