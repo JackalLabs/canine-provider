@@ -68,6 +68,25 @@ upload_file () {
     # {"cid":"jklc1amfnkh8fj8wpvadxp8zjm4h3kgnr0m6qqk5a7dkt0a87pc3yc6nqq4sawe","fid":"jklf12g2ae3tw5397rjehjavcfxzxp4nu9nggpm6lvs6m9wfns0gs3ecqpxt6vq"}
     # gets:
     # jklc1amfnkh8fj8wpvadxp8zjm4h3kgnr0m6qqk5a7dkt0a87pc3yc6nqq4sawe
+    #cid=$(echo "$resp" | jq '.cid' | sed 's/"//g')
+    #fid=$(echo "$resp" | jq '.fid' | sed 's/"//g')
+
+    #sleep 5
+
+    #canined tx storage sign-contract "$cid" --from charlie -y
+
+    #echo "$1 uploaded... fid: ${fid}"
+    #sleep 5
+}
+
+upload_file_and_sign () {
+    resp=$(curl -v -F sender=$sender -F file=@$1 http://localhost:333$2/upload)
+
+    # get cid value from json respnose and strip double quote at front and end 
+    # example:
+    # {"cid":"jklc1amfnkh8fj8wpvadxp8zjm4h3kgnr0m6qqk5a7dkt0a87pc3yc6nqq4sawe","fid":"jklf12g2ae3tw5397rjehjavcfxzxp4nu9nggpm6lvs6m9wfns0gs3ecqpxt6vq"}
+    # gets:
+    # jklc1amfnkh8fj8wpvadxp8zjm4h3kgnr0m6qqk5a7dkt0a87pc3yc6nqq4sawe
     cid=$(echo "$resp" | jq '.cid' | sed 's/"//g')
     fid=$(echo "$resp" | jq '.fid' | sed 's/"//g')
 
@@ -78,6 +97,8 @@ upload_file () {
     echo "$1 uploaded... fid: ${fid}"
     sleep 5
 }
+
+
 
 shut_down () {
     killall canined jprovd
@@ -110,7 +131,7 @@ sleep 30
 canined tx storage buy-storage jkl10k05lmc88q5ft3lm00q30qkd9x6654h3lejnct 720h 3000000000 ujkl --from charlie -y
 sleep 5
 
-upload_file ./scripts/dummy_data/1.png 0
+upload_file_and_sign ./scripts/dummy_data/1.png 0
 #upload_file ./scripts/dummy_data/2.png 1
 #upload_file ./scripts/dummy_data/3.png 6
 upload_file ./scripts/dummy_data/4.png 0

@@ -207,7 +207,7 @@ func cleanOld(homeDir, fid string) error {
 
 // DiscoverFids reads all directory entry of the storage and returns fids
 func DiscoverFids(homeDir string) (fids []string, err error) {
-	dirs, err := os.ReadDir(getStorageRootDir(homeDir))
+	dirs, err := os.ReadDir(GetStorageRootDir(homeDir))
 	if err != nil {
 		return
 	}

@@ -2,6 +2,7 @@ package archive
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -32,10 +33,160 @@ type Archive interface {
 	// Returns error if the tree is not found
 	RetrieveTree(fid string) (tree *merkletree.MerkleTree, err error)
 	// Delete deletes archive from disk. This include the file and merkle tree.
-	Delete(fid string)
+	Delete(fid string) error
 }
 
 var _ Archive = &SingleCellArchive{}
+
+var _ Archive = &HybridCellArchive{}
+
+type HybridCellArchive struct {
+	rootDir           string
+	pathFactory       *SingleCellPathFactory
+	legacyPathFactory *MultiCellPathFactory
+}
+
+func NewHybridCellArchive(rootDir string) *HybridCellArchive {
+	return &HybridCellArchive{
+		rootDir:           rootDir,
+		pathFactory:       NewSingleCellPathFactory(rootDir),
+		legacyPathFactory: NewMultiCellPathFactory(rootDir),
+	}
+}
+
+func (f *HybridCellArchive) WriteFileToDisk(data io.Reader, fid string) (written int64, err error) {
+	path := f.pathFactory.FilePath(fid)
+	err = os.MkdirAll(filepath.Dir(path), os.ModePerm)
+	if err != nil {
+		return
+	}
+
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, FilePerm)
+	if err != nil {
+		return
+	}
+	defer func() {
+		err = errors.Join(err, file.Close())
+	}()
+
+	written, err = io.Copy(file, data)
+	return
+}
+
+func (h *HybridCellArchive) getLegacyPiece(file *os.File, blockSize int64) ([]byte, error) {
+	block := make([]byte, blockSize)
+
+	_, err := file.Read(block)
+	if err != nil {
+		return nil, err
+	}
+
+	return block, nil
+}
+
+func (h *HybridCellArchive) GetPiece(fid string, index, blockSize int64) (block []byte, err error) {
+	file, err := os.Open(filepath.Join(h.rootDir, "storage", fid, fmt.Sprintf("%d.jkl", index)))
+	if err == nil {
+		// legacy file system
+		defer func() {
+			err = errors.Join(err, file.Close())
+		}()
+		return h.getLegacyPiece(file, blockSize)
+	} else if !os.IsNotExist(err) { // unkown error
+		return nil, err
+	}
+
+	file, err = os.Open(h.pathFactory.FilePath(fid))
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		err = errors.Join(err, file.Close())
+	}()
+
+	block = make([]byte, blockSize)
+	n, err := file.ReadAt(block, index*blockSize)
+	// ignoring io.EOF with n > 0 because the file size is not always n * blockSize
+	if (err != nil && err != io.EOF) || (err == io.EOF && n == 0) {
+		return nil, err
+	}
+
+	block = block[:n]
+	return block, nil
+}
+
+func (h *HybridCellArchive) RetrieveFile(fid string) (data io.ReadSeekCloser, err error) {
+	data, err = os.Open(h.pathFactory.FilePath(fid))
+	return
+}
+
+func (h *HybridCellArchive) FileExist(fid string) bool {
+	_, err := os.Stat(h.pathFactory.FilePath(fid))
+	return errors.Is(err, os.ErrNotExist)
+}
+
+func (h *HybridCellArchive) WriteTreeToDisk(fid string, tree *merkletree.MerkleTree) (err error) {
+	path := h.pathFactory.TreePath(fid)
+	err = os.MkdirAll(filepath.Dir(path), os.ModePerm)
+	if err != nil {
+		return
+	}
+
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, FilePerm)
+	if err != nil {
+		return
+	}
+	defer func() {
+		err = errors.Join(err, file.Close())
+	}()
+
+	data, err := tree.Export()
+	if err != nil {
+		return
+	}
+
+	_, err = file.Write(data)
+	return
+}
+
+func (h *HybridCellArchive) retrieveLegacyTree(fid string) (*merkletree.MerkleTree, error) {
+	rawTree, err := os.ReadFile(h.legacyPathFactory.TreePath(fid))
+	if err != nil {
+		return nil, err
+	}
+
+	tree, err := merkletree.ImportMerkleTree(rawTree, sha3.New512())
+	return tree, err
+}
+
+func (h *HybridCellArchive) RetrieveTree(fid string) (tree *merkletree.MerkleTree, err error) {
+	tree, err = h.retrieveLegacyTree(fid) // attempt to get legacy
+	if err == nil {
+		return tree, nil
+	} else if !os.IsNotExist(err) {
+		return nil, err
+	}
+
+	rawTree, err := os.ReadFile(h.pathFactory.TreePath(fid))
+	if err != nil {
+		return
+	}
+
+	tree, err = merkletree.ImportMerkleTree(rawTree, sha3.New512())
+	return
+}
+
+func (h *HybridCellArchive) Delete(fid string) error {
+	// since the file and merkle tree is saved together in an isolated directory,
+	// just delete the whole directory
+	err := os.RemoveAll(h.pathFactory.FileDir(fid))
+	if err != nil {
+		// filePath factory might be broken
+		// read os.RemoveAll error conditions at std doc
+		return err
+	}
+	return nil
+}
 
 type SingleCellArchive struct {
 	rootDir     string
@@ -132,13 +283,8 @@ func (f *SingleCellArchive) RetrieveTree(fid string) (tree *merkletree.MerkleTre
 	return
 }
 
-func (f *SingleCellArchive) Delete(fid string) {
+func (f *SingleCellArchive) Delete(fid string) error {
 	// since the file and merkle tree is saved together in an isolated directory,
 	// just delete the whole directory
-	err := os.RemoveAll(f.pathFactory.FileDir(fid))
-	if err != nil {
-		// filePath factory might be broken
-		// read os.RemoveAll error conditions at std doc
-		panic(err)
-	}
+	return os.RemoveAll(f.pathFactory.FileDir(fid))
 }

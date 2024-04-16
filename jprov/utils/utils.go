@@ -33,7 +33,7 @@ func MakeDowntimeKey(cid string) []byte {
 	return []byte(fmt.Sprintf("%s%s", DowntimeKey, cid))
 }
 
-func getStorageRootDir(homeDir string) string {
+func GetStorageRootDir(homeDir string) string {
 	return filepath.Join(homeDir, "storage")
 }
 
@@ -42,7 +42,7 @@ func GetContentsFileName(fid string) string {
 }
 
 func GetFidDir(homeDir, fid string) string {
-	return filepath.Join(getStorageRootDir(homeDir), fid)
+	return filepath.Join(GetStorageRootDir(homeDir), fid)
 }
 
 // GetContentsPath returns file path for the file that stores the user uploaded contents
