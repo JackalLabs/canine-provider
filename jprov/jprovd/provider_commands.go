@@ -286,7 +286,22 @@ func PruneCommand() *cobra.Command {
 		},
 	}
 
+    AddTxFlagsToCmd(cmd)
+	cmd.Flags().Int(types.FlagPort, types.DefaultPort, "Port to host the server on.")
+	cmd.Flags().String(types.VersionFlag, "", "The value exposed by the version api to allow for custom deployments.")
+	cmd.Flags().Bool(types.HaltStraysFlag, false, "Debug flag to stop picking up strays.")
+	cmd.Flags().Uint16(types.FlagInterval, types.DefaultInterval, "The interval in seconds for which to check proofs. Must be >=1800 if you need a custom interval")
+	cmd.Flags().Uint(types.FlagThreads, types.DefaultThreads, "The amount of stray threads.")
+	cmd.Flags().Int(types.FlagMaxMisses, types.DefaultMaxMisses, "The amount of intervals a provider can miss their proofs before removing a file.")
 	cmd.Flags().Int64(types.FlagChunkSize, types.DefaultChunkSize, "The size of a single file chunk.")
+	cmd.Flags().Int64(types.FlagStrayInterval, types.DefaultStrayInterval, "The interval in seconds to check for new strays.")
+	cmd.Flags().Int(types.FlagMessageSize, types.DefaultMessageSize, "The max size of all messages in bytes to submit to the chain at one time.")
+	cmd.Flags().Int(types.FlagGasCap, types.DefaultGasCap, "The maximum gas to be used per message.")
+	cmd.Flags().Int64(types.FlagQueueInterval, types.DefaultQueueInterval, "The time, in seconds, between running a queue loop.")
+	cmd.Flags().String(types.FlagProviderName, "A Storage Provider", "The name to identify this provider in block explorers.")
+	cmd.Flags().Int64(types.FlagSleep, types.DefaultSleep, "The time, in milliseconds, before adding another proof msg to the queue.")
+	cmd.Flags().Bool(types.FlagDoReport, types.DefaultDoReport, "Should this provider report deals (uses gas).")
+
 	return cmd
 }
 
