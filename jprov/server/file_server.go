@@ -235,7 +235,7 @@ func (f *FileServer) Init() error {
 }
 
 func (f *FileServer) RecollectActiveDeals() error {
-	queryActiveDeals, err := f.QueryMyActiveDeals()
+	queryActiveDeals, err := f.QueryOnlyMyActiveDeals()
 	if err != nil {
 		return err
 	}

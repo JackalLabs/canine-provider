@@ -2,6 +2,7 @@ package server
 
 import (
 	"strconv"
+	"time"
 
 	query "github.com/cosmos/cosmos-sdk/types/query"
 
@@ -68,6 +69,45 @@ func (f *FileServer) QueryAllActiveDeals() ([]storageTypes.ActiveDeals, error) {
 			return activeDeals, err
 		}
 		activeDeals = append(activeDeals, resp.ActiveDeals...)
+	}
+
+	return activeDeals, nil
+}
+
+func (f *FileServer) QueryOnlyMyActiveDeals() ([]storageTypes.ActiveDeals, error) {
+	req := storageTypes.QueryAllActiveDealsRequest{
+		Pagination: &query.PageRequest{CountTotal: true},
+	}
+
+	activeDeals := make([]storageTypes.ActiveDeals, 0)
+
+	resp, err := f.queryClient.ActiveDealsAll(f.cmd.Context(), &req)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, a := range resp.ActiveDeals {
+		if a.Provider == f.provider.Address {
+			activeDeals = append(activeDeals, a)
+		}
+	}
+
+	for len(resp.Pagination.GetNextKey()) != 0 {
+		req = storageTypes.QueryAllActiveDealsRequest{
+			Pagination: &query.PageRequest{Key: resp.Pagination.GetNextKey()},
+		}
+
+		r, err := f.queryClient.ActiveDealsAll(f.cmd.Context(), &req)
+		if err != nil {
+			time.Sleep(time.Second * 60) // we wait for a full minute if the request fails and try again
+			continue
+		}
+		resp = r // we only update the pagination key if the request was successful
+		for _, a := range resp.ActiveDeals {
+			if a.Provider == f.provider.Address {
+				activeDeals = append(activeDeals, a)
+			}
+		}
 	}
 
 	return activeDeals, nil
