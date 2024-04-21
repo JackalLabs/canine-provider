@@ -31,6 +31,7 @@ func StartServerCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx := client.GetClientContextFromCmd(cmd)
+
 			dbPath := utils.GetArchiveDBPath(clientCtx)
 			archivedb, err := archive.NewDoubleRefArchiveDB(dbPath)
 			if err != nil {
@@ -66,6 +67,10 @@ func StartServerCommand() *cobra.Command {
 			}
 
 			fs, err := server.NewFileServer(cmd, archivedb, downtimedb)
+			if err != nil {
+				return err
+			}
+			err = fs.Init()
 			if err != nil {
 				return err
 			}
