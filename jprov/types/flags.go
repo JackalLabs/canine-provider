@@ -14,6 +14,7 @@ const (
 	FlagProviderName  = "moniker"
 	FlagSleep         = "sleep"
 	FlagDoReport      = "do-report"
+	FlagPruneFirst    = "prune"
 )
 
 const (
