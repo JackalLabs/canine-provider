@@ -6,7 +6,7 @@ services:
       - "3333:3333"
     network_mode: "host"
     volumes:
-      - storage:/root/.jackal-storage/archivedb
+      - storage:/root/.jackal-storage/storage
       - "./config:/copyconfig"
 
 volumes:
