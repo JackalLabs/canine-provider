@@ -234,16 +234,18 @@ func PruneCommand() *cobra.Command {
 		Long:  "Prune files that are no longer on contract according to chain data",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			buf := bufio.NewReader(cmd.InOrStdin())
-			yes, err := input.GetConfirmation("Are you sure you want to prune expired files?", buf, cmd.ErrOrStderr())
-			if err != nil {
-				return err
-			}
+			if !cmd.Flags().Changed(flags.FlagSkipConfirmation) {
+				buf := bufio.NewReader(cmd.InOrStdin())
+				yes, err := input.GetConfirmation("Are you sure you want to prune expired files?", buf, cmd.ErrOrStderr())
+				if err != nil {
+					return err
+				}
 
-			if !yes {
-				return nil
-			}
+				if !yes {
+					return nil
+				}
 
+			}
 			clientCtx := client.GetClientContextFromCmd(cmd)
 
 			dbPath := utils.GetArchiveDBPath(clientCtx)
@@ -317,18 +319,21 @@ func MigrateCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			prune, err := cmd.Flags().GetBool(types.FlagPruneFirst)
-			if err != nil {
-				return err
-			}
 
-			buf := bufio.NewReader(cmd.InOrStdin())
-			yes, err := input.GetConfirmation("Are you sure you want to migrate from old file system?", buf, cmd.ErrOrStderr())
-			if err != nil {
-				return err
-			}
+			if !cmd.Flags().Changed(flags.FlagSkipConfirmation) {
+				if err != nil {
+					return err
+				}
 
-			if !yes {
-				return nil
+				buf := bufio.NewReader(cmd.InOrStdin())
+				yes, err := input.GetConfirmation("Are you sure you want to migrate from old file system?", buf, cmd.ErrOrStderr())
+				if err != nil {
+					return err
+				}
+
+				if !yes {
+					return nil
+				}
 			}
 
 			defer func() {
