@@ -31,6 +31,7 @@ func StartServerCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx := client.GetClientContextFromCmd(cmd)
+
 			dbPath := utils.GetArchiveDBPath(clientCtx)
 			archivedb, err := archive.NewDoubleRefArchiveDB(dbPath)
 			if err != nil {
@@ -66,6 +67,10 @@ func StartServerCommand() *cobra.Command {
 			}
 
 			fs, err := server.NewFileServer(cmd, archivedb, downtimedb)
+			if err != nil {
+				return err
+			}
+			err = fs.Init()
 			if err != nil {
 				return err
 			}
@@ -311,6 +316,11 @@ func MigrateCommand() *cobra.Command {
 		Long:  `Migrate old file system. This will glue all blocks together into one file per fids stored in your machine`,
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			prune, err := cmd.Flags().GetBool(types.FlagPruneFirst)
+			if err != nil {
+				return err
+			}
+
 			buf := bufio.NewReader(cmd.InOrStdin())
 			yes, err := input.GetConfirmation("Are you sure you want to migrate from old file system?", buf, cmd.ErrOrStderr())
 			if err != nil {
@@ -374,8 +384,15 @@ func MigrateCommand() *cobra.Command {
 				return err
 			}
 
+			if prune {
+				err := fs.PruneExpiredFiles()
+				if err != nil {
+					return err
+				}
+			}
 			utils.Migrate(clientCtx, chunkSize)
-			return err
+
+			return nil
 		},
 	}
 	AddTxFlagsToCmd(cmd)
@@ -393,6 +410,7 @@ func MigrateCommand() *cobra.Command {
 	cmd.Flags().String(types.FlagProviderName, "A Storage Provider", "The name to identify this provider in block explorers.")
 	cmd.Flags().Int64(types.FlagSleep, types.DefaultSleep, "The time, in milliseconds, before adding another proof msg to the queue.")
 	cmd.Flags().Bool(types.FlagDoReport, types.DefaultDoReport, "Should this provider report deals (uses gas).")
+	cmd.Flags().Bool(types.FlagPruneFirst, false, "Should the provider prune its state before migration?")
 
 	return cmd
 }

@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+  canine-provider:
+    build: .
+    ports:
+      - "3333:3333"
+    network_mode: "host"
+    volumes:
+      - storage:/root/.jackal-storage/storage
+      - "./config:/copyconfig"
+
+volumes:
+  storage:
