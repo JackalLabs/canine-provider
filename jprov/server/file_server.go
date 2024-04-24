@@ -240,20 +240,13 @@ func (f *FileServer) RecollectActiveDeals() error {
 		return err
 	}
 
-	count := 0
-
 	for _, q := range queryActiveDeals {
-		_, err := f.archivedb.GetFid(q.Cid)
-		if errors.Is(err, archive.ErrContractNotFound) {
-			err = f.archivedb.SetContract(q.Cid, q.Fid)
-			count++
-			if err != nil {
-				return err
-			}
+		err := f.archivedb.SetContract(q.Cid, q.Fid)
+		if err != nil && !errors.Is(err, archive.ErrContractAlreadyExists) {
+			return err
 		}
 	}
 
-	f.logger.Info(fmt.Sprintf("recollected deals: %d\n", count))
 	return nil
 }
 
