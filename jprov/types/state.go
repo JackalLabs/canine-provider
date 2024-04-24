@@ -1,10 +1,10 @@
 package types
 
 import (
+	"strconv"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	"strconv"
 
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 )

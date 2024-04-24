@@ -26,9 +26,6 @@ import (
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
 	"github.com/wealdtech/go-merkletree/sha3"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -453,7 +450,7 @@ func (f *FileServer) StartProofServer(interval uint16) {
 	for {
 		select {
 		case <-sigChan:
-			f.logger.Info("shutting down proof server")
+			fmt.Println("shutting down proof server")
 			return
 		default:
 			start := time.Now()
