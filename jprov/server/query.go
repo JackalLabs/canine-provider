@@ -17,7 +17,6 @@ const (
 	notFound    = "not found"
 )
 
-// returns verified, notVerified or notFound
 func (f *FileServer) QueryContractState(cid string) string {
 	req := storageTypes.QueryActiveDealRequest{Cid: cid}
 	resp, err := f.queryClient.ActiveDeals(f.cmd.Context(), &req)
@@ -135,4 +134,9 @@ func (f *FileServer) QueryMyActiveDeals() ([]storageTypes.ActiveDeals, error) {
 	}
 
 	return filterMyActiveDeals(activeDeals, f.provider.Address), nil
+}
+
+func (f *FileServer) QueryActiveDeal(cid string) (*storageTypes.QueryActiveDealResponse, error) {
+	req := storageTypes.QueryActiveDealRequest{Cid: cid}
+	return f.queryClient.ActiveDeals(f.cmd.Context(), &req)
 }

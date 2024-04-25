@@ -378,19 +378,14 @@ func (f *FileServer) ContractState(cid string) string {
 	return f.QueryContractState(cid)
 }
 
-func (f *FileServer) Prove(cid string) error {
-	block, err := queryBlock(&f.cosmosCtx, string(cid))
-	if err != nil {
-		return err
-	}
-
-	dex, ok := sdk.NewIntFromString(block)
-	f.logger.Debug(fmt.Sprintf("BlockToProve: %s", block))
+func (f *FileServer) Prove(deal storageTypes.ActiveDeals) error {
+	dex, ok := sdk.NewIntFromString(deal.Blocktoprove)
+	f.logger.Debug(fmt.Sprintf("BlockToProve: %s", deal.Blocktoprove))
 	if !ok {
-		return fmt.Errorf("failed to parse block number: %s", block)
+		return fmt.Errorf("failed to parse block number: %s", deal.Blocktoprove)
 	}
 
-	return f.postProof(string(cid), f.blockSize, dex.Int64())
+	return f.postProof(deal.Cid, f.blockSize, dex.Int64())
 }
 
 func (f *FileServer) handleContracts() error {
@@ -405,31 +400,34 @@ func (f *FileServer) handleContracts() error {
 		}
 
 		f.logger.Info(fmt.Sprintf("CID: %s FID: %s", cid, fid))
+		resp, respErr := f.QueryActiveDeal(cid)
 
-		switch state := f.QueryContractState(cid); state {
-		case verified:
+		switch state, err := types.ContractState(resp, respErr); state {
+		case types.Verified:
 			err := f.DeleteDowntime(cid)
 			if err != nil {
-				f.logger.Error("error when unmarking downtime cid: ", cid, ": ", err)
+				f.logger.Error(fmt.Sprintf("error when unmarking downtime cid: %s: %v", cid, err))
 			}
 			continue
-		case notFound:
+		case types.NotFound:
 			err := f.IncrementDowntime(cid)
 			if err != nil {
 				return err
 			}
-		case notVerified:
+		case types.NotVerified:
 			err := f.DeleteDowntime(cid)
 			if err != nil {
-				f.logger.Error("error when unmarking downtime cid: ", cid, ": ", err)
+				f.logger.Error(fmt.Sprintf("error when unmarking downtime cid: %s: %v", cid, err))
 			}
 
-			err = f.Prove(cid)
+			err = f.Prove(resp.ActiveDeals)
 			if err != nil {
-				f.logger.Error("failed to prove ", cid, ": ", err)
+				f.logger.Error(fmt.Sprintf("failed to prove: %s: %v", cid, err))
 			}
+		case types.Error:
+			f.logger.Error(fmt.Sprintf("query error: %v", err))
 		default:
-			f.logger.Error("unknown state to handle: ", state)
+			return fmt.Errorf("unkown state: %v %v", state, err)
 		}
 	}
 	return nil
@@ -452,6 +450,7 @@ func (f *FileServer) StartProofServer(interval uint16) {
 	for {
 		select {
 		case <-sigChan:
+			fmt.Println("shutting down proof server")
 			return
 		default:
 			start := time.Now()
