@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -12,7 +11,6 @@ import (
 
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
-	"github.com/cosmos/cosmos-sdk/client"
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 )
 
