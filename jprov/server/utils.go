@@ -78,23 +78,6 @@ func testConnection(providers []storageTypes.Providers, ip string) bool {
 	return true
 }
 
-func queryBlock(clientCtx *client.Context, cid string) (string, error) {
-	queryClient := storageTypes.NewQueryClient(clientCtx)
-
-	argCid := cid
-
-	params := &storageTypes.QueryActiveDealRequest{
-		Cid: argCid,
-	}
-
-	res, err := queryClient.ActiveDeals(context.Background(), params)
-	if err != nil {
-		return "", err
-	}
-
-	return res.ActiveDeals.Blocktoprove, nil
-}
-
 func buildCid(address, sender, fid string) (string, error) {
 	h := sha256.New()
 
