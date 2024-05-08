@@ -41,7 +41,7 @@ type FidResponse struct {
 }
 
 type DealsResponse struct {
-	Deals []storagetypes.ActiveDeals `json:"deals"`
+	Deals []storagetypes.LegacyActiveDeals `json:"deals"`
 }
 
 type StraysResponse struct {

@@ -378,7 +378,7 @@ func (f *FileServer) ContractState(cid string) string {
 	return f.QueryContractState(cid)
 }
 
-func (f *FileServer) Prove(deal storageTypes.ActiveDeals) error {
+func (f *FileServer) Prove(deal storageTypes.LegacyActiveDeals) error {
 	dex, ok := sdk.NewIntFromString(deal.Blocktoprove)
 	f.logger.Debug(fmt.Sprintf("BlockToProve: %s", deal.Blocktoprove))
 	if !ok {
