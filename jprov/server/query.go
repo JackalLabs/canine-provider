@@ -44,12 +44,12 @@ func (f *FileServer) QueryContractState(cid string) string {
 	return notVerified
 }
 
-func (f *FileServer) QueryAllActiveDeals() ([]storageTypes.ActiveDeals, error) {
+func (f *FileServer) QueryAllActiveDeals() ([]storageTypes.LegacyActiveDeals, error) {
 	req := storageTypes.QueryAllActiveDealsRequest{
 		Pagination: &query.PageRequest{CountTotal: true},
 	}
 
-	activeDeals := make([]storageTypes.ActiveDeals, 0)
+	activeDeals := make([]storageTypes.LegacyActiveDeals, 0)
 
 	resp, err := f.queryClient.ActiveDealsAll(f.cmd.Context(), &req)
 	if err != nil {
@@ -73,12 +73,12 @@ func (f *FileServer) QueryAllActiveDeals() ([]storageTypes.ActiveDeals, error) {
 	return activeDeals, nil
 }
 
-func (f *FileServer) QueryOnlyMyActiveDeals() ([]storageTypes.ActiveDeals, error) {
+func (f *FileServer) QueryOnlyMyActiveDeals() ([]storageTypes.LegacyActiveDeals, error) {
 	req := storageTypes.QueryAllActiveDealsRequest{
 		Pagination: &query.PageRequest{CountTotal: true},
 	}
 
-	activeDeals := make([]storageTypes.ActiveDeals, 0)
+	activeDeals := make([]storageTypes.LegacyActiveDeals, 0)
 
 	resp, err := f.queryClient.ActiveDealsAll(f.cmd.Context(), &req)
 	if err != nil {
@@ -112,12 +112,12 @@ func (f *FileServer) QueryOnlyMyActiveDeals() ([]storageTypes.ActiveDeals, error
 	return activeDeals, nil
 }
 
-func filterMyActiveDeals(activeDeals []storageTypes.ActiveDeals, provider string) []storageTypes.ActiveDeals {
+func filterMyActiveDeals(activeDeals []storageTypes.LegacyActiveDeals, provider string) []storageTypes.LegacyActiveDeals {
 	if activeDeals == nil {
 		return nil
 	}
 
-	res := make([]storageTypes.ActiveDeals, 0)
+	res := make([]storageTypes.LegacyActiveDeals, 0)
 
 	for _, a := range activeDeals {
 		if a.Provider == provider {
@@ -127,7 +127,7 @@ func filterMyActiveDeals(activeDeals []storageTypes.ActiveDeals, provider string
 	return res
 }
 
-func (f *FileServer) QueryMyActiveDeals() ([]storageTypes.ActiveDeals, error) {
+func (f *FileServer) QueryMyActiveDeals() ([]storageTypes.LegacyActiveDeals, error) {
 	activeDeals, err := f.QueryAllActiveDeals()
 	if err != nil {
 		return nil, err
