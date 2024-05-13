@@ -17,17 +17,11 @@ import (
 )
 
 func (f *FileServer) indexres(w http.ResponseWriter) {
-	address, err := crypto.GetAddress(f.cosmosCtx)
-	if err != nil {
-		f.serverCtx.Logger.Error(err.Error())
-		return
-	}
-
 	v := types.IndexResponse{
 		Status:  "online",
-		Address: address,
+		Address: f.serverCtx.address,
 	}
-	err = json.NewEncoder(w).Encode(v)
+	err := json.NewEncoder(w).Encode(v)
 	if err != nil {
 		f.serverCtx.Logger.Error(err.Error())
 	}

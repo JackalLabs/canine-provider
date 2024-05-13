@@ -35,8 +35,7 @@ import (
 
 type FileServer struct {
 	cmd         *cobra.Command
-	cosmosCtx   client.Context
-	serverCtx   *utils.Context
+	serverCtx   *serverContext
 	queryClient storageTypes.QueryClient
 	archive     archive.Archive
 	archivedb   archive.ArchiveDB
@@ -60,12 +59,16 @@ func NewFileServer(
 		return nil, err
 	}
 
+	srvrCtx, err := newServerContext(cmd)
+	if err != nil {
+		return nil, err
+	}
+
 	queue := queue.New()
 
 	return &FileServer{
 		cmd:         cmd,
-		cosmosCtx:   clientCtx,
-		serverCtx:   sCtx,
+		serverCtx:   srvrCtx,
 		archive:     archive.NewSingleCellArchive(sCtx.Config.RootDir),
 		archivedb:   archivedb,
 		downtimedb:  downtimedb,
@@ -98,13 +101,7 @@ func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader
 		return err
 	}
 
-	address, err := crypto.GetAddress(f.cosmosCtx)
-	if err != nil {
-		f.serverCtx.Logger.Error(err.Error())
-		return err
-	}
-
-	cid, err := buildCid(address, sender, fid)
+	cid, err := buildCid(f.serverCtx.address, sender, fid)
 	if err != nil {
 		return err
 	}
@@ -178,16 +175,10 @@ func writeResponse(w http.ResponseWriter, upload types.Upload, fid, cid string) 
 }
 
 func (f *FileServer) MakeContract(fid string, sender string, wg *sync.WaitGroup, merkleroot string, filesize string) (*types.Upload, error) {
-	address, err := crypto.GetAddress(f.cosmosCtx)
-	if err != nil {
-		f.serverCtx.Logger.Error(err.Error())
-		return nil, err
-	}
-
 	xRoot := hex.EncodeToString([]byte(merkleroot))
 
 	msg := storageTypes.NewMsgPostContract(
-		address,
+		f.serverCtx.address,
 		sender,
 		filesize,
 		fid,
@@ -214,13 +205,8 @@ func (f *FileServer) MakeContract(fid string, sender string, wg *sync.WaitGroup,
 }
 
 func (f *FileServer) Init() error {
-	address, err := crypto.GetAddress(f.cosmosCtx)
-	if err != nil {
-		return err
-	}
-
 	request := &storageTypes.QueryProviderRequest{
-		Address: address,
+		Address: f.serverCtx.address,
 	}
 
 	response, err := f.queryClient.Providers(context.Background(), request)
