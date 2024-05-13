@@ -69,6 +69,7 @@ func saveFile(file multipart.File, handler *multipart.FileHeader, sender string,
 
 	if msg.Err != nil {
 		ctx.Logger.Error(msg.Err.Error())
+		return err
 	}
 
 	if err = writeResponse(*w, *msg, fid, cid); err != nil {
@@ -95,6 +96,22 @@ func writeResponse(w http.ResponseWriter, upload types.Upload, fid, cid string) 
 	resp := types.UploadResponse{
 		CID: cid,
 		FID: fid,
+	}
+
+	if len(cid) == 0 {
+		e := fmt.Errorf("cid: '%s' is empty", cid)
+		resp := types.ErrorResponse{
+			Error: e.Error(),
+		}
+		return json.NewEncoder(w).Encode(resp)
+	}
+
+	if len(fid) == 0 {
+		e := fmt.Errorf("file with cid '%s' has empty fid: '%s'", cid, fid)
+		resp := types.ErrorResponse{
+			Error: e.Error(),
+		}
+		return json.NewEncoder(w).Encode(resp)
 	}
 
 	return json.NewEncoder(w).Encode(resp)
