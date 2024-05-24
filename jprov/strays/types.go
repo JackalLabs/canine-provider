@@ -11,7 +11,7 @@ import (
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 
 	"github.com/spf13/cobra"
-	"github.com/tendermint/tendermint/libs/log"
+	"log/slog"
 )
 
 type StrayManager struct {
@@ -83,5 +83,5 @@ type LittleHand struct {
 	ClientContext client.Context
 	Id            uint
 	Address       string
-	Logger        log.Logger
+	Logger        *slog.Logger
 }

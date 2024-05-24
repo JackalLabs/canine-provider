@@ -11,7 +11,7 @@ import (
 
 func (f *FileServer) allFilesAtStorage() ([]string, error) {
 	fids := make([]string, 0)
-	dirs, err := os.ReadDir(utils.GetStorageRootDir(f.cosmosCtx.HomeDir))
+	dirs, err := os.ReadDir(utils.GetStorageRootDir(f.serverCtx.cosmosCtx.HomeDir))
 	if err != nil {
 		return nil, err
 	}

@@ -4,42 +4,65 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
+	"log/slog"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/JackalLabs/jackal-provider/jprov/types"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	tmflags "github.com/tendermint/tendermint/libs/cli/flags"
 	tmos "github.com/tendermint/tendermint/libs/os"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	tmcfg "github.com/tendermint/tendermint/config"
-	tmcli "github.com/tendermint/tendermint/libs/cli"
-	tmlog "github.com/tendermint/tendermint/libs/log"
+)
+
+const (
+	configName = "client"
+	configType = "toml"
 )
 
 type Context struct {
 	Viper  *viper.Viper
 	Config *Config
-	Logger tmlog.Logger
+	Logger *slog.Logger
 }
 
 const ProviderContextKey = sdk.ContextKey("provider.context")
 
 var configTemplate *template.Template
 
-func NewContext(v *viper.Viper, config *Config, logger tmlog.Logger) *Context {
+func NewContext(v *viper.Viper, config *Config, logger *slog.Logger) *Context {
 	return &Context{v, config, logger}
 }
 
 func DefaultBaseConfig() BaseConfig {
 	return BaseConfig{
-		LogLevel:  tmcfg.DefaultLogLevel,
-		LogFormat: tmcfg.LogFormatPlain,
+		chainID:           "",
+		RootDir:           "$HOME/.jackal-storage/",
+		LogLevel:          tmcfg.DefaultLogLevel,
+		LogFormat:         tmcfg.LogFormatPlain,
+		Output:            "",
+		Node:              "",
+		PostProofInterval: types.DefaultInterval,
+		Threads:           types.DefaultThreads,
+		Port:              types.DefaultPort,
+		MaxMisses:         types.DefaultMaxMisses,
+		ChunkSize:         types.DefaultChunkSize,
+		StrayInterval:     types.DefaultStrayInterval,
+		MessageSize:       types.DefaultMessageSize,
+		GasCap:            types.DefaultGasCap,
+		MaxFileSize:       types.DefaultMaxFileSize,
+		QueueInterval:     types.DefaultQueueInterval,
+		ProviderName:      "",
+		DoReport:          types.DefaultDoReport,
 	}
 }
 
@@ -59,10 +82,44 @@ type BaseConfig struct {
 	// This should be set in viper so it can unmarshal into this struct
 	RootDir string `mapstructure:"home"`
 
+	// DEBUG, INFO, WARN, ERROR
 	LogLevel string `mapstructure:"log_level"`
 
 	// Output format: 'plain' (colored text) or 'json'
 	LogFormat string `mapstructure:"log_format"`
+
+	// RPC config
+	Output string
+	// RPC node endpoint
+	Node string
+
+	// proof
+	PostProofInterval int64
+
+	// littleHands; stray claimers
+	Threads int
+
+	// listening port
+	Port int
+
+	//The amount of intervals a provider can miss their proofs before removing a file
+	MaxMisses int
+	//The size of a single file chunk.
+	ChunkSize int64
+	//The interval in seconds to check for new strays
+	StrayInterval int64
+	//The max size of all messages in bytes to submit to the chain at one time.
+	MessageSize int
+	//The maximum gas to be used per message.
+	GasCap int
+	//The maximum size allowed to be sent to this provider in mbs. (only for monitoring services)
+	MaxFileSize int
+	//The time, in seconds, between running a queue loop.
+	QueueInterval int64
+	//The name to identify this provider in block explorers.
+	ProviderName string
+	//Should this provider report deals (uses gas).
+	DoReport bool
 }
 
 type Config struct {
@@ -74,6 +131,12 @@ func (cfg BaseConfig) ValidateBasic() error {
 	case tmcfg.LogFormatPlain, tmcfg.LogFormatJSON:
 	default:
 		return errors.New("unknown log_format (must be 'plain' or 'json')")
+	}
+
+	var level slog.Level
+	err := level.UnmarshalText([]byte(cfg.LogLevel))
+	if err != nil {
+		return fmt.Errorf("invalid log level: %v", err)
 	}
 	return nil
 }
@@ -108,16 +171,27 @@ func NewDefaultContext() *Context {
 	return NewContext(
 		viper.New(),
 		DefaultConfig(),
-		tmlog.NewTMLogger(tmlog.NewSyncWriter(os.Stdout)),
+		NewDefaultCtxLogger(os.Stdout),
 	)
 }
 
-func interceptConfigs(rootViper *viper.Viper, customAppTemplate string, customConfig interface{}) (*Config, error) {
+func interceptConfigs(rootViper *viper.Viper) (*Config, error) {
 	rootDir := rootViper.GetString(flags.FlagHome)
 
 	conf := DefaultConfig()
 
 	conf.SetRoot(rootDir)
+	viper.SetConfigName(configName)
+	viper.SetConfigType(configType)
+
+	configFileName := configName + "." + configType
+	configPath := filepath.Join(rootDir, configFileName)
+	viper.AddConfigPath(configPath)
+
+	err := viper.Unmarshal(conf)
+	if err != nil {
+		return nil, err
+	}
 
 	return conf, nil
 }
@@ -143,7 +217,7 @@ func SetCmdServerContext(cmd *cobra.Command, serverCtx *Context) error {
 	return nil
 }
 
-func InterceptConfigsPreRunHandler(cmd *cobra.Command, customAppConfigTemplate string, customAppConfig interface{}) error {
+func InterceptConfigsPreRunHandler(cmd *cobra.Command) error {
 	serverCtx := NewDefaultContext()
 
 	// Get the executable name and configure the viper instance so that environmental
@@ -168,7 +242,7 @@ func InterceptConfigsPreRunHandler(cmd *cobra.Command, customAppConfigTemplate s
 	serverCtx.Viper.AutomaticEnv()
 
 	// intercept configuration files, using both Viper instances separately
-	config, err := interceptConfigs(serverCtx.Viper, customAppConfigTemplate, customAppConfig)
+	config, err := interceptConfigs(serverCtx.Viper)
 	if err != nil {
 		return err
 	}
@@ -178,16 +252,10 @@ func InterceptConfigsPreRunHandler(cmd *cobra.Command, customAppConfigTemplate s
 	if err = bindFlags(basename, cmd, serverCtx.Viper); err != nil {
 		return err
 	}
-	logger := tmlog.NewTMLogger(tmlog.NewSyncWriter(os.Stdout))
-	logger, err = tmflags.ParseLogLevel(config.LogLevel, logger, tmcfg.DefaultLogLevel)
+
+	logger, err := newLogger(os.Stdout, config.LogFormat, config.LogLevel)
 	if err != nil {
 		return err
-	}
-
-	// Check if the tendermint flag for trace logging is set
-	// if it is then setup a tracing logger in this app as well
-	if serverCtx.Viper.GetBool(tmcli.TraceFlag) {
-		logger = tmlog.NewTracingLogger(logger)
 	}
 
 	serverCtx.Logger = logger
@@ -226,4 +294,25 @@ func bindFlags(basename string, cmd *cobra.Command, v *viper.Viper) (err error) 
 	})
 
 	return err
+}
+
+func newLogger(w io.Writer, logFormat string, logLevel string) (*slog.Logger, error) {
+	var level slog.Level
+
+	err := level.UnmarshalText([]byte(logLevel))
+	if err != nil {
+		return nil, err
+	}
+
+	opt := slog.HandlerOptions{
+		Level: level,
+	}
+
+	handler, err := NewFormatHandler(w, logFormat, &opt)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewCtxLogger(handler), nil
+
 }

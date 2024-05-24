@@ -130,7 +130,7 @@ echo "upgrading provider..."
 install_new
 
 read -rsp $'Press any key to shutdown and upgrade provider...\n' -n1 key
-#migrate_provider 0
+migrate_provider 0
 #migrate_provider 1
 #migrate_provider 2
 #migrate_provider 3
@@ -141,7 +141,7 @@ read -rsp $'Press any key to shutdown and upgrade provider...\n' -n1 key
 #
 #sleep 5
 #
-#restart_provider 0
+restart_provider 0
 #restart_provider 1
 #restart_provider 2
 #restart_provider 3

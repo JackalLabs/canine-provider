@@ -31,6 +31,7 @@ func StartServerCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx := client.GetClientContextFromCmd(cmd)
+			serverCtx := utils.GetServerContextFromCmd(cmd)
 
 			dbPath := utils.GetArchiveDBPath(clientCtx)
 			archivedb, err := archive.NewDoubleRefArchiveDB(dbPath)
@@ -66,7 +67,7 @@ func StartServerCommand() *cobra.Command {
 				go manager.Start()
 			}
 
-			fs, err := server.NewFileServer(cmd, archivedb, downtimedb)
+			fs, err := server.NewFileServer(cmd, *serverCtx, archivedb, downtimedb)
 			if err != nil {
 				return err
 			}
@@ -247,6 +248,7 @@ func PruneCommand() *cobra.Command {
 
 			}
 			clientCtx := client.GetClientContextFromCmd(cmd)
+			serverCtx := utils.GetServerContextFromCmd(cmd)
 
 			dbPath := utils.GetArchiveDBPath(clientCtx)
 			archivedb, err := archive.NewDoubleRefArchiveDB(dbPath)
@@ -266,7 +268,7 @@ func PruneCommand() *cobra.Command {
 				err = errors.Join(err, downtimedb.Close())
 			}()
 
-			fs, err := server.NewFileServer(cmd, archivedb, downtimedb)
+			fs, err := server.NewFileServer(cmd, *serverCtx, archivedb, downtimedb)
 			if err != nil {
 				return err
 			}
@@ -342,6 +344,8 @@ func MigrateCommand() *cobra.Command {
 			}()
 
 			clientCtx := client.GetClientContextFromCmd(cmd)
+			serverCtx := utils.GetServerContextFromCmd(cmd)
+
 			dbPath := utils.GetArchiveDBPath(clientCtx)
 			archivedb, err := archive.NewDoubleRefArchiveDB(dbPath)
 			if err != nil {
@@ -360,7 +364,7 @@ func MigrateCommand() *cobra.Command {
 				err = errors.Join(err, downtimedb.Close())
 			}()
 
-			fs, err := server.NewFileServer(cmd, archivedb, downtimedb)
+			fs, err := server.NewFileServer(cmd, *serverCtx, archivedb, downtimedb)
 			if err != nil {
 				return err
 			}

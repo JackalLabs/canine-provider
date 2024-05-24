@@ -7,17 +7,18 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"math/rand"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
 
 	"github.com/JackalLabs/jackal-provider/jprov/archive"
-	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
@@ -25,7 +26,6 @@ import (
 	"github.com/rs/cors"
 
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
-	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/cobra"
@@ -34,6 +34,7 @@ import (
 )
 
 type FileServer struct {
+	config      utils.Config
 	cmd         *cobra.Command
 	serverCtx   *serverContext
 	queryClient storageTypes.QueryClient
@@ -43,11 +44,12 @@ type FileServer struct {
 	provider    storageTypes.Providers
 	blockSize   int64
 	queue       *queue.UploadQueue
-	logger      tmlog.Logger
+	logger      *slog.Logger
 }
 
 func NewFileServer(
 	cmd *cobra.Command,
+	serverCtx utils.Context,
 	archivedb archive.ArchiveDB,
 	downtimedb *archive.DowntimeDB,
 ) (fs *FileServer, err error) {
@@ -75,8 +77,26 @@ func NewFileServer(
 		blockSize:   blockSize,
 		queryClient: storageTypes.NewQueryClient(clientCtx),
 		queue:       &queue,
-		logger:      sCtx.Logger,
+		logger:      serverCtx.Logger,
 	}, nil
+}
+
+func newServerLogger(config config) (*slog.Logger, error) {
+	var handler slog.Handler
+
+	options := slog.HandlerOptions{
+		Level: config.logLevel,
+	}
+
+	if format := strings.ToUpper(config.logFormat); format == "JSON" {
+		handler = slog.NewJSONHandler(os.Stdout, &options)
+	} else if format == "TEXT" {
+		handler = slog.NewTextHandler(os.Stdout, &options)
+	} else {
+		return nil, errors.New("unknown log format")
+	}
+
+	return newCtxLogger(handler), nil
 }
 
 func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader, sender string, w *http.ResponseWriter) error {
@@ -97,7 +117,7 @@ func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader
 
 	_, err = f.archive.WriteFileToDisk(file, fid)
 	if err != nil {
-		f.serverCtx.Logger.Error("saveFile: Write To Disk Error: ", err)
+		f.logger.Error("saveFile: Write To Disk Error: ", err)
 		return err
 	}
 
@@ -111,17 +131,17 @@ func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader
 
 	msg, ctrErr := f.MakeContract(fid, sender, &wg, string(tree.Root()), fmt.Sprintf("%d", handler.Size))
 	if ctrErr != nil {
-		f.serverCtx.Logger.Error("saveFile: CONTRACT ERROR: ", ctrErr)
+		f.logger.Error("saveFile: CONTRACT ERROR: ", ctrErr)
 		return ctrErr
 	}
 	wg.Wait()
 
 	if msg.Err != nil {
-		f.serverCtx.Logger.Error(msg.Err.Error())
+		f.logger.Error(msg.Err.Error())
 	}
 
 	if err = writeResponse(*w, *msg, fid, cid); err != nil {
-		f.serverCtx.Logger.Error("Json Encode Error: ", err)
+		f.logger.Error("Json Encode Error: ", err)
 		return err
 	}
 
@@ -188,7 +208,7 @@ func (f *FileServer) MakeContract(fid string, sender string, wg *sync.WaitGroup,
 		return nil, err
 	}
 
-	f.serverCtx.Logger.Info(fmt.Sprintf("Contract being pushed: %s", msg.String()))
+	f.logger.Info(fmt.Sprintf("Contract being pushed: %s", msg.String()))
 
 	u := types.Upload{
 		Message:  msg,
