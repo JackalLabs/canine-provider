@@ -46,7 +46,7 @@ func NewContext(v *viper.Viper, config *Config, logger *slog.Logger) *Context {
 func DefaultBaseConfig() BaseConfig {
 	return BaseConfig{
 		chainID:           "",
-		RootDir:           "$HOME/.jackal-storage/",
+		RootDir:           types.DefaultAppHome,
 		LogLevel:          tmcfg.DefaultLogLevel,
 		LogFormat:         tmcfg.LogFormatPlain,
 		Output:            "",
@@ -70,7 +70,22 @@ func DefaultBaseConfig() BaseConfig {
 func DefaultConfig() *Config {
 	return &Config{
 		BaseConfig: DefaultBaseConfig(),
+		IpfsConfig: DefaultIpfsConfig(),
 	}
+}
+
+func DefaultIpfsConfig() IpfsConfig {
+	return IpfsConfig{
+		Directory: filepath.Join(types.DefaultAppHome, "ipfs-storage"),
+		Port:      4005,
+	}
+}
+
+type IpfsConfig struct {
+	// Files are stored and managed in this directory.
+	// *this directory is locked so no other process have access.
+	Directory string
+	Port      int
 }
 
 type BaseConfig struct {
@@ -102,28 +117,29 @@ type BaseConfig struct {
 	// listening port
 	Port int
 
-	//The amount of intervals a provider can miss their proofs before removing a file
+	// The amount of intervals a provider can miss their proofs before removing a file
 	MaxMisses int
-	//The size of a single file chunk.
+	// The size of a single file chunk.
 	ChunkSize int64
-	//The interval in seconds to check for new strays
+	// The interval in seconds to check for new strays
 	StrayInterval int64
-	//The max size of all messages in bytes to submit to the chain at one time.
+	// The max size of all messages in bytes to submit to the chain at one time.
 	MessageSize int
-	//The maximum gas to be used per message.
+	// The maximum gas to be used per message.
 	GasCap int
-	//The maximum size allowed to be sent to this provider in mbs. (only for monitoring services)
+	// The maximum size allowed to be sent to this provider in mbs. (only for monitoring services)
 	MaxFileSize int
-	//The time, in seconds, between running a queue loop.
+	// The time, in seconds, between running a queue loop.
 	QueueInterval int64
-	//The name to identify this provider in block explorers.
+	// The name to identify this provider in block explorers.
 	ProviderName string
-	//Should this provider report deals (uses gas).
+	// Should this provider report deals (uses gas).
 	DoReport bool
 }
 
 type Config struct {
-	BaseConfig `mapstructure:",squash"`
+	BaseConfig BaseConfig `mapstructure:",squash"`
+	IpfsConfig IpfsConfig `mapstructure:",squash"`
 }
 
 func (cfg BaseConfig) ValidateBasic() error {
@@ -253,7 +269,7 @@ func InterceptConfigsPreRunHandler(cmd *cobra.Command) error {
 		return err
 	}
 
-	logger, err := newLogger(os.Stdout, config.LogFormat, config.LogLevel)
+	logger, err := newLogger(os.Stdout, config.BaseConfig.LogFormat, config.BaseConfig.LogLevel)
 	if err != nil {
 		return err
 	}
@@ -314,5 +330,4 @@ func newLogger(w io.Writer, logFormat string, logLevel string) (*slog.Logger, er
 	}
 
 	return NewCtxLogger(handler), nil
-
 }

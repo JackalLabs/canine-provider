@@ -30,6 +30,8 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/cobra"
 
+	badger "github.com/dgraph-io/badger/v4"
+
 	_ "net/http/pprof"
 )
 
@@ -45,6 +47,7 @@ type FileServer struct {
 	blockSize   int64
 	queue       *queue.UploadQueue
 	logger      *slog.Logger
+	ipfsArchive *archive.IpfsArchive
 }
 
 func NewFileServer(
@@ -66,18 +69,34 @@ func NewFileServer(
 		return nil, err
 	}
 
+	err = os.MkdirAll(sCtx.Config.IpfsConfig.Directory, os.ModePerm)
+	if err != nil {
+		return nil, errors.Join(errors.New("failed to create ipfs directory"), err)
+	}
+
+	options := badger.DefaultOptions(sCtx.Config.IpfsConfig.Directory)
+	db, err := badger.Open(options)
+	if err != nil {
+		return nil, err
+	}
+	ipfsArchive, err := archive.NewIpfsArchive(db, sCtx.Config.IpfsConfig.Port)
+	if err != nil {
+		return nil, err
+	}
+
 	queue := queue.New()
 
 	return &FileServer{
 		cmd:         cmd,
 		serverCtx:   srvrCtx,
-		archive:     archive.NewSingleCellArchive(sCtx.Config.RootDir),
+		archive:     archive.NewSingleCellArchive(sCtx.Config.BaseConfig.RootDir),
 		archivedb:   archivedb,
 		downtimedb:  downtimedb,
 		blockSize:   blockSize,
 		queryClient: storageTypes.NewQueryClient(clientCtx),
 		queue:       &queue,
 		logger:      serverCtx.Logger,
+		ipfsArchive: ipfsArchive,
 	}, nil
 }
 

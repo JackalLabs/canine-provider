@@ -424,6 +424,115 @@ func MigrateCommand() *cobra.Command {
 	return cmd
 }
 
+func MigrateIpfsCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "migrateIpfs",
+		Short: "migrate current file system to sequia (v4) ready file system",
+		Long:  `migrates current file system to v4 file system. compatible with sequia.`,
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			prune, err := cmd.Flags().GetBool(types.FlagPruneFirst)
+
+			if !cmd.Flags().Changed(flags.FlagSkipConfirmation) {
+				if err != nil {
+					return err
+				}
+
+				buf := bufio.NewReader(cmd.InOrStdin())
+				yes, err := input.GetConfirmation("Are you sure you want to migrate from old file system?", buf, cmd.ErrOrStderr())
+				if err != nil {
+					return err
+				}
+
+				if !yes {
+					return nil
+				}
+			}
+
+			defer func() {
+				// required to stop proof server
+				err = errors.Join(err, syscall.Kill(os.Getpid(), syscall.SIGTERM))
+			}()
+
+			clientCtx := client.GetClientContextFromCmd(cmd)
+			serverCtx := utils.GetServerContextFromCmd(cmd)
+
+			dbPath := utils.GetArchiveDBPath(clientCtx)
+			archivedb, err := archive.NewDoubleRefArchiveDB(dbPath)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				err = errors.Join(err, archivedb.Close())
+			}()
+
+			downtimedbPath := utils.GetDowntimeDBPath(clientCtx)
+			downtimedb, err := archive.NewDowntimeDB(downtimedbPath)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				err = errors.Join(err, downtimedb.Close())
+			}()
+
+			fs, err := server.NewFileServer(cmd, *serverCtx, archivedb, downtimedb)
+			if err != nil {
+				return err
+			}
+
+			err = fs.Init()
+			if err != nil {
+				return err
+			}
+
+			err = fs.RecollectActiveDeals()
+			if err != nil {
+				return err
+			}
+
+			interval, err := cmd.Flags().GetUint16(types.FlagInterval)
+			if err != nil {
+				interval = 0
+			}
+
+			fmt.Println("starting proof server")
+			go fs.StartProofServer(interval)
+
+			if prune {
+				err := fs.PruneExpiredFiles()
+				if err != nil {
+					return err
+				}
+			}
+
+			err = fs.PrepareIpfsUpgrade()
+			if err != nil {
+				return err
+			}
+
+			return fs.IpfsUpgrade()
+		},
+	}
+	AddTxFlagsToCmd(cmd)
+	cmd.Flags().Int(types.FlagPort, types.DefaultPort, "Port to host the server on.")
+	cmd.Flags().String(types.VersionFlag, "", "The value exposed by the version api to allow for custom deployments.")
+	cmd.Flags().Bool(types.HaltStraysFlag, false, "Debug flag to stop picking up strays.")
+	cmd.Flags().Uint16(types.FlagInterval, types.DefaultInterval, "The interval in seconds for which to check proofs. Must be >=1800 if you need a custom interval")
+	cmd.Flags().Uint(types.FlagThreads, types.DefaultThreads, "The amount of stray threads.")
+	cmd.Flags().Int(types.FlagMaxMisses, types.DefaultMaxMisses, "The amount of intervals a provider can miss their proofs before removing a file.")
+	cmd.Flags().Int64(types.FlagChunkSize, types.DefaultChunkSize, "The size of a single file chunk.")
+	cmd.Flags().Int64(types.FlagStrayInterval, types.DefaultStrayInterval, "The interval in seconds to check for new strays.")
+	cmd.Flags().Int(types.FlagMessageSize, types.DefaultMessageSize, "The max size of all messages in bytes to submit to the chain at one time.")
+	cmd.Flags().Int(types.FlagGasCap, types.DefaultGasCap, "The maximum gas to be used per message.")
+	cmd.Flags().Int64(types.FlagQueueInterval, types.DefaultQueueInterval, "The time, in seconds, between running a queue loop.")
+	cmd.Flags().String(types.FlagProviderName, "A Storage Provider", "The name to identify this provider in block explorers.")
+	cmd.Flags().Int64(types.FlagSleep, types.DefaultSleep, "The time, in milliseconds, before adding another proof msg to the queue.")
+	cmd.Flags().Bool(types.FlagDoReport, types.DefaultDoReport, "Should this provider report deals (uses gas).")
+	cmd.Flags().Bool(types.FlagPruneFirst, false, "Should the provider prune its state before migration?")
+
+	return cmd
+}
+
 // AddTxFlagsToCmd adds common flags to a module tx command.
 func AddTxFlagsToCmd(cmd *cobra.Command) {
 	cmd.Flags().StringP(tmcli.OutputFlag, "o", "json", "Output format (text|json)")

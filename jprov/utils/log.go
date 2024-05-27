@@ -64,7 +64,6 @@ func NewDefaultCtxLogger(w io.Writer) *slog.Logger {
 }
 
 func NewFormatHandler(w io.Writer, logFormat string, option *slog.HandlerOptions) (slog.Handler, error) {
-
 	switch strings.ToLower(logFormat) {
 	case LogFormatJSON:
 		return slog.NewJSONHandler(w, option), nil

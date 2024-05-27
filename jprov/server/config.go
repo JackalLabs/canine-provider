@@ -33,7 +33,7 @@ type config struct {
 	// Output format: text or json
 	logFormat string
 
-	//RPC config
+	// RPC config
 	chainID string
 	// text or json
 	output string
@@ -49,23 +49,23 @@ type config struct {
 	// listening port
 	port int
 
-	//The amount of intervals a provider can miss their proofs before removing a file
+	// The amount of intervals a provider can miss their proofs before removing a file
 	maxMisses int
-	//The size of a single file chunk.
+	// The size of a single file chunk.
 	chunkSize int64
-	//The interval in seconds to check for new strays
+	// The interval in seconds to check for new strays
 	strayInterval int64
-	//The max size of all messages in bytes to submit to the chain at one time.
+	// The max size of all messages in bytes to submit to the chain at one time.
 	messageSize int
-	//The maximum gas to be used per message.
+	// The maximum gas to be used per message.
 	gasCap int
-	//The maximum size allowed to be sent to this provider in mbs. (only for monitoring services)
+	// The maximum size allowed to be sent to this provider in mbs. (only for monitoring services)
 	maxFileSize int
-	//The time, in seconds, between running a queue loop.
+	// The time, in seconds, between running a queue loop.
 	queueInterval int64
-	//The name to identify this provider in block explorers.
+	// The name to identify this provider in block explorers.
 	providerName string
-	//Should this provider report deals (uses gas).
+	// Should this provider report deals (uses gas).
 	doReport bool
 }
 
@@ -75,7 +75,7 @@ type configFile struct {
 	// Output format: text or json
 	LogFormat string
 
-	//RPC config
+	// RPC config
 	ChainID string
 	// text or json
 	Output string
@@ -173,7 +173,6 @@ func parseLogLevel(s string) (slog.Level, error) {
 }
 
 func ParseCmdFlags(cmd *cobra.Command, config config) (config, error) {
-
 	if cmd.Flags().Changed(types.FlagThreads) {
 		threads, err := cmd.Flags().GetUint(types.FlagThreads)
 		if err != nil {

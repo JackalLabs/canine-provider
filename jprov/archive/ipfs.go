@@ -28,8 +28,8 @@ func merkleTreeKey(merkle []byte, owner string, start int64) []byte {
 	return []byte(fmt.Sprintf("tree/%x/%s/%d", merkle, owner, start))
 }
 
-func (i *IpfsArchive) WriteTreeToDisk(fid string, tree *merkletree.MerkleTree) (err error) {
-	k := []byte(fid)
+func (i *IpfsArchive) WriteTreeToDisk(merkle string, owner string, start int64, tree *merkletree.MerkleTree) (err error) {
+	k := merkleTreeKey([]byte(merkle), owner, start)
 	v, err := json.Marshal(tree)
 	if err != nil {
 		return err
