@@ -74,7 +74,7 @@ func NewRootCmd() *cobra.Command {
 		StartServerCommand(),
 		ResetCommand(),
 		MigrateCommand(),
-		MigrateIpfsCommand(),
+		MigrateSequiaCommand(),
 		init,
 		DataCmd(),
 		ClientCmd(),

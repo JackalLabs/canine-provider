@@ -424,11 +424,11 @@ func MigrateCommand() *cobra.Command {
 	return cmd
 }
 
-func MigrateIpfsCommand() *cobra.Command {
+func MigrateSequiaCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "migrateIpfs",
+		Use:   "migrate-sequoia",
 		Short: "migrate current file system to sequia (v4) ready file system",
-		Long:  `migrates current file system to v4 file system. compatible with sequia.`,
+		Long:  `migrates current file system to sequoia file system.`,
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			prune, err := cmd.Flags().GetBool(types.FlagPruneFirst)
