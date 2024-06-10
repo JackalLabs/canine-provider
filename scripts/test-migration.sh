@@ -58,6 +58,25 @@ migrate_provider () {
     echo y | jprovd migrate --home="$HOME/providers/provider$1"
 }
 
+init_sequoia () {
+    rm -rf $HOME/providers/sequoia${1}
+    sequoia init --home="$HOME/providers/sequoia${1}"
+}
+
+migrate_sequoia () {
+    jprovd migrate-sequoia --home="$HOME/providers/provider$1" -y
+    init_sequoia ${1}
+
+    mv -f $HOME/providers/provider${1}/data $HOME/providers/sequoia${1}
+    mv -f $HOME/providers/provider${1}/config/priv_storkey.json $HOME/providers/sequoia${1}
+    sed -i -e 's/rpc_addr: https:\/\/jackal-testnet-rpc.polkachu.com:443/rpc_addr: tcp:\/\/localhost:26657/g' $HOME/providers/sequoia${1}/config.yaml
+    sed -i -e 's/grpc_addr: https:\/\/jackal-testnet-rpc.polkachu.com:17590/grpc_addr: tcp:\/\/localhost:26657/g' $HOME/providers/sequoia${1}/config.yaml
+}
+
+start_sequoia () {
+    sequoia start --home="$HOME/providers/sequoia${1}"
+}
+
 sender="jkl10k05lmc88q5ft3lm00q30qkd9x6654h3lejnct"
 
 upload_file () {
@@ -129,7 +148,7 @@ sleep 4
 echo "upgrading provider..."
 install_new
 
-read -rsp $'Press any key to shutdown and upgrade provider...\n' -n1 key
+#read -rsp $'Press any key to shutdown and upgrade provider...\n' -n1 key
 migrate_provider 0
 #migrate_provider 1
 #migrate_provider 2
@@ -139,15 +158,17 @@ migrate_provider 0
 #migrate_provider 6
 #
 #
-#sleep 5
+#sleep 3
 #
-restart_provider 0
+migrate_sequoia 0
+#restart_provider 0
 #restart_provider 1
 #restart_provider 2
 #restart_provider 3
 #restart_provider 4
 #restart_provider 5
 #restart_provider 6
+start_sequoia 0
 
 
 read -rsp $'Press any key to shutdown...\n' -n1 key
