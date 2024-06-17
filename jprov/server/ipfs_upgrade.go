@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/hex"
 	"errors"
 	"log/slog"
 	"strconv"
@@ -34,7 +35,9 @@ func (f *FileServer) migrateToIpfs(activeDeal storageTypes.ActiveDeals) error {
 		return errors.Join(errors.New("failed to parse startblock"), err)
 	}
 
-	err = f.ipfsArchive.WriteTreeToDisk(activeDeal.Merkle, activeDeal.Signee, startBlock, tree)
+	merkle := make([]byte, hex.DecodedLen(len([]byte(activeDeal.Merkle))))
+	hex.Decode(merkle, []byte(activeDeal.Merkle))
+	err = f.ipfsArchive.WriteTreeToDisk(merkle, activeDeal.Signee, startBlock, tree)
 	if err != nil {
 		return err
 	}
@@ -62,7 +65,7 @@ func (f *FileServer) IpfsUpgrade() error {
 		}
 	}
 
-	return nil
+	return f.ipfsArchive.Stop()
 }
 
 func activeDealLogAttr(activeDeal storageTypes.ActiveDeals) slog.Attr {

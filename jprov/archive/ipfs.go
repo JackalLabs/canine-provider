@@ -14,8 +14,9 @@ import (
 	merkletree "github.com/wealdtech/go-merkletree"
 
 	bds "github.com/ipfs/go-ds-badger2"
+
+	jsoniter "github.com/json-iterator/go"
 )
-import jsoniter "github.com/json-iterator/go"
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
@@ -28,8 +29,8 @@ func merkleTreeKey(merkle []byte, owner string, start int64) []byte {
 	return []byte(fmt.Sprintf("tree/%x/%s/%d", merkle, owner, start))
 }
 
-func (i *IpfsArchive) WriteTreeToDisk(merkle string, owner string, start int64, tree *merkletree.MerkleTree) (err error) {
-	k := merkleTreeKey([]byte(merkle), owner, start)
+func (i *IpfsArchive) WriteTreeToDisk(merkle []byte, owner string, start int64, tree *merkletree.MerkleTree) (err error) {
+	k := merkleTreeKey(merkle, owner, start)
 	v, err := json.Marshal(tree)
 	if err != nil {
 		return err
@@ -48,7 +49,8 @@ func (i *IpfsArchive) WriteTreeToDisk(merkle string, owner string, start int64, 
 }
 
 func fidKey(fid string) []byte {
-	return []byte(fmt.Sprintf("cid/%x", []byte(fid)))
+	h := []byte(fid)
+	return []byte(fmt.Sprintf("cid/%x", h))
 }
 
 func (i *IpfsArchive) WriteFileToDisk(data io.Reader, fid string) (written int64, err error) {
@@ -115,4 +117,8 @@ func newIpfsArchive(ctx context.Context, db *badger.DB, port int) (*ipfslite.Pee
 	lite.Bootstrap(ipfslite.DefaultBootstrapPeers())
 
 	return lite, nil
+}
+
+func (i *IpfsArchive) Stop() error {
+	return i.db.Close()
 }

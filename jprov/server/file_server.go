@@ -306,7 +306,7 @@ func (f *FileServer) StartFileServer(cmd *cobra.Command) {
 	f.logger.Info("recollecting active deals...")
 	err = f.RecollectActiveDeals()
 	if err != nil {
-		f.logger.Error("failed to recollect lost active deals to database :", err.Error())
+		f.logger.Error("failed to recollect lost active deals to database :", "error", err.Error())
 	}
 	go f.StartProofServer(interval)
 	go NatCycle(cmd.Context())
