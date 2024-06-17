@@ -4,32 +4,88 @@ set -eu
 
 source ./scripts/setup-chain.sh
 
+UPGRADE_HEIGHT="30"
+
+OLD_CHAIN_VER="v3.2.2"
+NEW_CHAIN_VER="v4.0.0-alpha.3"
+
+OLD_PROVIDER_VER="v1.1.2"
+
+sender="jkl10k05lmc88q5ft3lm00q30qkd9x6654h3lejnct"
 current_dir=$(pwd)
 TMP_ROOT="$(dirname $(pwd))/_build"
 mkdir -p "${TMP_ROOT}"
 
 TMP_BUILD="${TMP_ROOT}"/jprovd
 
+bypass_go_version_check () {
+    VER=$(go version)
+    sed -i -e 's/! go version | grep -q "go1.2[0-9]"/false/' ${1}/Makefile
+}
+
 install_old () {
     TMP_GOCACHE="${TMP_ROOT}"/gocache
     mkdir -p "${TMP_GOCACHE}"
 
-    curl -o v1.1.2.zip --output-dir "${TMP_ROOT}" \
-        -L https://github.com/JackalLabs/canine-provider/archive/refs/tags/v1.1.2.zip 
+    echo "installing v3 canined"
+    if [[ ! -e "${TMP_ROOT}/canine-chain" ]]; then
+        cd ${TMP_ROOT}
+        git clone https://github.com/JackalLabs/canine-chain.git
+        cd ${current_dir}
+    fi
 
-    unzip -u -d "${TMP_ROOT}" "${TMP_ROOT}"/v1.1.2.zip
+    PROJ_DIR="${TMP_ROOT}/canine-chain"
 
-    cd "${TMP_ROOT}"/canine-provider-1.1.2
 
-    go install -mod=readonly ./jprov/jprovd
+    cd ${PROJ_DIR}
+    git switch tags/${OLD_CHAIN_VER} --detach
+    bypass_go_version_check ${PROJ_DIR}
+    make install
+    git restore Makefile
+    echo "finished chain installation"
     
+    cd "${current_dir}"
+    canined version
+
+    
+    if [[ ! -e "${TMP_ROOT}/canine-provider" ]]; then
+        cd ${TMP_ROOT}
+        git clone https://github.com/JackalLabs/canine-provider.git
+        cd canine-provider
+        cd ${current_dir}
+    fi
+
+    PROJ_DIR="${TMP_ROOT}/canine-provider"
+
+
+    cd ${PROJ_DIR}
+    git switch tags/${OLD_PROVIDER_VER} --detach
+    bypass_go_version_check ${PROJ_DIR}
+    make install
+    git restore Makefile
+
     cd "${current_dir}"
     jprovd version
 }
 
+
 install_new () {
     make install
     jprovd version
+}
+
+install_new_chain () {
+    PROJ_DIR="${TMP_ROOT}/canine-chain"
+    cd ${PROJ_DIR}
+    #git switch tags/${NEW_CHAIN_VER} --detach
+    git switch marston/econ-handler --detach
+
+    bypass_go_version_check ${PROJ_DIR}
+    make install
+    git restore Makefile
+
+    cd "${current_dir}"
+    canined version
 }
 
 start_chain () {
@@ -38,6 +94,37 @@ start_chain () {
     fix_config
 
     screen -d -m -S "canined" bash -c "canined start --pruning=nothing --minimum-gas-prices=0ujkl"
+}
+
+set_upgrade_prop () {
+    canined tx gov submit-proposal software-upgrade "v4" --upgrade-height ${UPGRADE_HEIGHT} --upgrade-info "tmp" --title "v4 Upgrade" \
+        --description "upgrade" --from charlie -y --deposit "20000000ujkl"
+
+    sleep 6
+
+    canined tx gov vote 1 yes --from ${KEY} -y
+    echo "voting successful"
+}
+
+upgrade_chain () {
+    while true; do
+        BLOCK_HEIGHT=$(canined status | jq '.SyncInfo.latest_block_height' -r)
+        if [ $BLOCK_HEIGHT = "$UPGRADE_HEIGHT" ]; then
+            # assuming running only 1 canined
+            echo "BLOCK HEIGHT = $UPGRADE_HEIGHT REACHED, KILLING OLD ONE"
+            killall canined
+            break
+        else
+            canined q storage list-active-deals --chain-id test --home $HOME
+            canined q storage list-strays --chain-id test --home $HOME
+            canined q storage list-contracts --chain-id test --home $HOME
+            canined q gov proposal 1 --output=json
+            echo "BLOCK_HEIGHT = $BLOCK_HEIGHT"
+            sleep 2
+        fi
+    done
+
+    install_new_chain
 }
 
 restart_chain () {
@@ -61,23 +148,29 @@ migrate_provider () {
 init_sequoia () {
     rm -rf $HOME/providers/sequoia${1}
     sequoia init --home="$HOME/providers/sequoia${1}"
+
+    sed -i -e 's/rpc_addr: https:\/\/jackal-testnet-rpc.polkachu.com:443/rpc_addr: tcp:\/\/localhost:26657/g' $HOME/providers/sequoia${1}/config.yaml
+    sed -i -e 's/grpc_addr: jackal-testnet-grpc.polkachu.com:17590/grpc_addr: localhost:9090/g' $HOME/providers/sequoia${1}/config.yaml
+
+    sed -i -e 's/data_directory: $HOME\/.sequoia\/data/data_directory: $HOME\/providers\/sequoia0\/data/g' $HOME/providers/sequoia${1}/config.yaml
+}
+
+move_files () {
+    cp -r "${HOME}/providers/provider${1}/ipfs-storage" "${HOME}/providers/sequoia${1}/data"
+    cp "${HOME}/providers/provider${1}/config/priv_storkey.json" "${HOME}/providers/sequoia${1}"
 }
 
 migrate_sequoia () {
     jprovd migrate-sequoia --home="$HOME/providers/provider$1" -y
     init_sequoia ${1}
 
-    mv -f $HOME/providers/provider${1}/data $HOME/providers/sequoia${1}
-    mv -f $HOME/providers/provider${1}/config/priv_storkey.json $HOME/providers/sequoia${1}
-    sed -i -e 's/rpc_addr: https:\/\/jackal-testnet-rpc.polkachu.com:443/rpc_addr: tcp:\/\/localhost:26657/g' $HOME/providers/sequoia${1}/config.yaml
-    sed -i -e 's/grpc_addr: https:\/\/jackal-testnet-rpc.polkachu.com:17590/grpc_addr: tcp:\/\/localhost:26657/g' $HOME/providers/sequoia${1}/config.yaml
+    move_files ${1}
 }
 
 start_sequoia () {
     sequoia start --home="$HOME/providers/sequoia${1}"
 }
 
-sender="jkl10k05lmc88q5ft3lm00q30qkd9x6654h3lejnct"
 
 upload_file () {
     resp=$(curl -v -F sender=$sender -F file=@$1 http://localhost:333$2/upload)
@@ -123,18 +216,21 @@ start_provider 54f86a701648e8324e920f9592c21cc591b244ae46eac935d45fe962bba1102c 
 #start_provider adf5a86ac54146b172c20b865c548e900c51439c3723af14aeab668ccd2b8ecf \
 #    jkl1yu099xns2qpslvyrymxq3hwrqhevs7qxksvu8p 6
 echo "provider started!!!"
-sleep 30
+sleep 35
 
 # upload files
 canined tx storage buy-storage jkl10k05lmc88q5ft3lm00q30qkd9x6654h3lejnct 720h 3000000000 ujkl --from charlie -y
 sleep 5
+set_upgrade_prop
+sleep 5
+canined q gov proposal 1
 
 upload_file ./scripts/dummy_data/1.png 0
-#upload_file ./scripts/dummy_data/2.png 1
-#upload_file ./scripts/dummy_data/3.png 6
-upload_file ./scripts/dummy_data/4.png 0
-upload_file ./scripts/dummy_data/5.svg 0
-upload_file ./scripts/dummy_data/6.wav 0
+upload_file ./scripts/dummy_data/2.png 0
+#upload_file ./scripts/dummy_data/3.png 0
+#upload_file ./scripts/dummy_data/4.png 0
+#upload_file ./scripts/dummy_data/5.svg 0
+#upload_file ./scripts/dummy_data/6.wav 0
 upload_file ./scripts/dummy_data/test.txt 0
 
 sleep 10
@@ -160,7 +256,8 @@ migrate_provider 0
 #
 #sleep 3
 #
-migrate_sequoia 0
+read -rsp $'Press any key to shutdown and upgrade provider...\n' -n1 key
+#migrate_sequoia 0
 #restart_provider 0
 #restart_provider 1
 #restart_provider 2
@@ -168,7 +265,14 @@ migrate_sequoia 0
 #restart_provider 4
 #restart_provider 5
 #restart_provider 6
-start_sequoia 0
+
+
+echo "upgrading chain to v4"
+upgrade_chain
+restart_chain
+sleep 5
+
+#start_sequoia 0
 
 
 read -rsp $'Press any key to shutdown...\n' -n1 key

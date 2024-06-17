@@ -14,6 +14,7 @@ import (
 
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -43,10 +44,13 @@ func NewContext(v *viper.Viper, config *Config, logger *slog.Logger) *Context {
 	return &Context{v, config, logger}
 }
 
-func DefaultBaseConfig() BaseConfig {
+func DefaultBaseConfig(home string) BaseConfig {
+	if home == "" {
+		home = types.DefaultAppHome
+	}
 	return BaseConfig{
 		chainID:           "",
-		RootDir:           types.DefaultAppHome,
+		RootDir:           home,
 		LogLevel:          tmcfg.DefaultLogLevel,
 		LogFormat:         tmcfg.LogFormatPlain,
 		Output:            "",
@@ -67,16 +71,20 @@ func DefaultBaseConfig() BaseConfig {
 }
 
 // DefaultConfig returns a default configuration for a Tendermint node
-func DefaultConfig() *Config {
+func DefaultConfig(home string) *Config {
 	return &Config{
-		BaseConfig: DefaultBaseConfig(),
-		IpfsConfig: DefaultIpfsConfig(),
+		BaseConfig: DefaultBaseConfig(home),
+		IpfsConfig: DefaultIpfsConfig(home),
 	}
 }
 
-func DefaultIpfsConfig() IpfsConfig {
+func DefaultIpfsConfig(home string) IpfsConfig {
+	if home == "" {
+		home = types.DefaultAppHome
+	}
+
 	return IpfsConfig{
-		Directory: filepath.Join(types.DefaultAppHome, "ipfs-storage"),
+		Directory: filepath.Join(home, "ipfs-storage"),
 		Port:      4005,
 	}
 }
@@ -183,10 +191,10 @@ func (cfg *Config) SetRoot(root string) *Config {
 	return cfg
 }
 
-func NewDefaultContext() *Context {
+func NewDefaultContext(home string) *Context {
 	return NewContext(
 		viper.New(),
-		DefaultConfig(),
+		DefaultConfig(home),
 		NewDefaultCtxLogger(os.Stdout),
 	)
 }
@@ -194,7 +202,7 @@ func NewDefaultContext() *Context {
 func interceptConfigs(rootViper *viper.Viper) (*Config, error) {
 	rootDir := rootViper.GetString(flags.FlagHome)
 
-	conf := DefaultConfig()
+	conf := DefaultConfig(rootDir)
 
 	conf.SetRoot(rootDir)
 	viper.SetConfigName(configName)
@@ -217,8 +225,9 @@ func GetServerContextFromCmd(cmd *cobra.Command) *Context {
 		serverCtxPtr := v.(*Context)
 		return serverCtxPtr
 	}
+	clientCtx := client.GetClientContextFromCmd(cmd)
 
-	return NewDefaultContext()
+	return NewDefaultContext(clientCtx.HomeDir)
 }
 
 func SetCmdServerContext(cmd *cobra.Command, serverCtx *Context) error {
@@ -234,7 +243,8 @@ func SetCmdServerContext(cmd *cobra.Command, serverCtx *Context) error {
 }
 
 func InterceptConfigsPreRunHandler(cmd *cobra.Command) error {
-	serverCtx := NewDefaultContext()
+	clientCtx := client.GetClientContextFromCmd(cmd)
+	serverCtx := NewDefaultContext(clientCtx.HomeDir)
 
 	// Get the executable name and configure the viper instance so that environmental
 	// variables are checked based off that name. The underscore character is used
