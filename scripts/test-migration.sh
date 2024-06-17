@@ -156,7 +156,7 @@ init_sequoia () {
 }
 
 move_files () {
-    cp -r "${HOME}/providers/provider${1}/ipfs-storage" "${HOME}/providers/sequoia${1}/data"
+    cp -rv "${HOME}/providers/provider${1}/ipfs-storage" "${HOME}/providers/sequoia${1}/data"
     cp "${HOME}/providers/provider${1}/config/priv_storkey.json" "${HOME}/providers/sequoia${1}"
 }
 
@@ -258,7 +258,7 @@ migrate_provider 0
 #
 read -rsp $'jprov migrate-sequoia now and press any key to continue...\n' -n1 key
 # uncomment below to migrate
-#migrate_sequoia 0
+migrate_sequoia 0
 
 #restart_provider 0
 #restart_provider 1

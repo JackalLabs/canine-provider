@@ -19,7 +19,7 @@ import (
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 )
 
-func verifyAttest(deal storageTypes.ActiveDeals, attest types.AttestRequest) (verified bool, err error) {
+func verifyAttest(deal storageTypes.LegacyActiveDeals, attest types.AttestRequest) (verified bool, err error) {
 	merkle := deal.Merkle
 	block := deal.Blocktoprove
 	blockNum, err := strconv.ParseInt(block, 10, 64)

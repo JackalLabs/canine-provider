@@ -18,7 +18,7 @@ func (f *FileServer) PrepareIpfsUpgrade() error {
 	return nil
 }
 
-func (f *FileServer) migrateToIpfs(activeDeal storageTypes.ActiveDeals) error {
+func (f *FileServer) migrateToIpfs(activeDeal storageTypes.LegacyActiveDeals) error {
 	tree, err := f.archive.RetrieveTree(activeDeal.Fid)
 	if err != nil {
 		return err
@@ -68,7 +68,7 @@ func (f *FileServer) IpfsUpgrade() error {
 	return f.ipfsArchive.Stop()
 }
 
-func activeDealLogAttr(activeDeal storageTypes.ActiveDeals) slog.Attr {
+func activeDealLogAttr(activeDeal storageTypes.LegacyActiveDeals) slog.Attr {
 	return slog.Group(
 		"activeDeal",
 		slog.String("cid", activeDeal.Cid),
