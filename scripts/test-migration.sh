@@ -192,7 +192,7 @@ upload_file () {
 }
 
 shut_down () {
-    killall canined jprovd
+    killall canined jprovd sequoia
 }
 
 install_old
@@ -256,8 +256,10 @@ migrate_provider 0
 #
 #sleep 3
 #
-read -rsp $'Press any key to shutdown and upgrade provider...\n' -n1 key
+read -rsp $'jprov migrate-sequoia now and press any key to continue...\n' -n1 key
+# uncomment below to migrate
 #migrate_sequoia 0
+
 #restart_provider 0
 #restart_provider 1
 #restart_provider 2
@@ -272,7 +274,7 @@ upgrade_chain
 restart_chain
 sleep 5
 
-#start_sequoia 0
+start_sequoia 0
 
 
 read -rsp $'Press any key to shutdown...\n' -n1 key
