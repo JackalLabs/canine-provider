@@ -174,7 +174,7 @@ upgrade_chain () {
             canined q storage list-active-deals --chain-id test --home $HOME
             canined q storage list-strays --chain-id test --home $HOME
             canined q storage list-contracts --chain-id test --home $HOME
-            canined q gov proposal 1 --output=json
+            canined q gov proposal 2 --output=json
             echo "BLOCK_HEIGHT = $BLOCK_HEIGHT"
             sleep 2
         fi
