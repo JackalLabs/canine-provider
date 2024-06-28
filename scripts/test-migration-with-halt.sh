@@ -40,7 +40,7 @@ install_old () {
 
 
     cd ${PROJ_DIR}
-    git switch tags/${OLD_CHAIN_VER} --detach
+    git checkout ${OLD_CHAIN_VER}
     bypass_go_version_check ${PROJ_DIR}
     make install
     git restore Makefile
@@ -61,7 +61,7 @@ install_old () {
 
 
     cd ${PROJ_DIR}
-    git switch tags/${OLD_PROVIDER_VER} --detach
+    git checkout ${OLD_PROVIDER_VER}
     bypass_go_version_check ${PROJ_DIR}
     make install
     git restore Makefile
@@ -85,7 +85,7 @@ install_halt () {
 
 
     cd ${PROJ_DIR}
-    git switch tags/${HALT_CHAIN_VER} --detach
+    git checkout ${HALT_CHAIN_VER}
     bypass_go_version_check ${PROJ_DIR}
     make install
     git restore Makefile
@@ -106,7 +106,7 @@ install_halt () {
 
 
     cd ${PROJ_DIR}
-    git switch tags/${OLD_PROVIDER_VER} --detach
+    git checkout ${OLD_PROVIDER_VER}
     bypass_go_version_check ${PROJ_DIR}
     make install
     git restore Makefile
@@ -124,8 +124,7 @@ install_new () {
 install_new_chain () {
     PROJ_DIR="${TMP_ROOT}/canine-chain"
     cd ${PROJ_DIR}
-    #git switch tags/${NEW_CHAIN_VER} --detach
-    git switch marston/econ-handler --detach
+    git checkout ${NEW_CHAIN_VER}
 
     bypass_go_version_check ${PROJ_DIR}
     make install
