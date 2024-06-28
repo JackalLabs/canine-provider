@@ -140,7 +140,7 @@ start_chain () {
     from_scratch
     fix_config
 
-    screen -d -m -S "canined" bash -c "canined start --pruning=nothing --minimum-gas-prices=0ujkl"
+    screen -d -m -L -Logfile "chain.log" -S "canined" bash -c "canined start --pruning=nothing --minimum-gas-prices=0ujkl"
 }
 
 set_upgrade_prop () {
