@@ -5,7 +5,7 @@ set -eu
 source ./scripts/setup-chain.sh
 
 HALT_UPGRADE_HEIGHT="60"
-UPGRADE_HEIGHT="120"
+UPGRADE_HEIGHT="90"
 
 OLD_CHAIN_VER="v3.2.2"
 HALT_CHAIN_VER="marston/v3-halt"
