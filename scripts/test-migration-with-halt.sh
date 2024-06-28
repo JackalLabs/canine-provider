@@ -4,8 +4,8 @@ set -eu
 
 source ./scripts/setup-chain.sh
 
-HALT_UPGRADE_HEIGHT="30"
-UPGRADE_HEIGHT="90"
+HALT_UPGRADE_HEIGHT="60"
+UPGRADE_HEIGHT="120"
 
 OLD_CHAIN_VER="v3.2.2"
 HALT_CHAIN_VER="marston/v3-halt"
@@ -166,7 +166,7 @@ set_halt_upgrade_prop () {
 upgrade_chain () {
     while true; do
         BLOCK_HEIGHT=$(canined status | jq '.SyncInfo.latest_block_height' -r)
-        if [ $BLOCK_HEIGHT = "$UPGRADE_HEIGHT" ||  $BLOCK_HEIGHT = "$HALT_UPGRADE_HEIGHT"  ]; then
+        if [ $BLOCK_HEIGHT = "$UPGRADE_HEIGHT" ]; then
             # assuming running only 1 canined
             echo "BLOCK HEIGHT = $UPGRADE_HEIGHT REACHED, KILLING OLD ONE"
             killall canined
@@ -175,7 +175,28 @@ upgrade_chain () {
             canined q storage list-active-deals --chain-id test --home $HOME
             canined q storage list-strays --chain-id test --home $HOME
             canined q storage list-contracts --chain-id test --home $HOME
-            canined q gov proposal $number --output=json
+            canined q gov proposal 1 --output=json
+            echo "BLOCK_HEIGHT = $BLOCK_HEIGHT"
+            sleep 2
+        fi
+    done
+
+    install_new_chain
+}
+
+upgrade_halt_chain () {
+    while true; do
+        BLOCK_HEIGHT=$(canined status | jq '.SyncInfo.latest_block_height' -r)
+        if [ $BLOCK_HEIGHT = "$HALT_UPGRADE_HEIGHT" ]; then
+            # assuming running only 1 canined
+            echo "BLOCK HEIGHT = $HALT_UPGRADE_HEIGHT REACHED, KILLING OLD ONE"
+            killall canined
+            break
+        else
+            canined q storage list-active-deals --chain-id test --home $HOME
+            canined q storage list-strays --chain-id test --home $HOME
+            canined q storage list-contracts --chain-id test --home $HOME
+            canined q gov proposal 1 --output=json
             echo "BLOCK_HEIGHT = $BLOCK_HEIGHT"
             sleep 2
         fi
@@ -297,7 +318,7 @@ upload_file ./scripts/dummy_data/test.txt 0
 
 sleep 10
 
-upgrade_chain
+upgrade_halt_chain
 restart_chain
 sleep 10
 
