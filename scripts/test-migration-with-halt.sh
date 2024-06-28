@@ -138,8 +138,8 @@ start_chain () {
     startup
     from_scratch
     fix_config
-
     screen -d -m -L -Logfile "chain.log" -S "canined" bash -c "canined start --pruning=nothing --minimum-gas-prices=0ujkl"
+
 }
 
 set_upgrade_prop () {
@@ -227,7 +227,7 @@ init_sequoia () {
     sequoia init --home="$HOME/providers/sequoia${1}"
 
     sed -i -e 's/rpc_addr: https:\/\/jackal-testnet-rpc.polkachu.com:443/rpc_addr: tcp:\/\/localhost:26657/g' $HOME/providers/sequoia${1}/config.yaml
-    sed -i -e 's/grpc_addr: jackal-testnet-grpc.polkachu.com:17590/grpc_addr: localhost:9090/g' $HOME/providers/sequoia${1}/config.yaml
+    sed -i -e 's/grpc_addr: jackal-testnet-grpc.polkachu.com:17590/grpc_addr: localhost:37890/g' $HOME/providers/sequoia${1}/config.yaml
 
     sed -i -e 's/data_directory: $HOME\/.sequoia\/data/data_directory: $HOME\/providers\/sequoia0\/data/g' $HOME/providers/sequoia${1}/config.yaml
 }
@@ -276,7 +276,8 @@ install_old
 
 start_chain
 echo "CHAIN STARTED!!!"
-sleep 5
+sleep 10
+echo "running on port 9090: $(lsof -i :9090)"
 
 start_provider 54f86a701648e8324e920f9592c21cc591b244ae46eac935d45fe962bba1102c \
     jkl1xclg3utp4yuvaxa54r39xzrudc988s82ykve3f 0

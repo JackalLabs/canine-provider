@@ -97,7 +97,7 @@ fix_config() {
     sed -i.bak -e 's/laddr = "tcp:\/\/127.0.0.1:26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' $HOME/.canine/config/config.toml
     sed -i.bak -e 's/laddr = "tcp:\/\/127.0.0.1:26656"/laddr = "tcp:\/\/0.0.0.0:26656"/' $HOME/.canine/config/config.toml
     sed -i.bak -e 's/chain-id = ""/chain-id = "canine-1"/' $HOME/.canine/config/client.toml
-    sed -i.bak -e 's/grpc_laddr = ""/grpc_laddr = "tcp:\/\/0.0.0.0:9090"/' $HOME/.canine/config/config.toml
+    sed -i.bak -e 's/grpc_laddr = ""/grpc_laddr = "tcp:\/\/0.0.0.0:37890"/' $HOME/.canine/config/config.toml
 }
 
 startup() {
