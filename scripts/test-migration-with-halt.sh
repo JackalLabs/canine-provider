@@ -201,7 +201,7 @@ upgrade_halt_chain () {
         fi
     done
 
-    install_new_chain
+    install_halt
 }
 
 restart_chain () {
