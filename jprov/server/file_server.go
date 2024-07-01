@@ -36,7 +36,7 @@ import (
 )
 
 type FileServer struct {
-	config      utils.Config
+	config      *utils.Config
 	cmd         *cobra.Command
 	serverCtx   *serverContext
 	queryClient storageTypes.QueryClient
@@ -87,6 +87,7 @@ func NewFileServer(
 	queue := queue.New()
 
 	return &FileServer{
+		config:      nil,
 		cmd:         cmd,
 		serverCtx:   srvrCtx,
 		archive:     archive.NewSingleCellArchive(sCtx.Config.BaseConfig.RootDir),
@@ -100,7 +101,7 @@ func NewFileServer(
 	}, nil
 }
 
-func newServerLogger(config config) (*slog.Logger, error) {
+func NewServerLogger(config config) (*slog.Logger, error) {
 	var handler slog.Handler
 
 	options := slog.HandlerOptions{
@@ -115,7 +116,7 @@ func newServerLogger(config config) (*slog.Logger, error) {
 		return nil, errors.New("unknown log format")
 	}
 
-	return newCtxLogger(handler), nil
+	return NewCtxLogger(handler), nil
 }
 
 func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader, sender string, w *http.ResponseWriter) error {

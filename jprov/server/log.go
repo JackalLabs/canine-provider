@@ -24,8 +24,8 @@ func (h contextHandler) Handle(ctx context.Context, r slog.Record) error {
 	return h.Handler.Handle(ctx, r)
 }
 
-// add log attr to context.
-func appendCtx(parent context.Context, attr slog.Attr) context.Context {
+// AppendCtx adds log attr to context.
+func AppendCtx(parent context.Context, attr slog.Attr) context.Context {
 	if parent == nil {
 		parent = context.Background()
 	}
@@ -39,7 +39,7 @@ func appendCtx(parent context.Context, attr slog.Attr) context.Context {
 	return context.WithValue(parent, slogFields, s)
 }
 
-func newCtxLogger(h slog.Handler) *slog.Logger {
+func NewCtxLogger(h slog.Handler) *slog.Logger {
 	handler := &contextHandler{h}
 	return slog.New(handler)
 }

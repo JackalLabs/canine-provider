@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"strconv"
 
+	merkletree2 "github.com/wealdtech/go-merkletree/v2"
+
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 )
 
@@ -27,6 +29,7 @@ func (f *FileServer) migrateToIpfs(activeDeal storageTypes.LegacyActiveDeals) er
 	fmt.Printf("Migrating %x...\n", tree.Root())
 
 	file, err := f.archive.RetrieveFile(activeDeal.Fid)
+	// nolint:all
 	defer file.Close()
 	if err != nil {
 		return err
@@ -38,8 +41,13 @@ func (f *FileServer) migrateToIpfs(activeDeal storageTypes.LegacyActiveDeals) er
 	}
 
 	merkle := make([]byte, hex.DecodedLen(len([]byte(activeDeal.Merkle))))
-	hex.Decode(merkle, []byte(activeDeal.Merkle))
-	err = f.ipfsArchive.WriteTreeToDisk(merkle, activeDeal.Signee, startBlock, tree)
+	_, err = hex.Decode(merkle, []byte(activeDeal.Merkle))
+	if err != nil {
+		return fmt.Errorf("failed to decode merkle | %w", err)
+	}
+	var t interface{} = tree
+	mt := t.(*merkletree2.MerkleTree)
+	err = f.ipfsArchive.WriteTreeToDisk(merkle, activeDeal.Signee, startBlock, mt)
 	if err != nil {
 		return err
 	}

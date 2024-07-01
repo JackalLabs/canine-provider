@@ -11,7 +11,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/crypto"
 	multiaddr "github.com/multiformats/go-multiaddr"
 
-	merkletree "github.com/wealdtech/go-merkletree"
+	merkletree2 "github.com/wealdtech/go-merkletree/v2"
 
 	bds "github.com/ipfs/go-ds-badger2"
 
@@ -29,9 +29,9 @@ func merkleTreeKey(merkle []byte, owner string, start int64) []byte {
 	return []byte(fmt.Sprintf("tree/%x/%s/%d", merkle, owner, start))
 }
 
-func (i *IpfsArchive) WriteTreeToDisk(merkle []byte, owner string, start int64, tree *merkletree.MerkleTree) (err error) {
+func (i *IpfsArchive) WriteTreeToDisk(merkle []byte, owner string, start int64, tree *merkletree2.MerkleTree) (err error) {
 	k := merkleTreeKey(merkle, owner, start)
-	v, err := tree.Export()
+	v, err := json.Marshal(tree)
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func (i *IpfsArchive) WriteTreeToDisk(merkle []byte, owner string, start int64, 
 		return nil
 	})
 
-	return nil
+	return err
 }
 
 func fidKey(fid string) []byte {
@@ -69,7 +69,6 @@ func (i *IpfsArchive) WriteFileToDisk(data io.Reader, fid string) (written int64
 	err = i.db.Update(func(txn *badger.Txn) error {
 		return txn.Set(fidKey(fid), []byte(node.Cid().String()))
 	})
-
 	if err != nil {
 		return int64(wrote), errors.Join(errors.New("failed to record fid to database"), err)
 	}

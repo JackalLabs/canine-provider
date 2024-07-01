@@ -3,16 +3,12 @@ package server
 import (
 	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/cosmos/cosmos-sdk/client"
-	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
 	"github.com/spf13/cobra"
 )
 
 type serverContext struct {
-	messageSize int
-	gasCap      int
-	address     string
-	cosmosCtx   client.Context
-	provider    storageTypes.Providers
+	address   string
+	cosmosCtx client.Context
 }
 
 func newServerContext(cmd *cobra.Command) (*serverContext, error) {

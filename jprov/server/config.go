@@ -92,7 +92,7 @@ type configFile struct {
 	Port int
 }
 
-func defaultConfig() config {
+func DefaultConfig() config {
 	return config{
 		logLevel:  defaultLogLevel,
 		logFormat: defaultLogFormat,
