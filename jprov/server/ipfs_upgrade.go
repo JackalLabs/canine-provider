@@ -2,10 +2,14 @@ package server
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"strconv"
+
+	"github.com/wealdtech/go-merkletree"
+	"github.com/wealdtech/go-merkletree/v2/sha3"
 
 	merkletree2 "github.com/wealdtech/go-merkletree/v2"
 
@@ -45,9 +49,25 @@ func (f *FileServer) migrateToIpfs(activeDeal storageTypes.LegacyActiveDeals) er
 	if err != nil {
 		return fmt.Errorf("failed to decode merkle | %w", err)
 	}
-	var t interface{} = tree
-	mt := t.(*merkletree2.MerkleTree)
-	err = f.ipfsArchive.WriteTreeToDisk(merkle, activeDeal.Signee, startBlock, mt)
+	e, err := tree.Export()
+	if err != nil {
+		return fmt.Errorf("failed to temp export tree | %w", err)
+	}
+	var me merkletree.Export
+	err = json.Unmarshal(e, &me)
+	if err != nil {
+		return fmt.Errorf("failed to temp re-import tree | %w", err)
+	}
+
+	t, err := merkletree2.NewTree(
+		merkletree2.WithData(me.Data),
+		merkletree2.WithHashType(sha3.New512()),
+		merkletree2.WithSalt(me.Salt),
+	)
+	if err != nil {
+		return err
+	}
+	err = f.ipfsArchive.WriteTreeToDisk(merkle, activeDeal.Signee, startBlock, t)
 	if err != nil {
 		return err
 	}
