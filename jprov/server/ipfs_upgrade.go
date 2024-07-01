@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strconv"
 
@@ -23,6 +24,7 @@ func (f *FileServer) migrateToIpfs(activeDeal storageTypes.LegacyActiveDeals) er
 	if err != nil {
 		return err
 	}
+	fmt.Printf("Migrating %x...\n", tree.Root())
 
 	file, err := f.archive.RetrieveFile(activeDeal.Fid)
 	defer file.Close()

@@ -31,10 +31,12 @@ func merkleTreeKey(merkle []byte, owner string, start int64) []byte {
 
 func (i *IpfsArchive) WriteTreeToDisk(merkle []byte, owner string, start int64, tree *merkletree.MerkleTree) (err error) {
 	k := merkleTreeKey(merkle, owner, start)
-	v, err := json.Marshal(tree)
+	v, err := tree.Export()
 	if err != nil {
 		return err
 	}
+
+	fmt.Printf("tree after export: %s\n", string(v))
 
 	err = i.db.Update(func(txn *badger.Txn) error {
 		err := txn.Set(k, v)

@@ -4,11 +4,11 @@ set -eu
 
 source ./scripts/setup-chain.sh
 
-HALT_UPGRADE_HEIGHT="60"
-UPGRADE_HEIGHT="90"
+HALT_UPGRADE_HEIGHT="45"
+UPGRADE_HEIGHT="60"
 
 OLD_CHAIN_VER="v3.2.2"
-HALT_CHAIN_VER="marston/v3-halt"
+HALT_CHAIN_VER="v3.4.0-beta.1"
 NEW_CHAIN_VER="marston/v4-smodule-update"
 
 OLD_PROVIDER_VER="v1.1.2"
@@ -85,6 +85,7 @@ install_halt () {
 
 
     cd ${PROJ_DIR}
+    git fetch
     git checkout ${HALT_CHAIN_VER}
     bypass_go_version_check ${PROJ_DIR}
     make install
@@ -93,26 +94,6 @@ install_halt () {
 
     cd "${current_dir}"
     canined version
-
-
-    if [[ ! -e "${TMP_ROOT}/canine-provider" ]]; then
-        cd ${TMP_ROOT}
-        git clone https://github.com/JackalLabs/canine-provider.git
-        cd canine-provider
-        cd ${current_dir}
-    fi
-
-    PROJ_DIR="${TMP_ROOT}/canine-provider"
-
-
-    cd ${PROJ_DIR}
-    git checkout ${OLD_PROVIDER_VER}
-    bypass_go_version_check ${PROJ_DIR}
-    make install
-    git restore Makefile
-
-    cd "${current_dir}"
-    jprovd version
 }
 
 
@@ -124,7 +105,9 @@ install_new () {
 install_new_chain () {
     PROJ_DIR="${TMP_ROOT}/canine-chain"
     cd ${PROJ_DIR}
+    git fetch
     git checkout ${NEW_CHAIN_VER}
+    git pull
 
     bypass_go_version_check ${PROJ_DIR}
     make install
@@ -205,7 +188,7 @@ upgrade_halt_chain () {
 }
 
 restart_chain () {
-    screen -d -m -S "canined" bash -c "canined start --pruning=nothing --minimum-gas-prices=0ujkl"
+    screen -d -m -L -Logfile "chain.log" -S "canined" bash -c "canined start --pruning=nothing --minimum-gas-prices=0ujkl"
 }
 
 start_provider () {
@@ -226,8 +209,8 @@ init_sequoia () {
     rm -rf $HOME/providers/sequoia${1}
     sequoia init --home="$HOME/providers/sequoia${1}"
 
-    sed -i -e 's/rpc_addr: https:\/\/jackal-testnet-rpc.polkachu.com:443/rpc_addr: tcp:\/\/localhost:26657/g' $HOME/providers/sequoia${1}/config.yaml
-    sed -i -e 's/grpc_addr: jackal-testnet-grpc.polkachu.com:17590/grpc_addr: localhost:37890/g' $HOME/providers/sequoia${1}/config.yaml
+#    sed -i -e 's/rpc_addr: https:\/\/jackal-testnet-rpc.polkachu.com:443/rpc_addr: tcp:\/\/localhost:26657/g' $HOME/providers/sequoia${1}/config.yaml
+#    sed -i -e 's/grpc_addr: jackal-testnet-grpc.polkachu.com:17590/grpc_addr: localhost:37890/g' $HOME/providers/sequoia${1}/config.yaml
 
     sed -i -e 's/data_directory: $HOME\/.sequoia\/data/data_directory: $HOME\/providers\/sequoia0\/data/g' $HOME/providers/sequoia${1}/config.yaml
 }
@@ -245,7 +228,7 @@ migrate_sequoia () {
 }
 
 start_sequoia () {
-    sequoia start --home="$HOME/providers/sequoia${1}"
+    sequoia start --home="$HOME/providers/sequoia${1}" --log-level debug
 }
 
 
@@ -341,9 +324,9 @@ migrate_provider 0
 #migrate_provider 6
 #
 #
-#sleep 3
+sleep 10
 #
-read -rsp $'jprov migrate-sequoia now and press any key to continue...\n' -n1 key
+#read -rsp $'jprov migrate-sequoia now and press any key to continue...\n' -n1 key
 # uncomment below to migrate
 migrate_sequoia 0
 
@@ -360,7 +343,7 @@ migrate_sequoia 0
 echo "upgrading chain to v4"
 upgrade_chain
 restart_chain
-sleep 5
+sleep 20
 
 start_sequoia 0
 

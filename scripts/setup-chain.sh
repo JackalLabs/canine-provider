@@ -62,6 +62,7 @@ from_scratch () {
     update_test_genesis '.app_state["storage"]["params"]["proof_window"]="'25'"'
     update_test_genesis '.app_state["oracle"]["params"]["deposit"]="'"$(canined keys show -a $DEPOACCKEY)"'"'
     update_test_genesis '.app_state["rns"]["params"]["deposit_account"]="'"$(canined keys show -a $DEPOACCKEY)"'"'
+#    update_test_genesis '.app_state["storage"]["params"]["check_window"]="'10'"'
 
     #update_test_genesis '.app_state["jklmint"]["params"]["deposit_account"]="'"$(canined keys show -a $DEPOACCKEY)"'"'
 
@@ -97,7 +98,7 @@ fix_config() {
     sed -i.bak -e 's/laddr = "tcp:\/\/127.0.0.1:26657"/laddr = "tcp:\/\/0.0.0.0:26657"/' $HOME/.canine/config/config.toml
     sed -i.bak -e 's/laddr = "tcp:\/\/127.0.0.1:26656"/laddr = "tcp:\/\/0.0.0.0:26656"/' $HOME/.canine/config/config.toml
     sed -i.bak -e 's/chain-id = ""/chain-id = "canine-1"/' $HOME/.canine/config/client.toml
-    sed -i.bak -e 's/grpc_laddr = ""/grpc_laddr = "tcp:\/\/0.0.0.0:37890"/' $HOME/.canine/config/config.toml
+    sed -i.bak -e 's/address = "0.0.0.0:9090"/address = "0.0.0.0:9090"/' $HOME/.canine/config/config.toml
 }
 
 startup() {
