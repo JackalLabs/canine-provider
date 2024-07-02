@@ -128,7 +128,7 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 
 	err := h.ClaimStray(m)
 	if err != nil {
-		ctx.Logger.Error("failed to claim stray: %s", err.Error())
+		ctx.Logger.Error("failed to claim stray: %w", err)
 		return
 	}
 
