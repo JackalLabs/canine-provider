@@ -137,7 +137,7 @@ func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader
 
 	_, err = f.archive.WriteFileToDisk(file, fid)
 	if err != nil {
-		f.logger.Error("saveFile: Write To Disk Error: ", err)
+		f.logger.Error(fmt.Errorf("saveFile: Write To Disk Error: %w", err).Error())
 		return err
 	}
 
@@ -151,7 +151,7 @@ func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader
 
 	msg, ctrErr := f.MakeContract(fid, sender, &wg, string(tree.Root()), fmt.Sprintf("%d", handler.Size))
 	if ctrErr != nil {
-		f.logger.Error("saveFile: CONTRACT ERROR: ", ctrErr)
+		f.logger.Error(fmt.Errorf("saveFile: CONTRACT ERROR: %w", ctrErr).Error())
 		return ctrErr
 	}
 	wg.Wait()
@@ -161,7 +161,7 @@ func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader
 	}
 
 	if err = writeResponse(*w, *msg, fid, cid); err != nil {
-		f.logger.Error("Json Encode Error: ", err)
+		f.logger.Error(fmt.Errorf("json Encode Error: %w", err).Error())
 		return err
 	}
 

@@ -41,7 +41,7 @@ func (h *LittleHand) DownloadFileFromURL(url string, fid string, cid string) (er
 
 	fileSize, err := h.Archive.WriteFileToDisk(resp.Body, fid)
 	if err != nil {
-		h.Logger.Error("saveFile: Write To Disk Error: ", err)
+		h.Logger.Error(fmt.Errorf("saveFile: Write To Disk Error: %w", err).Error())
 		return
 	}
 

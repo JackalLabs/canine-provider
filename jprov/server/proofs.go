@@ -280,7 +280,7 @@ func (f *FileServer) postProof(cid string, blockSize, block int64) error {
 	}
 
 	if u.Response.Code != 0 {
-		f.logger.Error("Contract Response Error: %s", fmt.Errorf(u.Response.RawLog))
+		f.logger.Error(fmt.Errorf("contract Response error: %s", u.Response.RawLog).Error())
 		return nil
 	}
 
