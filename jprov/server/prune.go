@@ -11,7 +11,7 @@ import (
 
 func (f *FileServer) allFilesAtStorage() ([]string, error) {
 	fids := make([]string, 0)
-	dirs, err := os.ReadDir(utils.GetStorageRootDir(f.cosmosCtx.HomeDir))
+	dirs, err := os.ReadDir(utils.GetStorageRootDir(f.serverCtx.cosmosCtx.HomeDir))
 	if err != nil {
 		return nil, err
 	}
@@ -41,13 +41,13 @@ func findOldMerkleTree(homedir, fid string) (bool, error) {
 }
 
 func (f *FileServer) purge(fid string) error {
-	exists, err := findOldMerkleTree(f.cosmosCtx.HomeDir, fid)
+	exists, err := findOldMerkleTree(f.serverCtx.cosmosCtx.HomeDir, fid)
 	if err != nil {
 		return err
 	}
 
 	if exists {
-		if err := os.Remove(utils.GetOldTreePath(f.cosmosCtx.HomeDir, fid)); err != nil {
+		if err := os.Remove(utils.GetOldTreePath(f.serverCtx.cosmosCtx.HomeDir, fid)); err != nil {
 			return err
 		}
 	}

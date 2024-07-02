@@ -7,17 +7,18 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"math/rand"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
 
 	"github.com/JackalLabs/jackal-provider/jprov/archive"
-	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 	"github.com/JackalLabs/jackal-provider/jprov/utils"
@@ -25,18 +26,19 @@ import (
 	"github.com/rs/cors"
 
 	storageTypes "github.com/jackalLabs/canine-chain/v3/x/storage/types"
-	tmlog "github.com/tendermint/tendermint/libs/log"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/cobra"
+
+	badger "github.com/dgraph-io/badger/v4"
 
 	_ "net/http/pprof"
 )
 
 type FileServer struct {
+	config      *utils.Config
 	cmd         *cobra.Command
-	cosmosCtx   client.Context
-	serverCtx   *utils.Context
+	serverCtx   *serverContext
 	queryClient storageTypes.QueryClient
 	archive     archive.Archive
 	archivedb   archive.ArchiveDB
@@ -44,11 +46,13 @@ type FileServer struct {
 	provider    storageTypes.Providers
 	blockSize   int64
 	queue       *queue.UploadQueue
-	logger      tmlog.Logger
+	logger      *slog.Logger
+	ipfsArchive *archive.IpfsArchive
 }
 
 func NewFileServer(
 	cmd *cobra.Command,
+	serverCtx utils.Context,
 	archivedb archive.ArchiveDB,
 	downtimedb *archive.DowntimeDB,
 ) (fs *FileServer, err error) {
@@ -60,20 +64,59 @@ func NewFileServer(
 		return nil, err
 	}
 
+	srvrCtx, err := newServerContext(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	err = os.MkdirAll(sCtx.Config.IpfsConfig.Directory, os.ModePerm)
+	if err != nil {
+		return nil, errors.Join(errors.New("failed to create ipfs directory"), err)
+	}
+
+	options := badger.DefaultOptions(sCtx.Config.IpfsConfig.Directory)
+	db, err := badger.Open(options)
+	if err != nil {
+		return nil, err
+	}
+	ipfsArchive, err := archive.NewIpfsArchive(db, sCtx.Config.IpfsConfig.Port)
+	if err != nil {
+		return nil, err
+	}
+
 	queue := queue.New()
 
 	return &FileServer{
+		config:      nil,
 		cmd:         cmd,
-		cosmosCtx:   clientCtx,
-		serverCtx:   sCtx,
-		archive:     archive.NewSingleCellArchive(sCtx.Config.RootDir),
+		serverCtx:   srvrCtx,
+		archive:     archive.NewSingleCellArchive(sCtx.Config.BaseConfig.RootDir),
 		archivedb:   archivedb,
 		downtimedb:  downtimedb,
 		blockSize:   blockSize,
 		queryClient: storageTypes.NewQueryClient(clientCtx),
 		queue:       &queue,
-		logger:      sCtx.Logger,
+		logger:      serverCtx.Logger,
+		ipfsArchive: ipfsArchive,
 	}, nil
+}
+
+func NewServerLogger(config config) (*slog.Logger, error) {
+	var handler slog.Handler
+
+	options := slog.HandlerOptions{
+		Level: config.logLevel,
+	}
+
+	if format := strings.ToUpper(config.logFormat); format == "JSON" {
+		handler = slog.NewJSONHandler(os.Stdout, &options)
+	} else if format == "TEXT" {
+		handler = slog.NewTextHandler(os.Stdout, &options)
+	} else {
+		return nil, errors.New("unknown log format")
+	}
+
+	return NewCtxLogger(handler), nil
 }
 
 func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader, sender string, w *http.ResponseWriter) error {
@@ -94,17 +137,11 @@ func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader
 
 	_, err = f.archive.WriteFileToDisk(file, fid)
 	if err != nil {
-		f.serverCtx.Logger.Error("saveFile: Write To Disk Error: ", err)
+		f.logger.Error(fmt.Errorf("saveFile: Write To Disk Error: %w", err).Error())
 		return err
 	}
 
-	address, err := crypto.GetAddress(f.cosmosCtx)
-	if err != nil {
-		f.serverCtx.Logger.Error(err.Error())
-		return err
-	}
-
-	cid, err := buildCid(address, sender, fid)
+	cid, err := buildCid(f.serverCtx.address, sender, fid)
 	if err != nil {
 		return err
 	}
@@ -114,17 +151,17 @@ func (f *FileServer) saveFile(file multipart.File, handler *multipart.FileHeader
 
 	msg, ctrErr := f.MakeContract(fid, sender, &wg, string(tree.Root()), fmt.Sprintf("%d", handler.Size))
 	if ctrErr != nil {
-		f.serverCtx.Logger.Error("saveFile: CONTRACT ERROR: ", ctrErr)
+		f.logger.Error(fmt.Errorf("saveFile: CONTRACT ERROR: %w", ctrErr).Error())
 		return ctrErr
 	}
 	wg.Wait()
 
 	if msg.Err != nil {
-		f.serverCtx.Logger.Error(msg.Err.Error())
+		f.logger.Error(msg.Err.Error())
 	}
 
 	if err = writeResponse(*w, *msg, fid, cid); err != nil {
-		f.serverCtx.Logger.Error("Json Encode Error: ", err)
+		f.logger.Error(fmt.Errorf("json Encode Error: %w", err).Error())
 		return err
 	}
 
@@ -178,16 +215,10 @@ func writeResponse(w http.ResponseWriter, upload types.Upload, fid, cid string) 
 }
 
 func (f *FileServer) MakeContract(fid string, sender string, wg *sync.WaitGroup, merkleroot string, filesize string) (*types.Upload, error) {
-	address, err := crypto.GetAddress(f.cosmosCtx)
-	if err != nil {
-		f.serverCtx.Logger.Error(err.Error())
-		return nil, err
-	}
-
 	xRoot := hex.EncodeToString([]byte(merkleroot))
 
 	msg := storageTypes.NewMsgPostContract(
-		address,
+		f.serverCtx.address,
 		sender,
 		filesize,
 		fid,
@@ -197,7 +228,7 @@ func (f *FileServer) MakeContract(fid string, sender string, wg *sync.WaitGroup,
 		return nil, err
 	}
 
-	f.serverCtx.Logger.Info(fmt.Sprintf("Contract being pushed: %s", msg.String()))
+	f.logger.Info(fmt.Sprintf("Contract being pushed: %s", msg.String()))
 
 	u := types.Upload{
 		Message:  msg,
@@ -214,13 +245,8 @@ func (f *FileServer) MakeContract(fid string, sender string, wg *sync.WaitGroup,
 }
 
 func (f *FileServer) Init() error {
-	address, err := crypto.GetAddress(f.cosmosCtx)
-	if err != nil {
-		return err
-	}
-
 	request := &storageTypes.QueryProviderRequest{
-		Address: address,
+		Address: f.serverCtx.address,
 	}
 
 	response, err := f.queryClient.Providers(context.Background(), request)
@@ -281,7 +307,7 @@ func (f *FileServer) StartFileServer(cmd *cobra.Command) {
 	f.logger.Info("recollecting active deals...")
 	err = f.RecollectActiveDeals()
 	if err != nil {
-		f.logger.Error("failed to recollect lost active deals to database :", err.Error())
+		f.logger.Error("failed to recollect lost active deals to database :", "error", err.Error())
 	}
 	go f.StartProofServer(interval)
 	go NatCycle(cmd.Context())

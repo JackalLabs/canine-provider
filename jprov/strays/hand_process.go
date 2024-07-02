@@ -128,7 +128,8 @@ func (h *LittleHand) Process(ctx *utils.Context, m *StrayManager) { // process t
 
 	err := h.ClaimStray(m)
 	if err != nil {
-		ctx.Logger.Error("failed to claim stray: ", err.Error())
+		ctx.Logger.Error(fmt.Errorf("failed to claim stray: %w", err).Error())
+		return
 	}
 
 	err = h.Database.SetContract(h.Stray.Cid, h.Stray.Fid)

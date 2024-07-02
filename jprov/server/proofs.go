@@ -243,22 +243,16 @@ func (f *FileServer) postProof(cid string, blockSize, block int64) error {
 		return err
 	}
 
-	address, err := crypto.GetAddress(f.cosmosCtx)
-	if err != nil {
-		f.logger.Error(err.Error())
-		return err
-	}
-
 	fmt.Printf("Requesting attestion for: %s\n", cid)
 
-	err = requestAttestation(f.cosmosCtx, cid, hashlist, item, f.queue) // request attestation, if we get it, skip all the posting
+	err = requestAttestation(f.serverCtx.cosmosCtx, cid, hashlist, item, f.queue) // request attestation, if we get it, skip all the posting
 	if err == nil {
 		fmt.Println("successfully got attestation.")
 		return nil
 	}
 
 	msg := storageTypes.NewMsgPostproof(
-		address,
+		f.serverCtx.address,
 		item,
 		hashlist,
 		cid,
@@ -286,7 +280,7 @@ func (f *FileServer) postProof(cid string, blockSize, block int64) error {
 	}
 
 	if u.Response.Code != 0 {
-		f.logger.Error("Contract Response Error: %s", fmt.Errorf(u.Response.RawLog))
+		f.logger.Error(fmt.Errorf("contract Response error: %s", u.Response.RawLog).Error())
 		return nil
 	}
 

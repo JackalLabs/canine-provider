@@ -1,6 +1,7 @@
 package strays
 
 import (
+	"log/slog"
 	"math/rand"
 	"sync"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/jackalLabs/canine-chain/v3/x/storage/types"
 
 	"github.com/spf13/cobra"
-	"github.com/tendermint/tendermint/libs/log"
 )
 
 type StrayManager struct {
@@ -56,7 +56,7 @@ func NewStrayManager(
 	}
 	ip := provs.Providers.Address // Our IP address
 
-	archive := archive.NewSingleCellArchive(ctx.Config.RootDir)
+	archive := archive.NewSingleCellArchive(ctx.Config.BaseConfig.RootDir)
 
 	return &StrayManager{
 		Address:       addr,
@@ -83,5 +83,5 @@ type LittleHand struct {
 	ClientContext client.Context
 	Id            uint
 	Address       string
-	Logger        log.Logger
+	Logger        *slog.Logger
 }

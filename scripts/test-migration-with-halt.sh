@@ -4,10 +4,12 @@ set -eu
 
 source ./scripts/setup-chain.sh
 
-UPGRADE_HEIGHT="30"
+HALT_UPGRADE_HEIGHT="45"
+UPGRADE_HEIGHT="60"
 
 OLD_CHAIN_VER="v3.2.2"
-NEW_CHAIN_VER="v4.0.0-alpha.3"
+HALT_CHAIN_VER="v3.4.0-beta.1"
+NEW_CHAIN_VER="marston/v4-smodule-update"
 
 OLD_PROVIDER_VER="v1.1.2"
 
@@ -38,7 +40,7 @@ install_old () {
 
 
     cd ${PROJ_DIR}
-    git switch tags/${OLD_CHAIN_VER} --detach
+    git checkout ${OLD_CHAIN_VER}
     bypass_go_version_check ${PROJ_DIR}
     make install
     git restore Makefile
@@ -59,13 +61,39 @@ install_old () {
 
 
     cd ${PROJ_DIR}
-    git switch tags/${OLD_PROVIDER_VER} --detach
+    git checkout ${OLD_PROVIDER_VER}
     bypass_go_version_check ${PROJ_DIR}
     make install
     git restore Makefile
 
     cd "${current_dir}"
     jprovd version
+}
+
+install_halt () {
+    TMP_GOCACHE="${TMP_ROOT}"/gocache
+    mkdir -p "${TMP_GOCACHE}"
+
+    echo "installing v3.4 canined"
+    if [[ ! -e "${TMP_ROOT}/canine-chain" ]]; then
+        cd ${TMP_ROOT}
+        git clone https://github.com/JackalLabs/canine-chain.git
+        cd ${current_dir}
+    fi
+
+    PROJ_DIR="${TMP_ROOT}/canine-chain"
+
+
+    cd ${PROJ_DIR}
+    git fetch
+    git checkout ${HALT_CHAIN_VER}
+    bypass_go_version_check ${PROJ_DIR}
+    make install
+    git restore Makefile
+    echo "finished chain installation"
+
+    cd "${current_dir}"
+    canined version
 }
 
 
@@ -77,8 +105,9 @@ install_new () {
 install_new_chain () {
     PROJ_DIR="${TMP_ROOT}/canine-chain"
     cd ${PROJ_DIR}
-    #git switch tags/${NEW_CHAIN_VER} --detach
-    git switch marston/econ-handler --detach
+    git fetch
+    git checkout ${NEW_CHAIN_VER}
+    git pull
 
     bypass_go_version_check ${PROJ_DIR}
     make install
@@ -92,12 +121,22 @@ start_chain () {
     startup
     from_scratch
     fix_config
+    screen -d -m -L -Logfile "chain.log" -S "canined" bash -c "canined start --pruning=nothing --minimum-gas-prices=0ujkl"
 
-    screen -d -m -S "canined" bash -c "canined start --pruning=nothing --minimum-gas-prices=0ujkl"
 }
 
 set_upgrade_prop () {
     canined tx gov submit-proposal software-upgrade "v4" --upgrade-height ${UPGRADE_HEIGHT} --upgrade-info "tmp" --title "v4 Upgrade" \
+        --description "upgrade" --from charlie -y --deposit "20000000ujkl"
+
+    sleep 6
+
+    canined tx gov vote 2 yes --from ${KEY} -y
+    echo "voting successful"
+}
+
+set_halt_upgrade_prop () {
+    canined tx gov submit-proposal software-upgrade "v340" --upgrade-height ${HALT_UPGRADE_HEIGHT} --upgrade-info "tmp" --title "v3 halt Upgrade" \
         --description "upgrade" --from charlie -y --deposit "20000000ujkl"
 
     sleep 6
@@ -118,7 +157,7 @@ upgrade_chain () {
             canined q storage list-active-deals --chain-id test --home $HOME
             canined q storage list-strays --chain-id test --home $HOME
             canined q storage list-contracts --chain-id test --home $HOME
-            canined q gov proposal 1 --output=json
+            canined q gov proposal 2 --output=json
             echo "BLOCK_HEIGHT = $BLOCK_HEIGHT"
             sleep 2
         fi
@@ -127,8 +166,29 @@ upgrade_chain () {
     install_new_chain
 }
 
+upgrade_halt_chain () {
+    while true; do
+        BLOCK_HEIGHT=$(canined status | jq '.SyncInfo.latest_block_height' -r)
+        if [ $BLOCK_HEIGHT = "$HALT_UPGRADE_HEIGHT" ]; then
+            # assuming running only 1 canined
+            echo "BLOCK HEIGHT = $HALT_UPGRADE_HEIGHT REACHED, KILLING OLD ONE"
+            killall canined
+            break
+        else
+            canined q storage list-active-deals --chain-id test --home $HOME
+            canined q storage list-strays --chain-id test --home $HOME
+            canined q storage list-contracts --chain-id test --home $HOME
+            canined q gov proposal 1 --output=json
+            echo "BLOCK_HEIGHT = $BLOCK_HEIGHT"
+            sleep 2
+        fi
+    done
+
+    install_halt
+}
+
 restart_chain () {
-    screen -d -m -S "canined" bash -c "canined start --pruning=nothing --minimum-gas-prices=0ujkl"
+    screen -d -m -L -Logfile "chain.log" -S "canined" bash -c "canined start --pruning=nothing --minimum-gas-prices=0ujkl"
 }
 
 start_provider () {
@@ -149,8 +209,8 @@ init_sequoia () {
     rm -rf $HOME/providers/sequoia${1}
     sequoia init --home="$HOME/providers/sequoia${1}"
 
-    sed -i -e 's/rpc_addr: https:\/\/jackal-testnet-rpc.polkachu.com:443/rpc_addr: tcp:\/\/localhost:26657/g' $HOME/providers/sequoia${1}/config.yaml
-    sed -i -e 's/grpc_addr: jackal-testnet-grpc.polkachu.com:17590/grpc_addr: localhost:9090/g' $HOME/providers/sequoia${1}/config.yaml
+#    sed -i -e 's/rpc_addr: https:\/\/jackal-testnet-rpc.polkachu.com:443/rpc_addr: tcp:\/\/localhost:26657/g' $HOME/providers/sequoia${1}/config.yaml
+#    sed -i -e 's/grpc_addr: jackal-testnet-grpc.polkachu.com:17590/grpc_addr: localhost:37890/g' $HOME/providers/sequoia${1}/config.yaml
 
     sed -i -e 's/data_directory: $HOME\/.sequoia\/data/data_directory: $HOME\/providers\/sequoia0\/data/g' $HOME/providers/sequoia${1}/config.yaml
 }
@@ -168,7 +228,7 @@ migrate_sequoia () {
 }
 
 start_sequoia () {
-    sequoia start --home="$HOME/providers/sequoia${1}"
+    sequoia start --home="$HOME/providers/sequoia${1}" --log-level debug
 }
 
 
@@ -199,7 +259,8 @@ install_old
 
 start_chain
 echo "CHAIN STARTED!!!"
-sleep 5
+sleep 10
+echo "running on port 9090: $(lsof -i :9090)"
 
 start_provider 54f86a701648e8324e920f9592c21cc591b244ae46eac935d45fe962bba1102c \
     jkl1xclg3utp4yuvaxa54r39xzrudc988s82ykve3f 0
@@ -221,9 +282,14 @@ sleep 35
 # upload files
 canined tx storage buy-storage jkl10k05lmc88q5ft3lm00q30qkd9x6654h3lejnct 720h 3000000000 ujkl --from charlie -y
 sleep 5
-set_upgrade_prop
+
+set_halt_upgrade_prop
 sleep 5
 canined q gov proposal 1
+
+set_upgrade_prop
+sleep 5
+canined q gov proposal 2
 
 upload_file ./scripts/dummy_data/1.png 0
 upload_file ./scripts/dummy_data/2.png 0
@@ -233,6 +299,10 @@ upload_file ./scripts/dummy_data/2.png 0
 #upload_file ./scripts/dummy_data/6.wav 0
 upload_file ./scripts/dummy_data/test.txt 0
 
+sleep 10
+
+upgrade_halt_chain
+restart_chain
 sleep 10
 
 
@@ -254,9 +324,9 @@ migrate_provider 0
 #migrate_provider 6
 #
 #
-#sleep 3
+sleep 10
 #
-read -rsp $'jprov migrate-sequoia now and press any key to continue...\n' -n1 key
+#read -rsp $'jprov migrate-sequoia now and press any key to continue...\n' -n1 key
 # uncomment below to migrate
 migrate_sequoia 0
 
@@ -269,10 +339,11 @@ migrate_sequoia 0
 #restart_provider 6
 
 
+
 echo "upgrading chain to v4"
 upgrade_chain
 restart_chain
-sleep 5
+sleep 20
 
 start_sequoia 0
 

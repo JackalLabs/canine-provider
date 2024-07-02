@@ -12,36 +12,29 @@ import (
 	"github.com/julienschmidt/httprouter"
 
 	"github.com/JackalLabs/jackal-provider/jprov/api"
-	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 )
 
 func (f *FileServer) indexres(w http.ResponseWriter) {
-	address, err := crypto.GetAddress(f.cosmosCtx)
-	if err != nil {
-		f.serverCtx.Logger.Error(err.Error())
-		return
-	}
-
 	v := types.IndexResponse{
 		Status:  "online",
-		Address: address,
+		Address: f.serverCtx.address,
 	}
-	err = json.NewEncoder(w).Encode(v)
+	err := json.NewEncoder(w).Encode(v)
 	if err != nil {
-		f.serverCtx.Logger.Error(err.Error())
+		f.logger.Error(err.Error())
 	}
 }
 
 func (f *FileServer) checkVersion(w http.ResponseWriter) {
 	res, err := f.cmd.Flags().GetString(types.VersionFlag)
 	if err != nil {
-		f.serverCtx.Logger.Error(err.Error())
+		f.logger.Error(err.Error())
 	}
 
 	v := types.VersionResponse{
 		Version: version.Version,
-		ChainID: f.cosmosCtx.ChainID,
+		ChainID: f.serverCtx.cosmosCtx.ChainID,
 	}
 	if len(res) > 0 {
 		v.Version = res
@@ -49,7 +42,7 @@ func (f *FileServer) checkVersion(w http.ResponseWriter) {
 
 	err = json.NewEncoder(w).Encode(v)
 	if err != nil {
-		f.serverCtx.Logger.Error(err.Error())
+		f.logger.Error(err.Error())
 	}
 }
 
@@ -62,13 +55,13 @@ func (f *FileServer) downfil(w http.ResponseWriter, ps httprouter.Params) {
 	}
 	defer func() {
 		if err := file.Close(); err != nil {
-			f.serverCtx.Logger.Error(fmt.Sprintf("downfil: %s", err.Error()))
+			f.logger.Error(fmt.Sprintf("downfil: %s", err.Error()))
 		}
 	}()
 
 	written, err := io.Copy(w, file)
 	if err != nil {
-		f.serverCtx.Logger.Error(fmt.Sprintf("downfil: %s", err.Error()))
+		f.logger.Error(fmt.Sprintf("downfil: %s", err.Error()))
 	}
 
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", written))
@@ -127,14 +120,14 @@ func (f *FileServer) fileUpload(w *http.ResponseWriter, r *http.Request) {
 	// ParseMultipartForm parses a request body as multipart/form-data
 	err := r.ParseMultipartForm(types.MaxFileSize) // MAX file size lives here
 	if err != nil {
-		f.serverCtx.Logger.Error("Error with parsing form!")
+		f.logger.Error("Error with parsing form!")
 		v := types.ErrorResponse{
 			Error: err.Error(),
 		}
 		(*w).WriteHeader(http.StatusInternalServerError)
 		err = json.NewEncoder(*w).Encode(v)
 		if err != nil {
-			f.serverCtx.Logger.Error(err.Error())
+			f.logger.Error(err.Error())
 		}
 		return
 	}
@@ -142,14 +135,14 @@ func (f *FileServer) fileUpload(w *http.ResponseWriter, r *http.Request) {
 
 	file, handler, err := r.FormFile("file") // Retrieve the file from form data
 	if err != nil {
-		f.serverCtx.Logger.Error("Error with form file!")
+		f.logger.Error("Error with form file!")
 		v := types.ErrorResponse{
 			Error: err.Error(),
 		}
 		(*w).WriteHeader(http.StatusInternalServerError)
 		err = json.NewEncoder(*w).Encode(v)
 		if err != nil {
-			f.serverCtx.Logger.Error(err.Error())
+			f.logger.Error(err.Error())
 		}
 		return
 	}
@@ -162,7 +155,7 @@ func (f *FileServer) fileUpload(w *http.ResponseWriter, r *http.Request) {
 		(*w).WriteHeader(http.StatusInternalServerError)
 		err = json.NewEncoder(*w).Encode(v)
 		if err != nil {
-			f.serverCtx.Logger.Error(err.Error())
+			f.logger.Error(err.Error())
 		}
 	}
 }

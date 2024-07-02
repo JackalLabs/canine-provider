@@ -12,7 +12,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/JackalLabs/jackal-provider/jprov/crypto"
 	"github.com/JackalLabs/jackal-provider/jprov/queue"
 	"github.com/JackalLabs/jackal-provider/jprov/types"
 
@@ -105,12 +104,7 @@ func (f *FileServer) attest(attestReq types.AttestRequest) error {
 		return errors.New("failed to verify attest")
 	}
 
-	address, err := crypto.GetAddress(f.cosmosCtx)
-	if err != nil {
-		return err
-	}
-
-	upload, err := addMsgAttest(address, attestReq.Cid, f.queue)
+	upload, err := addMsgAttest(f.serverCtx.address, attestReq.Cid, f.queue)
 	if err != nil {
 		return err
 	}

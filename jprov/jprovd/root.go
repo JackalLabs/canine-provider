@@ -62,7 +62,7 @@ func NewRootCmd() *cobra.Command {
 				return err
 			}
 
-			return utils.InterceptConfigsPreRunHandler(cmd, "", nil)
+			return utils.InterceptConfigsPreRunHandler(cmd)
 		},
 	}
 
@@ -74,6 +74,7 @@ func NewRootCmd() *cobra.Command {
 		StartServerCommand(),
 		ResetCommand(),
 		MigrateCommand(),
+		MigrateSequiaCommand(),
 		init,
 		DataCmd(),
 		ClientCmd(),

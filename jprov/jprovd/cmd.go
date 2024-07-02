@@ -20,7 +20,7 @@ func Execute(rootCmd *cobra.Command, defaultHome string) error {
 	// and a Tendermint RPC. This requires the use of a pointer reference when
 	// getting and setting the client.Context. Ideally, we utilize
 	// https://github.com/spf13/cobra/pull/1118.
-	srvCtx := utils.NewDefaultContext()
+	srvCtx := utils.NewDefaultContext(defaultHome)
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, client.ClientContextKey, &client.Context{})
 	ctx = context.WithValue(ctx, utils.ProviderContextKey, srvCtx)
