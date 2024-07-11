@@ -10,7 +10,7 @@ require (
 	github.com/hsanjuan/ipfs-lite v1.8.2
 	github.com/huin/goupnp v1.3.0
 	github.com/ipfs/go-ds-badger2 v0.1.3
-	github.com/jackalLabs/canine-chain/v3 v3.2.2
+	github.com/jackalLabs/canine-chain/v3 v3.4.0
 	github.com/json-iterator/go v1.1.12
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/libp2p/go-libp2p v0.32.2
